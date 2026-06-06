@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}{{ employee.full_name }}{% endblock %}
+{% block page_title %}{{ employee.full_name }}{% endblock %}
+{% block page_subtitle %}Employee Profile{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+  <div class="bg-white rounded-2xl border border-slate-100 p-6 text-center">
+    <div class="w-20 h-20 rounded-2xl bg-brand-100 flex items-center justify-center text-2xl font-bold text-brand-700 mx-auto mb-3">
+      {{ employee.first_name|first|upper }}{{ employee.last_name|first|upper }}
+    </div>
+    <h2 class="text-slate-800 font-semibold text-base">{{ employee.full_name }}</h2>
+    <p class="text-slate-500 text-sm mb-1">{{ employee.designation.title|default:"—" }}</p>
+    <span class="text-xs px-2 py-0.5 rounded-full font-medium {% if employee.status == 'active' %}bg-emerald-100 text-emerald-700{% else %}bg-slate-100 text-slate-500{% endif %}">{{ employee.get_status_display }}</span>
+    <div class="mt-4 pt-4 border-t border-slate-100 text-left space-y-2">
+      <p class="text-xs text-slate-500"><i class="fas fa-id-card w-4 text-slate-400 mr-1"></i>{{ employee.employee_id }}</p>
+      <p class="text-xs text-slate-500"><i class="fas fa-envelope w-4 text-slate-400 mr-1"></i>{{ employee.email }}</p>
+      <p class="text-xs text-slate-500"><i class="fas fa-phone w-4 text-slate-400 mr-1"></i>{{ employee.phone|default:"—" }}</p>
+      <p class="text-xs text-slate-500"><i class="fas fa-building w-4 text-slate-400 mr-1"></i>{{ employee.department.name|default:"—" }}</p>
+      <p class="text-xs text-slate-500"><i class="fas fa-calendar w-4 text-slate-400 mr-1"></i>Joined {{ employee.date_joined|date:"d M Y" }}</p>
+    </div>
+  </div>
+  <div class="xl:col-span-2 space-y-5">
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-3">Employment Details</h3>
+      <div class="grid grid-cols-2 gap-3">
+        {% for label, value in employee_fields|default:"" %}
+        <div><p class="text-slate-400 text-xs mb-0.5">{{ label }}</p><p class="text-slate-700 text-sm font-medium">{{ value }}</p></div>
+        {% empty %}
+        <div><p class="text-slate-400 text-xs mb-0.5">Employment Type</p><p class="text-slate-700 text-sm font-medium">{{ employee.get_employment_type_display }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Gender</p><p class="text-slate-700 text-sm font-medium">{{ employee.get_gender_display|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Date of Birth</p><p class="text-slate-700 text-sm font-medium">{{ employee.date_of_birth|date:"d M Y"|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Emergency Contact</p><p class="text-slate-700 text-sm font-medium">{{ employee.emergency_contact_name|default:"—" }}</p></div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-3">Address</h3>
+      <p class="text-slate-600 text-sm">{{ employee.address|default:"No address on record"|linebreaksbr }}</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

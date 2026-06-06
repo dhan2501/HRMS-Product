@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Designations{% endblock %}
+{% block page_title %}Designations{% endblock %}
+{% block page_subtitle %}Job titles and roles{% endblock %}
+{% block content %}
+<div class="flex justify-between items-center mb-5">
+  <p class="text-slate-500 text-sm">{{ designations.count }} designations</p>
+  <a href="#" class="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors inline-flex items-center gap-2">
+    <i class="fas fa-plus"></i>Add Designation
+  </a>
+</div>
+<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+  <table class="w-full">
+    <thead><tr class="bg-slate-50 border-b border-slate-100">
+      <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-5 py-3.5">Title</th>
+      <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Department</th>
+      <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Level</th>
+      <th class="px-4 py-3.5"></th>
+    </tr></thead>
+    <tbody class="divide-y divide-slate-50">
+    {% for d in designations %}
+    <tr class="hover:bg-slate-50/60">
+      <td class="px-5 py-3.5 text-slate-700 text-sm font-medium">{{ d.title }}</td>
+      <td class="px-4 py-3.5 text-slate-500 text-sm">{{ d.department.name }}</td>
+      <td class="px-4 py-3.5">
+        <div class="flex gap-0.5">{% for i in "12345"|make_list %}<span class="w-2 h-2 rounded-full {% if forloop.counter <= d.level %}bg-brand-500{% else %}bg-slate-200{% endif %}"></span>{% endfor %}</div>
+      </td>
+      <td class="px-4 py-3.5"><a href="#" class="text-brand-600 text-xs hover:underline">Edit</a></td>
+    </tr>
+    {% empty %}<tr><td colspan="4" class="text-center py-8 text-slate-400 text-sm">No designations yet</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
