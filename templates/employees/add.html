@@ -1,0 +1,332 @@
+{% extends 'base.html' %}
+{% block title %}{% if is_edit %}Edit {{ employee.full_name }}{% else %}Add Employee{% endif %}{% endblock %}
+{% block page_title %}{% if is_edit %}Edit Employee{% else %}Add New Employee{% endif %}{% endblock %}
+{% block page_subtitle %}{% if is_edit %}Update details for {{ employee.full_name }}{% else %}Fill in the details to onboard a new team member{% endif %}{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-xs text-slate-400 mb-5">
+  <a href="{% url 'dashboard' %}" class="hover:text-brand-600 transition-colors">Dashboard</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <a href="{% url 'employee_list' %}" class="hover:text-brand-600 transition-colors">Employees</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <span class="text-slate-600 font-medium">{% if is_edit %}Edit{% else %}Add Employee{% endif %}</span>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="employeeForm">
+{% csrf_token %}
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+  <!-- LEFT: Photo + Status -->
+  <div class="space-y-5">
+
+    <!-- Photo upload card -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-6">
+      <h3 class="text-slate-700 font-semibold text-sm mb-4 flex items-center gap-2">
+        <span class="w-5 h-5 bg-brand-100 rounded-md flex items-center justify-center"><i class="fas fa-camera text-brand-600 text-[10px]"></i></span>
+        Profile Photo
+      </h3>
+
+      <div class="flex flex-col items-center">
+        <!-- Preview circle -->
+        <div id="photoPreview"
+          class="w-24 h-24 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-200 flex items-center justify-center mb-4 overflow-hidden border-2 border-dashed border-brand-200 cursor-pointer relative group"
+          onclick="document.getElementById('id_photo').click()">
+          {% if is_edit and employee.photo %}
+            <img src="{{ employee.photo.url }}" class="w-full h-full object-cover" id="previewImg">
+          {% else %}
+            <div id="previewPlaceholder" class="text-center">
+              <i class="fas fa-user text-brand-400 text-2xl"></i>
+              <p class="text-brand-400 text-[9px] mt-1">Click to upload</p>
+            </div>
+            <img id="previewImg" class="w-full h-full object-cover hidden" src="">
+          {% endif %}
+          <div class="absolute inset-0 bg-black bg-opacity-30 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <i class="fas fa-camera text-white text-lg"></i>
+          </div>
+        </div>
+
+        <input type="file" name="photo" id="id_photo" accept="image/*" class="hidden" onchange="previewPhoto(this)">
+        <button type="button" onclick="document.getElementById('id_photo').click()"
+          class="text-brand-600 text-xs font-medium hover:underline">
+          {% if is_edit and employee.photo %}Change Photo{% else %}Upload Photo{% endif %}
+        </button>
+        <p class="text-slate-400 text-[10px] mt-1">JPG, PNG up to 2MB</p>
+      </div>
+    </div>
+
+    <!-- Employment Status -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-4 flex items-center gap-2">
+        <span class="w-5 h-5 bg-emerald-100 rounded-md flex items-center justify-center"><i class="fas fa-toggle-on text-emerald-600 text-[10px]"></i></span>
+        Employment Info
+      </h3>
+      <div class="space-y-4">
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Employee ID <span class="text-red-500">*</span></label>
+          <input type="text" name="employee_id" value="{{ form.employee_id.value|default:'' }}"
+            placeholder="e.g. EMP009"
+            class="w-full border {% if form.employee_id.errors %}border-red-400 bg-red-50{% else %}border-slate-200{% endif %} rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 font-mono">
+          {% if form.employee_id.errors %}<p class="text-red-500 text-[11px] mt-1">{{ form.employee_id.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Employment Type <span class="text-red-500">*</span></label>
+          <select name="employment_type"
+            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 bg-white">
+            {% for val, label in form.fields.employment_type.choices %}
+            <option value="{{ val }}" {% if form.employment_type.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Status <span class="text-red-500">*</span></label>
+          <select name="status"
+            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 bg-white">
+            {% for val, label in form.fields.status.choices %}
+            <option value="{{ val }}" {% if form.status.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Date of Joining <span class="text-red-500">*</span></label>
+          <input type="date" name="date_joined" value="{{ form.date_joined.value|default:'' }}"
+            class="w-full border {% if form.date_joined.errors %}border-red-400 bg-red-50{% else %}border-slate-200{% endif %} rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          {% if form.date_joined.errors %}<p class="text-red-500 text-[11px] mt-1">{{ form.date_joined.errors.0 }}</p>{% endif %}
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Main form sections -->
+  <div class="xl:col-span-2 space-y-5">
+
+    <!-- Personal Information -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-6">
+      <h3 class="text-slate-700 font-semibold text-sm mb-5 flex items-center gap-2">
+        <span class="w-5 h-5 bg-blue-100 rounded-md flex items-center justify-center"><i class="fas fa-user text-blue-600 text-[10px]"></i></span>
+        Personal Information
+      </h3>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">First Name <span class="text-red-500">*</span></label>
+          <input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}"
+            placeholder="Priya"
+            class="w-full border {% if form.first_name.errors %}border-red-400 bg-red-50{% else %}border-slate-200{% endif %} rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          {% if form.first_name.errors %}<p class="text-red-500 text-[11px] mt-1">{{ form.first_name.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Last Name <span class="text-red-500">*</span></label>
+          <input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}"
+            placeholder="Sharma"
+            class="w-full border {% if form.last_name.errors %}border-red-400 bg-red-50{% else %}border-slate-200{% endif %} rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          {% if form.last_name.errors %}<p class="text-red-500 text-[11px] mt-1">{{ form.last_name.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Email Address <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <i class="fas fa-envelope absolute left-3 top-3 text-slate-400 text-xs"></i>
+            <input type="email" name="email" value="{{ form.email.value|default:'' }}"
+              placeholder="priya@company.com"
+              class="w-full border {% if form.email.errors %}border-red-400 bg-red-50{% else %}border-slate-200{% endif %} rounded-xl pl-8 pr-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          </div>
+          {% if form.email.errors %}<p class="text-red-500 text-[11px] mt-1">{{ form.email.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Phone Number</label>
+          <div class="relative">
+            <i class="fas fa-phone absolute left-3 top-3 text-slate-400 text-xs"></i>
+            <input type="text" name="phone" value="{{ form.phone.value|default:'' }}"
+              placeholder="9876543210"
+              class="w-full border border-slate-200 rounded-xl pl-8 pr-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Date of Birth</label>
+          <input type="date" name="date_of_birth" value="{{ form.date_of_birth.value|default:'' }}"
+            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-2">Gender</label>
+          <div class="flex gap-3">
+            {% for val, label in form.fields.gender.choices %}
+            {% if val %}
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="gender" value="{{ val }}"
+                {% if form.gender.value == val %}checked{% endif %}
+                class="w-3.5 h-3.5 accent-brand-600">
+              <span class="text-slate-600 text-sm">{{ label }}</span>
+            </label>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Job Details -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-6">
+      <h3 class="text-slate-700 font-semibold text-sm mb-5 flex items-center gap-2">
+        <span class="w-5 h-5 bg-purple-100 rounded-md flex items-center justify-center"><i class="fas fa-briefcase text-purple-600 text-[10px]"></i></span>
+        Job Details
+      </h3>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Department <span class="text-red-500">*</span></label>
+          <select name="department" id="departmentSelect"
+            class="w-full border {% if form.department.errors %}border-red-400{% else %}border-slate-200{% endif %} rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 bg-white"
+            onchange="filterDesignations(this.value)">
+            <option value="">-- Select Department --</option>
+            {% for dept in departments %}
+            <option value="{{ dept.id }}"
+              {% if form.department.value|stringformat:'s' == dept.id|stringformat:'s' %}selected{% endif %}>
+              {{ dept.name }}
+            </option>
+            {% endfor %}
+          </select>
+          {% if form.department.errors %}<p class="text-red-500 text-[11px] mt-1">{{ form.department.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Designation</label>
+          <select name="designation" id="designationSelect"
+            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 bg-white">
+            <option value="">-- Select Designation --</option>
+            {% for desig in designations %}
+            <option value="{{ desig.id }}"
+              data-dept="{{ desig.department_id }}"
+              {% if form.designation.value|stringformat:'s' == desig.id|stringformat:'s' %}selected{% endif %}>
+              {{ desig.title }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Address & Emergency -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-6">
+      <h3 class="text-slate-700 font-semibold text-sm mb-5 flex items-center gap-2">
+        <span class="w-5 h-5 bg-amber-100 rounded-md flex items-center justify-center"><i class="fas fa-location-dot text-amber-600 text-[10px]"></i></span>
+        Address & Emergency Contact
+      </h3>
+
+      <div class="space-y-4">
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Residential Address</label>
+          <textarea name="address" rows="3" placeholder="Full address with city, state, pincode…"
+            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 resize-none">{{ form.address.value|default:'' }}</textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Emergency Contact Name</label>
+            <input type="text" name="emergency_contact_name" value="{{ form.emergency_contact_name.value|default:'' }}"
+              placeholder="Parent / Spouse name"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          </div>
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Emergency Contact Phone</label>
+            <div class="relative">
+              <i class="fas fa-phone-volume absolute left-3 top-3 text-slate-400 text-xs"></i>
+              <input type="text" name="emergency_contact_phone" value="{{ form.emergency_contact_phone.value|default:'' }}"
+                placeholder="9876500000"
+                class="w-full border border-slate-200 rounded-xl pl-8 pr-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="flex items-center justify-between gap-3 pt-1">
+      <a href="{% url 'employee_list' %}"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors">
+        <i class="fas fa-arrow-left text-xs"></i> Cancel
+      </a>
+      <div class="flex gap-3">
+        {% if not is_edit %}
+        <button type="reset"
+          class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors">
+          <i class="fas fa-rotate-left mr-1.5 text-xs"></i> Reset
+        </button>
+        {% endif %}
+        <button type="submit"
+          class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98] shadow-sm"
+          style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+          <i class="fas {% if is_edit %}fa-floppy-disk{% else %}fa-user-plus{% endif %} text-xs"></i>
+          {% if is_edit %}Save Changes{% else %}Add Employee{% endif %}
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Photo preview
+function previewPhoto(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.getElementById('previewImg');
+      const placeholder = document.getElementById('previewPlaceholder');
+      img.src = e.target.result;
+      img.classList.remove('hidden');
+      if (placeholder) placeholder.classList.add('hidden');
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// Filter designations by department
+const allDesignations = [...document.querySelectorAll('#designationSelect option[data-dept]')];
+
+function filterDesignations(deptId) {
+  const select = document.getElementById('designationSelect');
+  const currentVal = select.value;
+
+  // Remove all options except placeholder
+  while (select.options.length > 1) select.remove(1);
+
+  // Add matching ones
+  allDesignations.forEach(opt => {
+    if (!deptId || opt.dataset.dept === deptId) {
+      select.appendChild(opt.cloneNode(true));
+    }
+  });
+
+  // Restore selection if still valid
+  select.value = currentVal;
+}
+
+// Init on page load
+document.addEventListener('DOMContentLoaded', () => {
+  const dept = document.getElementById('departmentSelect').value;
+  if (dept) filterDesignations(dept);
+});
+</script>
+{% endblock %}
