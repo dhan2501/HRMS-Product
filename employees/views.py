@@ -170,8 +170,133 @@ def department_list(request):
     return render(request, 'employees/departments.html', {'departments': departments})
 
 
+# ── Add Department ────────────────────────────────────────────────────────────
+@login_required
+def add_department(request):
+    if request.method == 'POST':
+        name        = request.POST.get('name', '').strip()
+        code        = request.POST.get('code', '').strip().upper()
+        description = request.POST.get('description', '').strip()
+
+        if not name or not code:
+            messages.error(request, 'Department name and code are required.')
+        elif Department.objects.filter(name=name).exists():
+            messages.error(request, f'Department "{name}" already exists.')
+        elif Department.objects.filter(code=code).exists():
+            messages.error(request, f'Code "{code}" already used.')
+        else:
+            Department.objects.create(name=name, code=code, description=description)
+            messages.success(request, f'Department "{name}" added successfully!')
+            return redirect('department_list')
+
+    return render(request, 'employees/add_department.html')
+
+
+# ── Edit Department ───────────────────────────────────────────────────────────
+@login_required
+def edit_department(request, pk):
+    dept = get_object_or_404(Department, pk=pk)
+
+    if request.method == 'POST':
+        name        = request.POST.get('name', '').strip()
+        code        = request.POST.get('code', '').strip().upper()
+        description = request.POST.get('description', '').strip()
+
+        if not name or not code:
+            messages.error(request, 'Name and code are required.')
+        elif Department.objects.filter(name=name).exclude(pk=pk).exists():
+            messages.error(request, f'Department "{name}" already exists.')
+        elif Department.objects.filter(code=code).exclude(pk=pk).exists():
+            messages.error(request, f'Code "{code}" already used.')
+        else:
+            dept.name        = name
+            dept.code        = code
+            dept.description = description
+            dept.save()
+            messages.success(request, f'Department "{name}" updated!')
+            return redirect('department_list')
+
+    return render(request, 'employees/add_department.html', {'dept': dept})
+
+
+# ── Delete Department ─────────────────────────────────────────────────────────
+@login_required
+def delete_department(request, pk):
+    dept = get_object_or_404(Department, pk=pk)
+    if request.method == 'POST':
+        name = dept.name
+        dept.delete()
+        messages.success(request, f'Department "{name}" deleted.')
+    return redirect('department_list')
+
 # ── Designation List ──────────────────────────────────────────────────────────
 @login_required
 def designation_list(request):
     designations = Designation.objects.select_related('department').all()
     return render(request, 'employees/designations.html', {'designations': designations})
+
+# ── Add Designation ───────────────────────────────────────────────────────────
+@login_required
+def add_designation(request):
+    departments = Department.objects.all()
+
+    if request.method == 'POST':
+        title      = request.POST.get('title', '').strip()
+        dept_id    = request.POST.get('department')
+        level      = request.POST.get('level', 1)
+
+        if not title or not dept_id:
+            messages.error(request, 'Title and Department are required.')
+        elif Designation.objects.filter(title=title).exists():
+            messages.error(request, f'Designation "{title}" already exists.')
+        else:
+            dept = get_object_or_404(Department, pk=dept_id)
+            Designation.objects.create(title=title, department=dept, level=level)
+            messages.success(request, f'Designation "{title}" added successfully!')
+            return redirect('designation_list')
+
+    return render(request, 'employees/add_designation.html', {
+        'departments': departments,
+    })
+
+
+# ── Edit Designation ──────────────────────────────────────────────────────────
+@login_required
+def edit_designation(request, pk):
+    designation = get_object_or_404(Designation, pk=pk)
+    departments = Department.objects.all()
+
+    if request.method == 'POST':
+        title   = request.POST.get('title', '').strip()
+        dept_id = request.POST.get('department')
+        level   = request.POST.get('level', 1)
+
+        if not title or not dept_id:
+            messages.error(request, 'Title and Department are required.')
+        elif Designation.objects.filter(title=title).exclude(pk=pk).exists():
+            messages.error(request, f'Designation "{title}" already exists.')
+        else:
+            dept                = get_object_or_404(Department, pk=dept_id)
+            designation.title      = title
+            designation.department = dept
+            designation.level      = level
+            designation.save()
+            messages.success(request, f'Designation "{title}" updated!')
+            return redirect('designation_list')
+
+    return render(request, 'employees/add_designation.html', {
+        'designation': designation,
+        'departments': departments,
+        'is_edit':     True,
+    })
+
+
+# ── Delete Designation ────────────────────────────────────────────────────────
+@login_required
+def delete_designation(request, pk):
+    designation = get_object_or_404(Designation, pk=pk)
+    if request.method == 'POST':
+        title = designation.title
+        designation.delete()
+        messages.success(request, f'Designation "{title}" deleted.')
+    return redirect('designation_list')

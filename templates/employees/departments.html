@@ -1,34 +1,112 @@
 {% extends 'base.html' %}
 {% block title %}Departments{% endblock %}
 {% block page_title %}Departments{% endblock %}
-{% block page_subtitle %}Organisation structure{% endblock %}
+{% block page_subtitle %}Manage organisation structure{% endblock %}
+
 {% block content %}
-<div class="flex justify-between items-center mb-5">
-  <p class="text-slate-500 text-sm">{{ departments.count }} departments</p>
-  <a href="#" class="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors inline-flex items-center gap-2">
-    <i class="fas fa-plus"></i>Add Department
+
+<!-- Header -->
+<div class="flex items-center justify-between mb-5">
+  <p class="text-slate-500 text-sm">
+    <span class="font-semibold text-slate-700">{{ departments.count }}</span> department(s) total
+  </p>
+  <a href="{% url 'add_department' %}"
+    class="inline-flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors">
+    <i class="fas fa-plus text-xs"></i> Add Department
   </a>
 </div>
+
+<!-- Cards -->
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-{% for dept in departments %}
-<div class="bg-white rounded-2xl border border-slate-100 p-5 hover:border-brand-200 transition-colors">
-  <div class="flex items-start justify-between mb-3">
-    <div class="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center">
-      <i class="fas fa-sitemap text-brand-600 text-sm"></i>
+  {% for dept in departments %}
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 hover:border-brand-200 hover:shadow-sm transition-all">
+
+    <div class="flex items-start justify-between mb-3">
+      <div class="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center">
+        <i class="fas fa-sitemap text-brand-600 text-sm"></i>
+      </div>
+      <span class="bg-slate-100 text-slate-600 text-xs font-mono font-medium px-2 py-0.5 rounded-lg">
+        {{ dept.code }}
+      </span>
     </div>
-    <span class="bg-slate-100 text-slate-600 text-xs font-mono px-2 py-0.5 rounded-lg">{{ dept.code }}</span>
+
+    <h3 class="text-slate-800 font-semibold text-sm mb-1">{{ dept.name }}</h3>
+    <p class="text-slate-400 text-xs mb-4 min-h-[32px]">
+      {{ dept.description|default:"No description added"|truncatechars:70 }}
+    </p>
+
+    <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+      <span class="text-slate-500 text-xs">
+        <i class="fas fa-users mr-1 text-slate-400"></i>
+        <strong class="text-slate-700">{{ dept.emp_count }}</strong> employees
+      </span>
+      <div class="flex items-center gap-2">
+        <a href="{% url 'edit_department' dept.pk %}"
+          class="text-xs text-brand-600 hover:text-brand-700 font-medium hover:underline">
+          <i class="fas fa-pencil mr-1 text-[10px]"></i>Edit
+        </a>
+        <span class="text-slate-300">|</span>
+        <!-- Delete button -->
+        <button onclick="confirmDelete('{{ dept.name }}', '{% url 'delete_department' dept.pk %}')"
+          class="text-xs text-red-500 hover:text-red-600 font-medium hover:underline">
+          <i class="fas fa-trash mr-1 text-[10px]"></i>Delete
+        </button>
+      </div>
+    </div>
+
   </div>
-  <h3 class="text-slate-800 font-semibold text-sm mb-1">{{ dept.name }}</h3>
-  <p class="text-slate-400 text-xs mb-3">{{ dept.description|default:"No description"|truncatechars:60 }}</p>
-  <div class="flex items-center justify-between pt-3 border-t border-slate-100">
-    <span class="text-slate-600 text-xs font-medium"><i class="fas fa-users mr-1 text-slate-400"></i>{{ dept.emp_count }} employees</span>
-    <a href="#" class="text-brand-600 text-xs font-medium hover:underline">View</a>
+  {% empty %}
+  <div class="col-span-3 bg-white rounded-2xl border border-slate-100 py-16 text-center">
+    <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+      <i class="fas fa-sitemap text-slate-300 text-xl"></i>
+    </div>
+    <p class="text-slate-500 font-medium text-sm">No departments yet</p>
+    <p class="text-slate-400 text-xs mt-1 mb-4">Start by creating your first department</p>
+    <a href="{% url 'add_department' %}"
+      class="inline-flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors">
+      <i class="fas fa-plus text-xs"></i> Add First Department
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Delete Confirm Modal -->
+<div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+  <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+    <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+      <i class="fas fa-trash text-red-500 text-lg"></i>
+    </div>
+    <h3 class="text-slate-800 font-semibold text-center mb-1">Delete Department?</h3>
+    <p class="text-slate-500 text-sm text-center mb-5">
+      "<span id="deptName" class="font-medium text-slate-700"></span>" will be permanently deleted.
+    </p>
+    <div class="flex gap-3">
+      <button onclick="closeModal()"
+        class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors">
+        Cancel
+      </button>
+      <form id="deleteForm" method="post">
+        {% csrf_token %}
+        <button type="submit"
+          class="flex-1 px-4 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors">
+          Yes, Delete
+        </button>
+      </form>
+    </div>
   </div>
 </div>
-{% empty %}
-<div class="col-span-3 text-center py-12 bg-white rounded-2xl border border-slate-100">
-  <p class="text-slate-400 text-sm">No departments yet</p>
-</div>
-{% endfor %}
-</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(name, url) {
+  document.getElementById('deptName').textContent = name;
+  document.getElementById('deleteForm').action = url;
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+function closeModal() {
+  document.getElementById('deleteModal').classList.add('hidden');
+}
+</script>
 {% endblock %}

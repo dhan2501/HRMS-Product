@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Attendance Reports{% endblock %}
+{% block page_title %}Attendance Reports{% endblock %}
+{% block page_subtitle %}{{ month_name }} {{ year }} summary{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 text-center">
+    <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+      <i class="fas fa-circle-check text-emerald-500 text-lg"></i>
+    </div>
+    <p class="text-3xl font-bold text-slate-800">{{ total_present }}</p>
+    <p class="text-slate-500 text-xs mt-1">Total Present</p>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 text-center">
+    <div class="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+      <i class="fas fa-circle-xmark text-red-400 text-lg"></i>
+    </div>
+    <p class="text-3xl font-bold text-slate-800">{{ total_absent }}</p>
+    <p class="text-slate-500 text-xs mt-1">Total Absent</p>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 text-center">
+    <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+      <i class="fas fa-clock text-amber-500 text-lg"></i>
+    </div>
+    <p class="text-3xl font-bold text-slate-800">{{ total_late }}</p>
+    <p class="text-slate-500 text-xs mt-1">Late Arrivals</p>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 text-center">
+    <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+      <i class="fas fa-house-laptop text-blue-500 text-lg"></i>
+    </div>
+    <p class="text-3xl font-bold text-slate-800">{{ total_wfh }}</p>
+    <p class="text-slate-500 text-xs mt-1">Work From Home</p>
+  </div>
+</div>
+
+<div class="bg-white rounded-2xl border border-slate-100 p-12 text-center">
+  <i class="fas fa-chart-bar text-slate-300 text-4xl mb-3"></i>
+  <p class="text-slate-500 font-medium">Detailed charts coming soon</p>
+  <p class="text-slate-400 text-xs mt-1">Export to Excel feature will be added</p>
+</div>
+{% endblock %}

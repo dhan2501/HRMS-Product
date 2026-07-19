@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% block title %}{% if is_edit %}Edit Designation{% else %}Add Designation{% endif %}{% endblock %}
+{% block page_title %}{% if is_edit %}Edit Designation{% else %}Add Designation{% endif %}{% endblock %}
+{% block page_subtitle %}{% if is_edit %}Update "{{ designation.title }}"{% else %}Create a new job title{% endif %}{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-xs text-slate-400 mb-6">
+  <a href="{% url 'dashboard' %}" class="hover:text-brand-600">Dashboard</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <a href="{% url 'designation_list' %}" class="hover:text-brand-600">Designations</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <span class="text-slate-600 font-medium">{% if is_edit %}Edit{% else %}Add{% endif %}</span>
+</div>
+
+<div class="max-w-xl">
+  <div class="bg-white rounded-2xl border border-slate-100 p-6">
+
+    <!-- Header -->
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
+        <i class="fas fa-id-badge text-purple-600"></i>
+      </div>
+      <div>
+        <h2 class="text-slate-800 font-semibold text-sm">
+          {% if is_edit %}Edit Designation{% else %}New Designation{% endif %}
+        </h2>
+        <p class="text-slate-400 text-xs">
+          {% if is_edit %}Update designation details{% else %}Fill details to create a designation{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="space-y-5">
+
+        <!-- Title -->
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">
+            Designation Title <span class="text-red-500">*</span>
+          </label>
+          <input type="text" name="title"
+            value="{% if is_edit %}{{ designation.title }}{% endif %}"
+            placeholder="e.g. Software Engineer"
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+            required>
+        </div>
+
+        <!-- Department -->
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">
+            Department <span class="text-red-500">*</span>
+          </label>
+          <select name="department"
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 bg-white"
+            required>
+            <option value="">-- Select Department --</option>
+            {% for dept in departments %}
+              <option value="{{ dept.id }}"
+                {% if is_edit and designation.department_id == dept.id %}selected{% endif %}>
+                {{ dept.name }}
+              </option>
+            {% endfor %}
+          </select>
+          {% if not departments %}
+            <p class="text-amber-500 text-[11px] mt-1">
+              <i class="fas fa-triangle-exclamation mr-1"></i>
+              No departments found.
+              <a href="{% url 'add_department' %}" class="underline font-medium">Add a department first</a>
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Level -->
+        <!-- Level -->
+<div>
+  <label class="block text-slate-600 text-xs font-medium mb-3">
+    Seniority Level <span class="text-red-500">*</span>
+  </label>
+  <div class="grid grid-cols-5 gap-2">
+
+    <label class="cursor-pointer">
+      <input type="radio" name="level" value="1"
+        {% if is_edit and designation.level == 1 %}checked{% endif %}
+        {% if not is_edit %}checked{% endif %}
+        class="peer hidden">
+      <div class="text-center border-2 border-slate-200 rounded-xl py-2.5 px-1 peer-checked:border-brand-500 peer-checked:bg-brand-50 hover:border-brand-300 transition-all">
+        <div class="text-lg mb-0.5">🌱</div>
+        <p class="text-[10px] font-semibold text-slate-600">Intern</p>
+      </div>
+    </label>
+
+    <label class="cursor-pointer">
+      <input type="radio" name="level" value="2"
+        {% if is_edit and designation.level == 2 %}checked{% endif %}
+        class="peer hidden">
+      <div class="text-center border-2 border-slate-200 rounded-xl py-2.5 px-1 peer-checked:border-brand-500 peer-checked:bg-brand-50 hover:border-brand-300 transition-all">
+        <div class="text-lg mb-0.5">⚡</div>
+        <p class="text-[10px] font-semibold text-slate-600">Junior</p>
+      </div>
+    </label>
+
+    <label class="cursor-pointer">
+      <input type="radio" name="level" value="3"
+        {% if is_edit and designation.level == 3 %}checked{% endif %}
+        class="peer hidden">
+      <div class="text-center border-2 border-slate-200 rounded-xl py-2.5 px-1 peer-checked:border-brand-500 peer-checked:bg-brand-50 hover:border-brand-300 transition-all">
+        <div class="text-lg mb-0.5">🚀</div>
+        <p class="text-[10px] font-semibold text-slate-600">Mid</p>
+      </div>
+    </label>
+
+    <label class="cursor-pointer">
+      <input type="radio" name="level" value="4"
+        {% if is_edit and designation.level == 4 %}checked{% endif %}
+        class="peer hidden">
+      <div class="text-center border-2 border-slate-200 rounded-xl py-2.5 px-1 peer-checked:border-brand-500 peer-checked:bg-brand-50 hover:border-brand-300 transition-all">
+        <div class="text-lg mb-0.5">🏆</div>
+        <p class="text-[10px] font-semibold text-slate-600">Senior</p>
+      </div>
+    </label>
+
+    <label class="cursor-pointer">
+      <input type="radio" name="level" value="5"
+        {% if is_edit and designation.level == 5 %}checked{% endif %}
+        class="peer hidden">
+      <div class="text-center border-2 border-slate-200 rounded-xl py-2.5 px-1 peer-checked:border-brand-500 peer-checked:bg-brand-50 hover:border-brand-300 transition-all">
+        <div class="text-lg mb-0.5">👑</div>
+        <p class="text-[10px] font-semibold text-slate-600">Lead</p>
+      </div>
+    </label>
+
+  </div>
+</div>
+
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex items-center justify-between mt-6 pt-5 border-t border-slate-100">
+        <a href="{% url 'designation_list' %}"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors">
+          <i class="fas fa-arrow-left text-xs"></i> Cancel
+        </a>
+        <button type="submit"
+          class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all shadow-sm"
+          style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+          <i class="fas {% if is_edit %}fa-floppy-disk{% else %}fa-plus{% endif %} text-xs"></i>
+          {% if is_edit %}Save Changes{% else %}Add Designation{% endif %}
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

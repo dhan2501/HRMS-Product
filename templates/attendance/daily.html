@@ -1,0 +1,354 @@
+{% extends 'base.html' %}
+{% block title %}Daily Attendance{% endblock %}
+{% block page_title %}Daily Attendance{% endblock %}
+{% block page_subtitle %}Mark and track attendance for {{ selected_date|date:"l, d F Y" }}{% endblock %}
+
+{% block content %}
+
+<!-- Date Navigation -->
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+  <div class="flex items-center gap-2">
+    <a href="?date={{ prev_date|date:'Y-m-d' }}"
+      class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors">
+      <i class="fas fa-chevron-left text-xs"></i>
+    </a>
+    <form method="get">
+      <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}"
+        onchange="this.form.submit()"
+        class="border border-slate-200 rounded-xl px-3 py-2 text-slate-700 text-sm focus:outline-none focus:border-brand-400 bg-white">
+    </form>
+    <a href="?date={{ next_date|date:'Y-m-d' }}"
+      class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors">
+      <i class="fas fa-chevron-right text-xs"></i>
+    </a>
+    {% if selected_date != today %}
+    <a href="?date={{ today|date:'Y-m-d' }}"
+      class="text-xs text-brand-600 font-medium hover:underline px-2">Today</a>
+    {% endif %}
+  </div>
+
+  <!-- Bulk Mark -->
+  <div class="flex items-center gap-2">
+    <form method="post" action="{% url 'bulk_attendance' %}" id="bulkForm">
+      {% csrf_token %}
+      <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+      <div class="flex items-center gap-2">
+        <select name="bulk_status"
+          class="border border-slate-200 rounded-xl px-3 py-2 text-slate-600 text-sm focus:outline-none bg-white">
+          <option value="present">Present</option>
+          <option value="absent">Absent</option>
+          <option value="work_from_home">WFH</option>
+          <option value="holiday">Holiday</option>
+        </select>
+        <button type="button" onclick="bulkMark()"
+          class="inline-flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors">
+          <i class="fas fa-check-double text-xs"></i> Mark All
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-circle-check text-emerald-500"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">{{ present }}</p>
+      <p class="text-slate-500 text-xs">Present</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-circle-xmark text-red-400"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">{{ absent }}</p>
+      <p class="text-slate-500 text-xs">Absent</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-clock text-amber-500"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">{{ not_marked }}</p>
+      <p class="text-slate-500 text-xs">Not Marked</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-users text-brand-500"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">{{ total }}</p>
+      <p class="text-slate-500 text-xs">Total</p>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance Table -->
+<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+  <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+    <h3 class="text-slate-700 font-semibold text-sm">Employee Attendance</h3>
+    <p class="text-slate-400 text-xs">{{ selected_date|date:"d F Y" }}</p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead>
+        <tr class="bg-slate-50 border-b border-slate-100">
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-5 py-3">
+            <input type="checkbox" id="selectAll" onchange="toggleAll(this)"
+              class="w-3.5 h-3.5 rounded accent-brand-600 mr-2">
+            Employee
+          </th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">Department</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">Status</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">Check In</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">Check Out</th>
+          <th class="px-4 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for item in attendance_data %}
+        <tr class="hover:bg-slate-50/60 transition-colors" id="row-{{ item.employee.id }}">
+
+          <!-- Employee -->
+          <td class="px-5 py-3">
+            <div class="flex items-center gap-3">
+              <input type="checkbox" name="emp_check" value="{{ item.employee.id }}"
+                class="w-3.5 h-3.5 rounded accent-brand-600 emp-checkbox flex-shrink-0">
+              {% if item.employee.photo %}
+                <img src="{{ item.employee.photo.url }}" class="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-slate-200">
+              {% else %}
+                <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  {{ item.employee.first_name|first|upper }}{{ item.employee.last_name|first|upper }}
+                </div>
+              {% endif %}
+              <div>
+                <p class="text-slate-700 text-sm font-medium">{{ item.employee.full_name }}</p>
+                <p class="text-slate-400 text-xs">{{ item.employee.employee_id }}</p>
+              </div>
+            </div>
+          </td>
+
+          <!-- Department -->
+          <td class="px-4 py-3 text-slate-500 text-sm">{{ item.employee.department.name|default:"—" }}</td>
+
+          <!-- Status -->
+          <td class="px-4 py-3">
+            {% if item.record %}
+              <span class="text-xs px-2.5 py-1 rounded-full font-medium
+                {% if item.record.status == 'present' %}bg-emerald-100 text-emerald-700
+                {% elif item.record.status == 'absent' %}bg-red-100 text-red-600
+                {% elif item.record.status == 'late' %}bg-amber-100 text-amber-700
+                {% elif item.record.status == 'work_from_home' %}bg-blue-100 text-blue-700
+                {% elif item.record.status == 'half_day' %}bg-purple-100 text-purple-700
+                {% elif item.record.status == 'holiday' %}bg-slate-100 text-slate-600
+                {% endif %}">
+                {{ item.record.get_status_display }}
+              </span>
+            {% else %}
+              <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-400">
+                Not Marked
+              </span>
+            {% endif %}
+          </td>
+
+          <!-- Check In -->
+          <td class="px-4 py-3 text-slate-600 text-sm">
+            {{ item.record.check_in|time:"H:i"|default:"—" }}
+          </td>
+
+          <!-- Check Out -->
+          <td class="px-4 py-3 text-slate-600 text-sm">
+            {{ item.record.check_out|time:"H:i"|default:"—" }}
+          </td>
+
+          <!-- Action -->
+          <td class="px-4 py-3">
+            <button onclick="openModal({{ item.employee.id }}, '{{ item.employee.full_name }}', '{{ item.record.status|default:'' }}', '{{ item.record.check_in|time:'H:i'|default:'' }}', '{{ item.record.check_out|time:'H:i'|default:'' }}', '{{ item.record.notes|default:'' }}')"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
+                {% if item.record %}bg-brand-50 text-brand-600 hover:bg-brand-100{% else %}bg-emerald-50 text-emerald-600 hover:bg-emerald-100{% endif %}">
+              <i class="fas {% if item.record %}fa-pencil{% else %}fa-plus{% endif %} text-[10px]"></i>
+              {% if item.record %}Edit{% else %}Mark{% endif %}
+            </button>
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center py-12 text-slate-400 text-sm">No active employees found</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Mark Attendance Modal -->
+<div id="attendanceModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl w-full max-w-md shadow-xl">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h3 class="text-slate-800 font-semibold text-sm" id="modalTitle">Mark Attendance</h3>
+      <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+
+    <form method="post" action="{% url 'mark_attendance' %}" class="p-6">
+      {% csrf_token %}
+      <input type="hidden" name="employee_id" id="modalEmpId">
+      <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+
+      <div class="space-y-4">
+
+        <!-- Status -->
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-2">Status</label>
+          <div class="grid grid-cols-3 gap-2">
+            {% for val, label in status_choices|default:"" %}
+            {% empty %}
+            <!-- Hardcoded since context not passed -->
+            {% endfor %}
+            <label class="cursor-pointer">
+              <input type="radio" name="status" value="present" class="peer hidden" id="s_present">
+              <div class="text-center border-2 border-slate-200 rounded-xl py-2 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 hover:border-emerald-300 transition-all">
+                <i class="fas fa-circle-check text-emerald-500 text-sm mb-0.5 block"></i>
+                <p class="text-[10px] font-semibold text-slate-600">Present</p>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="status" value="absent" class="peer hidden" id="s_absent">
+              <div class="text-center border-2 border-slate-200 rounded-xl py-2 peer-checked:border-red-400 peer-checked:bg-red-50 hover:border-red-300 transition-all">
+                <i class="fas fa-circle-xmark text-red-400 text-sm mb-0.5 block"></i>
+                <p class="text-[10px] font-semibold text-slate-600">Absent</p>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="status" value="late" class="peer hidden" id="s_late">
+              <div class="text-center border-2 border-slate-200 rounded-xl py-2 peer-checked:border-amber-400 peer-checked:bg-amber-50 hover:border-amber-300 transition-all">
+                <i class="fas fa-clock text-amber-500 text-sm mb-0.5 block"></i>
+                <p class="text-[10px] font-semibold text-slate-600">Late</p>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="status" value="work_from_home" class="peer hidden" id="s_wfh">
+              <div class="text-center border-2 border-slate-200 rounded-xl py-2 peer-checked:border-blue-400 peer-checked:bg-blue-50 hover:border-blue-300 transition-all">
+                <i class="fas fa-house-laptop text-blue-500 text-sm mb-0.5 block"></i>
+                <p class="text-[10px] font-semibold text-slate-600">WFH</p>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="status" value="half_day" class="peer hidden" id="s_half">
+              <div class="text-center border-2 border-slate-200 rounded-xl py-2 peer-checked:border-purple-400 peer-checked:bg-purple-50 hover:border-purple-300 transition-all">
+                <i class="fas fa-circle-half-stroke text-purple-500 text-sm mb-0.5 block"></i>
+                <p class="text-[10px] font-semibold text-slate-600">Half Day</p>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="status" value="holiday" class="peer hidden" id="s_holiday">
+              <div class="text-center border-2 border-slate-200 rounded-xl py-2 peer-checked:border-slate-400 peer-checked:bg-slate-50 hover:border-slate-300 transition-all">
+                <i class="fas fa-umbrella-beach text-slate-400 text-sm mb-0.5 block"></i>
+                <p class="text-[10px] font-semibold text-slate-600">Holiday</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Check In / Out -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Check In</label>
+            <input type="time" name="check_in" id="modalCheckIn"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+          </div>
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Check Out</label>
+            <input type="time" name="check_out" id="modalCheckOut"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Notes (optional)</label>
+          <input type="text" name="notes" id="modalNotes" placeholder="Any remarks…"
+            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+        </div>
+      </div>
+
+      <div class="flex gap-3 mt-5 pt-4 border-t border-slate-100">
+        <button type="button" onclick="closeModal()"
+          class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+          Cancel
+        </button>
+        <button type="submit"
+          class="flex-1 px-4 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90"
+          style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+          Save Attendance
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openModal(empId, empName, status, checkIn, checkOut, notes) {
+  document.getElementById('modalEmpId').value  = empId;
+  document.getElementById('modalTitle').textContent = 'Attendance — ' + empName;
+  document.getElementById('modalCheckIn').value  = checkIn  || '';
+  document.getElementById('modalCheckOut').value = checkOut || '';
+  document.getElementById('modalNotes').value    = notes    || '';
+
+  // Set status radio
+  const statusMap = {
+    'present': 's_present', 'absent': 's_absent', 'late': 's_late',
+    'work_from_home': 's_wfh', 'half_day': 's_half', 'holiday': 's_holiday'
+  };
+  const radioId = statusMap[status] || 's_present';
+  document.getElementById(radioId).checked = true;
+
+  document.getElementById('attendanceModal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('attendanceModal').classList.add('hidden');
+}
+
+// Select all checkboxes
+function toggleAll(source) {
+  document.querySelectorAll('.emp-checkbox').forEach(cb => cb.checked = source.checked);
+}
+
+// Bulk mark selected employees
+function bulkMark() {
+  const checked = [...document.querySelectorAll('.emp-checkbox:checked')].map(cb => cb.value);
+  if (checked.length === 0) {
+    alert('Please select at least one employee.');
+    return;
+  }
+  const form = document.getElementById('bulkForm');
+  // Remove previous hidden inputs
+  form.querySelectorAll('input[name="employee_ids"]').forEach(el => el.remove());
+  checked.forEach(id => {
+    const input = document.createElement('input');
+    input.type  = 'hidden';
+    input.name  = 'employee_ids';
+    input.value = id;
+    form.appendChild(input);
+  });
+  form.submit();
+}
+
+// Close modal on backdrop click
+document.getElementById('attendanceModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+{% endblock %}
