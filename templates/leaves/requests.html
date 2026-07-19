@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+{% block title %}Leave Requests{% endblock %}
+{% block page_title %}Leave Requests{% endblock %}
+{% block page_subtitle %}Manage employee leave applications{% endblock %}
+
+{% block content %}
+
+<!-- Stat Cards -->
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-hourglass-half text-amber-500"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">{{ pending }}</p>
+      <p class="text-slate-500 text-xs">Pending</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-circle-check text-emerald-500"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">{{ approved }}</p>
+      <p class="text-slate-500 text-xs">Approved</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-circle-xmark text-red-400"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">{{ rejected }}</p>
+      <p class="text-slate-500 text-xs">Rejected</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-file-lines text-brand-500"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">{{ total }}</p>
+      <p class="text-slate-500 text-xs">Total</p>
+    </div>
+  </div>
+</div>
+
+<!-- Filters & Actions -->
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+  <form method="get" class="flex flex-wrap items-center gap-2">
+    <input type="text" name="search" value="{{ search }}"
+      placeholder="Search employee…"
+      class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none focus:border-brand-400 bg-white w-48">
+    <select name="status" onchange="this.form.submit()"
+      class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none bg-white">
+      <option value="">All Status</option>
+      <option value="pending"   {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+      <option value="approved"  {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+      <option value="rejected"  {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+      <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+    </select>
+    <button type="submit"
+      class="bg-slate-100 text-slate-600 px-3 py-2 rounded-xl text-sm hover:bg-slate-200 transition-colors">
+      <i class="fas fa-magnifying-glass"></i>
+    </button>
+    {% if status_filter or search %}
+    <a href="{% url 'leave_requests' %}" class="text-xs text-slate-400 hover:text-red-500">
+      <i class="fas fa-xmark mr-1"></i>Clear
+    </a>
+    {% endif %}
+  </form>
+  <a href="{% url 'apply_leave' %}"
+    class="inline-flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors">
+    <i class="fas fa-plus text-xs"></i> Apply Leave
+  </a>
+</div>
+
+<!-- Table -->
+<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead>
+        <tr class="bg-slate-50 border-b border-slate-100">
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-5 py-3.5">Employee</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Leave Type</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">From</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">To</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Days</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Status</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Applied On</th>
+          <th class="px-4 py-3.5"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for leave in leaves %}
+        <tr class="hover:bg-slate-50/60 transition-colors">
+
+          <!-- Employee -->
+          <td class="px-5 py-3.5">
+            <div class="flex items-center gap-3">
+              {% if leave.employee.photo %}
+                <img src="{{ leave.employee.photo.url }}" class="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-slate-200">
+              {% else %}
+                <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  {{ leave.employee.first_name|first|upper }}{{ leave.employee.last_name|first|upper }}
+                </div>
+              {% endif %}
+              <div>
+                <p class="text-slate-700 text-sm font-medium">{{ leave.employee.full_name }}</p>
+                <p class="text-slate-400 text-xs">{{ leave.employee.department.name|default:"—" }}</p>
+              </div>
+            </div>
+          </td>
+
+          <!-- Leave Type -->
+          <td class="px-4 py-3.5">
+            <span class="inline-flex items-center gap-1.5 bg-brand-50 text-brand-700 text-xs font-medium px-2.5 py-1 rounded-lg">
+              {{ leave.leave_type.name }}
+              {% if leave.leave_type.is_paid %}
+                <span class="text-emerald-500 text-[9px]">PAID</span>
+              {% else %}
+                <span class="text-red-400 text-[9px]">UNPAID</span>
+              {% endif %}
+            </span>
+          </td>
+
+          <!-- Dates -->
+          <td class="px-4 py-3.5 text-slate-600 text-sm">{{ leave.start_date|date:"d M Y" }}</td>
+          <td class="px-4 py-3.5 text-slate-600 text-sm">{{ leave.end_date|date:"d M Y" }}</td>
+
+          <!-- Days -->
+          <td class="px-4 py-3.5">
+            <span class="text-slate-700 font-semibold text-sm">{{ leave.days }}</span>
+            <span class="text-slate-400 text-xs"> day{{ leave.days|pluralize }}</span>
+          </td>
+
+          <!-- Status -->
+          <td class="px-4 py-3.5">
+            <span class="text-xs px-2.5 py-1 rounded-full font-medium
+              {% if leave.status == 'pending' %}bg-amber-100 text-amber-700
+              {% elif leave.status == 'approved' %}bg-emerald-100 text-emerald-700
+              {% elif leave.status == 'rejected' %}bg-red-100 text-red-600
+              {% else %}bg-slate-100 text-slate-500{% endif %}">
+              {{ leave.get_status_display }}
+            </span>
+          </td>
+
+          <!-- Applied On -->
+          <td class="px-4 py-3.5 text-slate-400 text-xs">{{ leave.created_at|date:"d M Y" }}</td>
+
+          <!-- Actions -->
+          <td class="px-4 py-3.5">
+            <div class="flex items-center gap-1.5">
+              <!-- View reason -->
+              <button onclick="viewReason('{{ leave.employee.full_name }}', '{{ leave.reason|escapejs }}', '{{ leave.rejection_reason|escapejs }}')"
+                class="w-7 h-7 rounded-lg bg-slate-50 text-slate-500 hover:bg-slate-100 flex items-center justify-center text-xs" title="View Reason">
+                <i class="fas fa-eye"></i>
+              </button>
+
+              {% if leave.status == 'pending' %}
+              <!-- Approve -->
+              <form method="post" action="{% url 'approve_leave' leave.pk %}" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                  class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center text-xs" title="Approve">
+                  <i class="fas fa-check"></i>
+                </button>
+              </form>
+              <!-- Reject -->
+              <button onclick="openRejectModal({{ leave.pk }}, '{{ leave.employee.full_name }}')"
+                class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 flex items-center justify-center text-xs" title="Reject">
+                <i class="fas fa-xmark"></i>
+              </button>
+              {% endif %}
+
+              {% if leave.status == 'pending' %}
+              <!-- Cancel -->
+              <form method="post" action="{% url 'cancel_leave' leave.pk %}" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                  class="w-7 h-7 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-100 flex items-center justify-center text-xs" title="Cancel">
+                  <i class="fas fa-ban"></i>
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="py-16 text-center">
+            <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <i class="fas fa-umbrella-beach text-slate-300 text-xl"></i>
+            </div>
+            <p class="text-slate-500 font-medium text-sm">No leave requests found</p>
+            <p class="text-slate-400 text-xs mt-1 mb-4">Apply a leave request to get started</p>
+            <a href="{% url 'apply_leave' %}"
+              class="inline-flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700">
+              <i class="fas fa-plus text-xs"></i> Apply Leave
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- View Reason Modal -->
+<div id="reasonModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl w-full max-w-md shadow-xl p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-slate-800 font-semibold text-sm" id="reasonModalTitle">Leave Reason</h3>
+      <button onclick="document.getElementById('reasonModal').classList.add('hidden')"
+        class="text-slate-400 hover:text-slate-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+    <div class="bg-slate-50 rounded-xl p-4 mb-3">
+      <p class="text-xs text-slate-500 font-medium mb-1">Reason for Leave</p>
+      <p class="text-slate-700 text-sm" id="reasonText"></p>
+    </div>
+    <div id="rejectionBlock" class="bg-red-50 rounded-xl p-4 hidden">
+      <p class="text-xs text-red-500 font-medium mb-1">Rejection Reason</p>
+      <p class="text-slate-700 text-sm" id="rejectionText"></p>
+    </div>
+    <button onclick="document.getElementById('reasonModal').classList.add('hidden')"
+      class="w-full mt-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+      Close
+    </button>
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div id="rejectModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl w-full max-w-md shadow-xl p-6">
+    <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+      <i class="fas fa-circle-xmark text-red-500 text-lg"></i>
+    </div>
+    <h3 class="text-slate-800 font-semibold text-center mb-1">Reject Leave Request</h3>
+    <p class="text-slate-500 text-sm text-center mb-4">
+      For <span id="rejectEmpName" class="font-medium text-slate-700"></span>
+    </p>
+    <form method="post" id="rejectForm">
+      {% csrf_token %}
+      <textarea name="rejection_reason" rows="3"
+        placeholder="Reason for rejection (optional)…"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-red-300 resize-none mb-4"></textarea>
+      <div class="flex gap-3">
+        <button type="button" onclick="document.getElementById('rejectModal').classList.add('hidden')"
+          class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+          Cancel
+        </button>
+        <button type="submit"
+          class="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600">
+          Reject
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function viewReason(name, reason, rejection) {
+  document.getElementById('reasonModalTitle').textContent = name + ' — Leave Reason';
+  document.getElementById('reasonText').textContent = reason || 'No reason provided.';
+  const rejBlock = document.getElementById('rejectionBlock');
+  if (rejection) {
+    document.getElementById('rejectionText').textContent = rejection;
+    rejBlock.classList.remove('hidden');
+  } else {
+    rejBlock.classList.add('hidden');
+  }
+  document.getElementById('reasonModal').classList.remove('hidden');
+}
+
+function openRejectModal(pk, name) {
+  document.getElementById('rejectEmpName').textContent = name;
+  document.getElementById('rejectForm').action = '/leaves/' + pk + '/reject/';
+  document.getElementById('rejectModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}

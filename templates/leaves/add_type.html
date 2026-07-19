@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}{% if is_edit %}Edit Leave Type{% else %}Add Leave Type{% endif %}{% endblock %}
+{% block page_title %}{% if is_edit %}Edit Leave Type{% else %}Add Leave Type{% endif %}{% endblock %}
+
+{% block content %}
+<div class="flex items-center gap-2 text-xs text-slate-400 mb-6">
+  <a href="{% url 'dashboard' %}" class="hover:text-brand-600">Dashboard</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <a href="{% url 'leave_types' %}" class="hover:text-brand-600">Leave Types</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <span class="text-slate-600 font-medium">{% if is_edit %}Edit{% else %}Add{% endif %}</span>
+</div>
+
+<div class="max-w-xl">
+  <div class="bg-white rounded-2xl border border-slate-100 p-6">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+        <i class="fas fa-umbrella-beach text-amber-500"></i>
+      </div>
+      <div>
+        <h2 class="text-slate-800 font-semibold text-sm">{% if is_edit %}Edit Leave Type{% else %}New Leave Type{% endif %}</h2>
+        <p class="text-slate-400 text-xs">e.g. Casual Leave, Sick Leave, Earned Leave</p>
+      </div>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="space-y-4">
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Name <span class="text-red-500">*</span></label>
+            <input type="text" name="name" value="{% if is_edit %}{{ lt.name }}{% endif %}"
+              placeholder="e.g. Casual Leave"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+              required>
+          </div>
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Code <span class="text-red-500">*</span></label>
+            <input type="text" name="code" value="{% if is_edit %}{{ lt.code }}{% endif %}"
+              placeholder="e.g. CL" maxlength="10"
+              oninput="this.value = this.value.toUpperCase()"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm font-mono focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 uppercase"
+              required>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Days Allowed Per Year <span class="text-red-500">*</span></label>
+          <input type="number" name="days_allowed" value="{% if is_edit %}{{ lt.days_allowed }}{% else %}0{% endif %}"
+            min="0" max="365"
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Description</label>
+          <textarea name="description" rows="2"
+            placeholder="Brief description…"
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 resize-none">{% if is_edit %}{{ lt.description }}{% endif %}</textarea>
+        </div>
+
+        <!-- Toggles -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-slate-50 rounded-xl p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-slate-700 text-xs font-semibold">Paid Leave</p>
+                <p class="text-slate-400 text-[10px]">Employee gets paid during leave</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" name="is_paid" class="sr-only peer"
+                  {% if not is_edit or lt.is_paid %}checked{% endif %}>
+                <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:bg-brand-500 transition-colors"></div>
+                <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
+              </label>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 rounded-xl p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-slate-700 text-xs font-semibold">Carry Forward</p>
+                <p class="text-slate-400 text-[10px]">Unused leaves carry to next year</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" name="carry_forward" id="carryForwardToggle"
+                  class="sr-only peer" onchange="toggleCarryForward(this)"
+                  {% if is_edit and lt.carry_forward %}checked{% endif %}>
+                <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:bg-brand-500 transition-colors"></div>
+                <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Max carry forward -->
+        <div id="carryForwardDays" class="{% if not is_edit or not lt.carry_forward %}hidden{% endif %}">
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Max Carry Forward Days</label>
+          <input type="number" name="max_carry_forward_days"
+            value="{% if is_edit %}{{ lt.max_carry_forward_days }}{% else %}0{% endif %}"
+            min="0" max="365"
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+        </div>
+
+      </div>
+
+      <div class="flex items-center justify-between mt-6 pt-5 border-t border-slate-100">
+        <a href="{% url 'leave_types' %}"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+          <i class="fas fa-arrow-left text-xs"></i> Cancel
+        </a>
+        <button type="submit"
+          class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 shadow-sm"
+          style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+          <i class="fas {% if is_edit %}fa-floppy-disk{% else %}fa-plus{% endif %} text-xs"></i>
+          {% if is_edit %}Save Changes{% else %}Add Leave Type{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleCarryForward(el) {
+  document.getElementById('carryForwardDays').classList.toggle('hidden', !el.checked);
+}
+</script>
+{% endblock %}
