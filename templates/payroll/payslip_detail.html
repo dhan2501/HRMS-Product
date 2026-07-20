@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}Payslip Detail{% endblock %}
+{% block page_title %}Payslip{% endblock %}
+{% block page_subtitle %}Employee Payslip{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+
+    <div class="p-6 text-white" style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-indigo-200 text-xs font-medium uppercase tracking-wide">Payslip</p>
+          <h2 class="text-white font-bold text-xl mt-0.5">{{ slip.employee.full_name }}</h2>
+          <p class="text-indigo-200 text-sm mt-1">
+            {{ slip.employee.designation.title|default:"" }} - {{ slip.employee.department.name|default:"" }}
+          </p>
+        </div>
+        <div class="text-right">
+          <p class="text-indigo-200 text-xs">Pay Period</p>
+          <p class="text-white font-bold text-lg">{{ slip.month }}/{{ slip.year }}</p>
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium
+            {% if slip.status == 'paid' %}bg-emerald-400 text-white
+            {% else %}bg-amber-300 text-amber-900{% endif %}">
+            {{ slip.get_status_display }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-6">
+      <div class="grid grid-cols-2 gap-6">
+
+        <div>
+          <h3 class="text-slate-600 text-xs font-semibold uppercase tracking-wide mb-3">Earnings</h3>
+          <div class="space-y-2.5">
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">Basic Salary</span>
+              <span class="text-slate-700 font-medium">Rs. {{ slip.basic|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">HRA</span>
+              <span class="text-slate-700 font-medium">Rs. {{ slip.hra|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">Special Allowance</span>
+              <span class="text-slate-700 font-medium">Rs. {{ slip.special_allowance|floatformat:0 }}</span>
+            </div>
+            <div class="border-t border-slate-100 pt-2 flex justify-between text-sm font-semibold">
+              <span class="text-slate-700">Gross Salary</span>
+              <span class="text-emerald-600">Rs. {{ slip.gross_salary|floatformat:0 }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-slate-600 text-xs font-semibold uppercase tracking-wide mb-3">Deductions</h3>
+          <div class="space-y-2.5">
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">PF Deduction</span>
+              <span class="text-red-500 font-medium">- Rs. {{ slip.pf_deduction|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">Professional Tax</span>
+              <span class="text-red-500 font-medium">- Rs. {{ slip.professional_tax|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">TDS</span>
+              <span class="text-red-500 font-medium">- Rs. {{ slip.tds|floatformat:0 }}</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="mt-6 p-4 rounded-xl bg-indigo-50 border border-indigo-100">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-slate-600 text-xs font-medium">Net Pay (Take Home)</p>
+            {% if slip.payment_date %}
+            <p class="text-slate-400 text-xs mt-0.5">Paid on {{ slip.payment_date|date:"d M Y" }}</p>
+            {% endif %}
+          </div>
+          <p class="text-brand-700 font-bold text-2xl">Rs. {{ slip.net_salary|floatformat:0 }}</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 mt-5 pt-5 border-t border-slate-100">
+        <a href="{% url 'payslips' %}"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+          Back
+        </a>
+        {% if slip.status != 'paid' %}
+        <form method="post" action="{% url 'mark_paid' slip.pk %}">
+          {% csrf_token %}
+          <button type="submit"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600">
+            Mark as Paid
+          </button>
+        </form>
+        {% endif %}
+        <button onclick="window.print()"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 ml-auto">
+          Print
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

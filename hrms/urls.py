@@ -17,4 +17,7 @@ urlpatterns = [
     path('api/v1/', include('leaves.api_urls')),
     path('api/v1/', include('payroll.api_urls')),
     path('api/v1/', include('recruitment.api_urls')),
+
+    # Employee Self Service Portal
+    path('portal/', include('employees.portal_urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

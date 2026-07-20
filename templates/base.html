@@ -111,11 +111,11 @@
 
       <p class="nav-group-label text-slate-400 px-3 pt-4 pb-1">Finance</p>
 
-      <a href="/payroll/" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+      <a href="{% url 'salary_structure' %}" class="sidebar-item {% if request.resolver_match.url_name == 'salary_structure' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
         <i class="fas fa-wallet w-4 text-center"></i>
         <span>Salary Structure</span>
       </a>
-      <a href="#" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+      <a href="{% url 'payslips' %}" class="sidebar-item {% if request.resolver_match.url_name == 'payslips' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
         <i class="fas fa-file-invoice-dollar w-4 text-center"></i>
         <span>Payslips</span>
       </a>
