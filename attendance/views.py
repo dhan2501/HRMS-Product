@@ -5,7 +5,8 @@ from django.utils import timezone
 from datetime import date, timedelta
 import calendar
 from employees.models import Employee
-from .models import AttendanceRecord, Holiday
+from .models import AttendanceRecord, Holiday,WorkFromHomeRequest
+# from .models import AttendanceRecord, Holiday, WorkFromHomeRequest
 
 
 # ── Daily Attendance ──────────────────────────────────────────────────────────
@@ -205,3 +206,60 @@ def attendance_reports(request):
         'year':          year,
         'month_name':    calendar.month_name[month],
     })
+
+
+
+
+
+# ── WFH Requests (Admin) ──────────────────────────────────────────────────────
+@login_required
+def wfh_requests(request):
+    status_filter = request.GET.get('status', '')
+    requests_list = WorkFromHomeRequest.objects.select_related(
+        'employee', 'employee__department', 'approved_by'
+    ).all()
+
+    if status_filter:
+        requests_list = requests_list.filter(status=status_filter)
+
+    pending  = WorkFromHomeRequest.objects.filter(status='pending').count()
+    approved = WorkFromHomeRequest.objects.filter(status='approved').count()
+    rejected = WorkFromHomeRequest.objects.filter(status='rejected').count()
+
+    return render(request, 'attendance/wfh_requests.html', {
+        'requests_list':  requests_list,
+        'pending':        pending,
+        'approved':       approved,
+        'rejected':       rejected,
+        'status_filter':  status_filter,
+    })
+
+
+@login_required
+def approve_wfh(request, pk):
+    wfh = get_object_or_404(WorkFromHomeRequest, pk=pk)
+    if request.method == 'POST':
+        wfh.status      = 'approved'
+        wfh.approved_at = timezone.now()
+        wfh.save()
+
+        # Auto mark attendance as WFH
+        from employees.models import Employee
+        AttendanceRecord.objects.update_or_create(
+            employee=wfh.employee,
+            date=wfh.date,
+            defaults={'status': 'work_from_home', 'notes': 'WFH approved'}
+        )
+        messages.success(request, f'WFH approved for {wfh.employee.full_name} on {wfh.date}')
+    return redirect('wfh_requests')
+
+
+@login_required
+def reject_wfh(request, pk):
+    wfh = get_object_or_404(WorkFromHomeRequest, pk=pk)
+    if request.method == 'POST':
+        wfh.status           = 'rejected'
+        wfh.rejection_reason = request.POST.get('reason', '')
+        wfh.save()
+        messages.success(request, f'WFH rejected for {wfh.employee.full_name}')
+    return redirect('wfh_requests')

@@ -5,9 +5,10 @@ from django.utils import timezone
 from datetime import date, timedelta
 import calendar
 from .models import Employee
-from attendance.models import AttendanceRecord
+# from attendance.models import AttendanceRecord
 from leaves.models import LeaveRequest, LeaveType, LeaveBalance
 from payroll.models import Payslip, SalaryStructure
+from attendance.models import AttendanceRecord, WorkFromHomeRequest
 
 
 def get_employee(request):
@@ -268,3 +269,65 @@ def portal_profile(request):
     if not employee:
         return redirect('dashboard')
     return render(request, 'portal/profile.html', {'employee': employee})
+
+
+
+
+
+# ── Portal WFH ────────────────────────────────────────────────────────────────
+@login_required
+def portal_wfh(request):
+    employee = get_employee(request)
+    if not employee:
+        return redirect('dashboard')
+
+    today    = date.today()
+    my_wfh   = WorkFromHomeRequest.objects.filter(
+        employee=employee
+    ).order_by('-created_at')
+
+    pending  = my_wfh.filter(status='pending').count()
+    approved = my_wfh.filter(status='approved').count()
+
+    if request.method == 'POST':
+        wfh_date = request.POST.get('date')
+        reason   = request.POST.get('reason', '').strip()
+
+        if not wfh_date or not reason:
+            messages.error(request, 'Date and reason are required.')
+        else:
+            from datetime import datetime
+            req_date = datetime.strptime(wfh_date, '%Y-%m-%d').date()
+
+            if req_date < today:
+                messages.error(request, 'Cannot apply WFH for past dates.')
+            elif WorkFromHomeRequest.objects.filter(employee=employee, date=req_date).exists():
+                messages.error(request, f'WFH already applied for {req_date}.')
+            else:
+                WorkFromHomeRequest.objects.create(
+                    employee=employee,
+                    date=req_date,
+                    reason=reason,
+                    status='pending',
+                )
+                messages.success(request, f'WFH request submitted for {req_date}. Waiting for approval.')
+                return redirect('portal_wfh')
+
+    return render(request, 'portal/wfh.html', {
+        'employee': employee,
+        'my_wfh':   my_wfh,
+        'today':    today,
+        'pending':  pending,
+        'approved': approved,
+    })
+
+
+@login_required
+def portal_cancel_wfh(request, pk):
+    employee = get_employee(request)
+    wfh      = get_object_or_404(WorkFromHomeRequest, pk=pk, employee=employee)
+    if request.method == 'POST' and wfh.status == 'pending':
+        wfh.status = 'cancelled'
+        wfh.save()
+        messages.success(request, 'WFH request cancelled.')
+    return redirect('portal_wfh')

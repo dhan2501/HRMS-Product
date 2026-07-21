@@ -40,3 +40,30 @@ class Holiday(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.date})"
+
+
+# Existing models ke neeche add karo
+
+class WorkFromHomeRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    employee    = models.ForeignKey('employees.Employee', on_delete=models.CASCADE, related_name='wfh_requests')
+    date        = models.DateField()
+    reason      = models.TextField()
+    status      = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    approved_by = models.ForeignKey('employees.Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_wfh')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['employee', 'date']
+
+    def __str__(self):
+        return f"{self.employee.full_name} - WFH {self.date} ({self.status})"

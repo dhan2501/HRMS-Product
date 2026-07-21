@@ -72,6 +72,12 @@
             class="nav-item {% if request.resolver_match.url_name == 'portal_profile' %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
             <i class="fas fa-user text-[11px]"></i> Profile
           </a>
+
+          <!-- Leave link ke baad add karo -->
+<a href="{% url 'portal_wfh' %}"
+  class="nav-item {% if request.resolver_match.url_name == 'portal_wfh' %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
+  <i class="fas fa-house-laptop text-[11px]"></i> WFH
+</a>
         </div>
 
         <!-- User -->
@@ -112,6 +118,12 @@
         <a href="{% url 'portal_payslips' %}" class="nav-item flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium">
           <i class="fas fa-file-invoice-dollar text-[10px]"></i> Payslips
         </a>
+
+        <!-- Leave link ke baad add karo -->
+<a href="{% url 'portal_wfh' %}"
+  class="nav-item {% if request.resolver_match.url_name == 'portal_wfh' %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
+  <i class="fas fa-house-laptop text-[11px]"></i> WFH
+</a>
       </div>
     </div>
   </nav>

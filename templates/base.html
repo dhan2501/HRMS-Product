@@ -68,6 +68,16 @@
         <span>Dashboard</span>
       </a>
 
+      <!-- Daily Attendance ke neeche add karo -->
+<a href="{% url 'wfh_requests' %}"
+  class="sidebar-item {% if request.resolver_match.url_name == 'wfh_requests' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+  <i class="fas fa-house-laptop w-4 text-center"></i>
+  <span>WFH Requests</span>
+  {% if pending_wfh > 0 %}
+  <span class="ml-auto bg-blue-100 text-blue-700 text-xs font-semibold px-1.5 py-0.5 rounded-md">{{ pending_wfh }}</span>
+  {% endif %}
+</a>
+
       <p class="nav-group-label text-slate-400 px-3 pt-2 pb-1">People</p>
 
       <a href="{% url 'employee_list' %}" class="sidebar-item {% if 'employee' in request.resolver_match.url_name %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">

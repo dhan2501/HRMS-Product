@@ -9,4 +9,9 @@ urlpatterns = [
     path('payslips/', portal_views.portal_payslips, name='portal_payslips'),
     path('payslips/<int:pk>/', portal_views.portal_payslip_detail, name='portal_payslip_detail'),
     path('profile/', portal_views.portal_profile, name='portal_profile'),
+
+    # WFH
+    path('wfh/', portal_views.portal_wfh, name='portal_wfh'),
+    path('wfh/cancel/<int:pk>/', portal_views.portal_cancel_wfh, name='portal_cancel_wfh'),
+
 ]
