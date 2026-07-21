@@ -85,9 +85,16 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_URL = '/auth/login/'
+# LOGIN_URL = '/auth/login/'
+# LOGIN_REDIRECT_URL = '/dashboard/'
+# LOGOUT_REDIRECT_URL = '/auth/login/'
+
+# HR Admin
+LOGIN_URL          = '/admin-login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
-LOGOUT_REDIRECT_URL = '/auth/login/'
+LOGOUT_REDIRECT_URL = '/admin-login/'
+
+# Employee portal redirect alag handle hoga views mein
 
 # REST Framework
 REST_FRAMEWORK = {

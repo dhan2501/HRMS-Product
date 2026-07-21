@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HR Admin Login — WorkForce</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="min-h-screen flex" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)">
+
+  <!-- Left Panel -->
+  <div class="hidden lg:flex lg:w-1/2 flex-col justify-between p-12">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-white bg-opacity-10 rounded-xl flex items-center justify-center">
+        <i class="fas fa-building text-white"></i>
+      </div>
+      <span class="text-white font-bold text-lg">WorkForce HRMS</span>
+    </div>
+
+    <div>
+      <h1 class="text-white font-bold text-4xl leading-tight mb-4">
+        Manage your<br>
+        <span style="color: #818cf8">workforce</span><br>
+        efficiently.
+      </h1>
+      <p class="text-indigo-200 text-base leading-relaxed mb-8">
+        Complete HR management — employees, attendance, payroll, recruitment — all in one platform.
+      </p>
+
+      <!-- Features -->
+      <div class="space-y-3">
+        {% for icon, text in features|default:"" %}
+        {% empty %}
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-white bg-opacity-10 rounded-lg flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-users text-indigo-300 text-xs"></i>
+          </div>
+          <span class="text-indigo-200 text-sm">Employee Management & Onboarding</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-white bg-opacity-10 rounded-lg flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-clock text-indigo-300 text-xs"></i>
+          </div>
+          <span class="text-indigo-200 text-sm">Attendance & Leave Tracking</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-white bg-opacity-10 rounded-lg flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-wallet text-indigo-300 text-xs"></i>
+          </div>
+          <span class="text-indigo-200 text-sm">Payroll & Salary Management</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-white bg-opacity-10 rounded-lg flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-chart-bar text-indigo-300 text-xs"></i>
+          </div>
+          <span class="text-indigo-200 text-sm">Reports & Analytics</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <p class="text-indigo-400 text-xs">WorkForce HRMS &copy; 2024 — All rights reserved</p>
+  </div>
+
+  <!-- Right Panel - Login Form -->
+  <div class="w-full lg:w-1/2 flex items-center justify-center p-6">
+    <div class="w-full max-w-md">
+
+      <!-- Card -->
+      <div class="bg-white rounded-3xl shadow-2xl p-8">
+
+        <!-- Header -->
+        <div class="text-center mb-7">
+          <div class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+            <i class="fas fa-shield-halved text-white text-xl"></i>
+          </div>
+          <h2 class="text-slate-800 font-bold text-xl">HR Admin Login</h2>
+          <p class="text-slate-400 text-sm mt-1">Access the HR management portal</p>
+        </div>
+
+        <!-- Error Messages -->
+        {% if messages %}
+          {% for msg in messages %}
+          <div class="mb-4 px-4 py-3 rounded-xl text-sm font-medium
+            {% if msg.tags == 'error' %}bg-red-50 text-red-700 border border-red-200
+            {% else %}bg-emerald-50 text-emerald-700 border border-emerald-200{% endif %}">
+            <i class="fas {% if msg.tags == 'error' %}fa-circle-exclamation{% else %}fa-circle-check{% endif %} mr-2"></i>
+            {{ msg }}
+          </div>
+          {% endfor %}
+        {% endif %}
+
+        <!-- Form -->
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ next }}">
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-slate-600 text-xs font-semibold mb-1.5 uppercase tracking-wide">Username</label>
+              <div class="relative">
+                <i class="fas fa-user absolute left-3.5 top-3.5 text-slate-400 text-xs"></i>
+                <input type="text" name="username" placeholder="Enter admin username"
+                  autofocus required
+                  class="w-full border border-slate-200 rounded-xl pl-9 pr-4 py-3 text-slate-700 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-slate-600 text-xs font-semibold mb-1.5 uppercase tracking-wide">Password</label>
+              <div class="relative">
+                <i class="fas fa-lock absolute left-3.5 top-3.5 text-slate-400 text-xs"></i>
+                <input type="password" name="password" id="adminPass" placeholder="Enter password"
+                  required
+                  class="w-full border border-slate-200 rounded-xl pl-9 pr-10 py-3 text-slate-700 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all">
+                <button type="button" onclick="togglePass('adminPass', 'eyeIcon1')"
+                  class="absolute right-3 top-3 text-slate-400 hover:text-slate-600 p-0.5">
+                  <i class="fas fa-eye text-xs" id="eyeIcon1"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit"
+            class="w-full mt-5 py-3 rounded-xl text-white font-semibold text-sm transition-all hover:opacity-90 active:scale-[0.98] shadow-md"
+            style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+            <i class="fas fa-right-to-bracket mr-2"></i> Sign In to Admin Panel
+          </button>
+        </form>
+
+        <!-- Divider -->
+        <div class="flex items-center gap-3 my-5">
+          <div class="flex-1 h-px bg-slate-100"></div>
+          <span class="text-slate-400 text-xs">or</span>
+          <div class="flex-1 h-px bg-slate-100"></div>
+        </div>
+
+        <!-- Employee Login Link -->
+        <a href="{% url 'employee_login' %}"
+          class="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors">
+          <i class="fas fa-user-tie text-slate-400 text-xs"></i>
+          Login as Employee instead
+        </a>
+
+      </div>
+
+      <p class="text-center text-indigo-300 text-xs mt-5">
+        Trouble logging in? Contact your system administrator.
+      </p>
+    </div>
+  </div>
+
+</body>
+<script>
+function togglePass(inputId, iconId) {
+  const input = document.getElementById(inputId);
+  const icon  = document.getElementById(iconId);
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.className = 'fas fa-eye-slash text-xs';
+  } else {
+    input.type = 'password';
+    icon.className = 'fas fa-eye text-xs';
+  }
+}
+</script>
+</html>
