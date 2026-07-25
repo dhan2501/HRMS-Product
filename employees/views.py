@@ -1,12 +1,43 @@
+# from django.shortcuts import render, get_object_or_404, redirect
+# from django.contrib.auth.decorators import login_required
+# from django.contrib import messages
+# from django.db.models import Count, Q
+# from django import forms
+# from .models import Employee, Department, Designation
+# from attendance.models import AttendanceRecord
+# from leaves.models import LeaveRequest
+# from datetime import date
+
+# from django.contrib.auth.decorators import login_required
+# from django.core.exceptions import PermissionDenied
+
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Q
 from django import forms
+from functools import wraps
 from .models import Employee, Department, Designation
 from attendance.models import AttendanceRecord
 from leaves.models import LeaveRequest
 from datetime import date
+
+
+def admin_required(view_func):
+    """Sirf staff/superadmin access kar sake."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('admin_login')
+        if not (request.user.is_staff or request.user.is_superuser):
+            try:
+                Employee.objects.get(user=request.user)
+                return redirect('portal_dashboard')
+            except Employee.DoesNotExist:
+                return redirect('employee_login')
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 
 # ── Form ────────────────────────────────────────────────────────────────────
@@ -101,6 +132,31 @@ def employee_list(request):
 
 
 # ── Add Employee ──────────────────────────────────────────────────────────────
+# @login_required
+# def add_employee(request):
+#     departments  = Department.objects.all()
+#     designations = Designation.objects.select_related('department').all()
+
+#     if request.method == 'POST':
+#         form = EmployeeForm(request.POST, request.FILES)
+#         if form.is_valid():
+#             employee = form.save()
+#             messages.success(
+#                 request,
+#                 f'✅ Employee {employee.full_name} ({employee.employee_id}) added successfully!'
+#             )
+#             return redirect('employee_list')
+#         else:
+#             messages.error(request, '❌ Please fix the errors below.')
+#     else:
+#         form = EmployeeForm()
+
+#     return render(request, 'employees/add.html', {
+#         'form':         form,
+#         'departments':  departments,
+#         'designations': designations,
+#     })
+
 @login_required
 def add_employee(request):
     departments  = Department.objects.all()
@@ -110,13 +166,23 @@ def add_employee(request):
         form = EmployeeForm(request.POST, request.FILES)
         if form.is_valid():
             employee = form.save()
-            messages.success(
-                request,
-                f'✅ Employee {employee.full_name} ({employee.employee_id}) added successfully!'
-            )
+
+            # Auto-create login credentials
+            from employees.auth_views import create_employee_user
+            user, username, password = create_employee_user(employee)
+
+            if username:
+                messages.success(
+                    request,
+                    f'✅ Employee {employee.full_name} added! '
+                    f'Login: Username = "{username}" | Password = "{password}"'
+                )
+            else:
+                messages.success(request, f'✅ Employee {employee.full_name} added!')
+
             return redirect('employee_list')
         else:
-            messages.error(request, '❌ Please fix the errors below.')
+            messages.error(request, 'Please fix the errors below.')
     else:
         form = EmployeeForm()
 
@@ -125,7 +191,6 @@ def add_employee(request):
         'departments':  departments,
         'designations': designations,
     })
-
 
 # ── Edit Employee ─────────────────────────────────────────────────────────────
 @login_required
@@ -300,3 +365,159 @@ def delete_designation(request, pk):
         designation.delete()
         messages.success(request, f'Designation "{title}" deleted.')
     return redirect('designation_list')
+
+
+@login_required
+def add_employee(request):
+    departments  = Department.objects.all()
+    designations = Designation.objects.select_related('department').all()
+
+    if request.method == 'POST':
+        form = EmployeeForm(request.POST, request.FILES)
+        if form.is_valid():
+            employee = form.save()
+
+            # ✅ Auto username & password generate
+            from django.contrib.auth.models import User
+            first    = employee.first_name.lower().strip().replace(' ', '')
+            last     = employee.last_name.lower().strip().replace(' ', '')
+            username = f"{first}.{last}"
+
+            if User.objects.filter(username=username).exists():
+                username = f"{first}.{employee.employee_id.lower()}"
+
+            password = f"{employee.first_name.capitalize()}@{employee.employee_id}"
+
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                email=employee.email,
+                first_name=employee.first_name,
+                last_name=employee.last_name,
+                is_staff=False,
+                is_superuser=False,
+            )
+            employee.user = user
+            employee.save()
+
+            messages.success(
+                request,
+                f'✅ Employee added! Login — Username: "{username}" | Password: "{password}"'
+            )
+            return redirect('employee_list')
+        else:
+            messages.error(request, 'Please fix the errors below.')
+    else:
+        form = EmployeeForm()
+
+    return render(request, 'employees/add.html', {
+        'form':         form,
+        'departments':  departments,
+        'designations': designations,
+    })
+
+@login_required
+def employee_credentials(request):
+    """Admin page — all employees with login details."""
+    from django.contrib.auth.models import User
+
+    employees = Employee.objects.select_related(
+        'user', 'department', 'designation'
+    ).all().order_by('first_name')
+
+    return render(request, 'employees/credentials.html', {
+        'employees': employees,
+    })
+
+
+@login_required
+def create_employee_login(request, pk):
+    """Create login for employee who doesn't have one."""
+    from django.contrib.auth.models import User
+    employee = get_object_or_404(Employee, pk=pk)
+
+    if employee.user:
+        messages.warning(request, f'{employee.full_name} already has login: {employee.user.username}')
+        return redirect('employee_credentials')
+
+    first    = employee.first_name.lower().strip().replace(' ', '')
+    last     = employee.last_name.lower().strip().replace(' ', '')
+    username = f"{first}.{last}"
+
+    if User.objects.filter(username=username).exists():
+        username = f"{first}.{employee.employee_id.lower()}"
+
+    password = f"{employee.first_name.capitalize()}@{employee.employee_id}"
+
+    user = User.objects.create_user(
+        username=username,
+        password=password,
+        email=employee.email,
+        first_name=employee.first_name,
+        last_name=employee.last_name,
+        is_staff=False,
+        is_superuser=False,
+    )
+    employee.user = user
+    employee.save()
+
+    messages.success(
+        request,
+        f'✅ Login created for {employee.full_name} — Username: "{username}" | Password: "{password}"'
+    )
+    return redirect('employee_credentials')
+
+
+@login_required
+def create_all_logins(request):
+    """Bulk create logins for all employees without user."""
+    from django.contrib.auth.models import User
+
+    employees_no_user = Employee.objects.filter(user=None)
+    created = 0
+
+    for employee in employees_no_user:
+        first    = employee.first_name.lower().strip().replace(' ', '')
+        last     = employee.last_name.lower().strip().replace(' ', '')
+        username = f"{first}.{last}"
+
+        if User.objects.filter(username=username).exists():
+            username = f"{first}.{employee.employee_id.lower()}"
+
+        password = f"{employee.first_name.capitalize()}@{employee.employee_id}"
+
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            email=employee.email,
+            first_name=employee.first_name,
+            last_name=employee.last_name,
+            is_staff=False,
+            is_superuser=False,
+        )
+        employee.user = user
+        employee.save()
+        created += 1
+
+    messages.success(request, f'✅ {created} employee login(s) created successfully!')
+    return redirect('employee_credentials')
+
+
+@login_required  
+def reset_employee_password(request, pk):
+    """Reset password to default."""
+    employee = get_object_or_404(Employee, pk=pk)
+    
+    if not employee.user:
+        messages.error(request, 'No login found for this employee.')
+        return redirect('employee_credentials')
+
+    password = f"{employee.first_name.capitalize()}@{employee.employee_id}"
+    employee.user.set_password(password)
+    employee.user.save()
+
+    messages.success(
+        request,
+        f'🔑 Password reset for {employee.full_name} — New Password: "{password}"'
+    )
+    return redirect('employee_credentials')

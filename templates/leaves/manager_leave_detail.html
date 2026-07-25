@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% block title %}Review Leave{% endblock %}
+{% block page_title %}Review Leave Request{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+  <!-- Leave Details -->
+  <div class="xl:col-span-2 space-y-4">
+
+    <!-- Employee Card -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <div class="flex items-center gap-4 mb-4">
+        {% if leave.employee.photo %}
+          <img src="{{ leave.employee.photo.url }}" class="w-14 h-14 rounded-xl object-cover border border-slate-200">
+        {% else %}
+          <div class="w-14 h-14 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center text-xl font-bold">
+            {{ leave.employee.first_name|first|upper }}{{ leave.employee.last_name|first|upper }}
+          </div>
+        {% endif %}
+        <div>
+          <h2 class="text-slate-800 font-bold text-base">{{ leave.employee.full_name }}</h2>
+          <p class="text-slate-500 text-sm">{{ leave.employee.designation.title|default:"—" }}</p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">{{ leave.employee.department.name|default:"—" }}</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono">{{ leave.employee.employee_id }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-slate-100">
+        <div class="bg-brand-50 rounded-xl p-3 text-center">
+          <p class="text-brand-700 font-bold text-lg">{{ leave.days }}</p>
+          <p class="text-brand-600 text-xs">Days</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-slate-700 font-bold text-sm">{{ leave.start_date|date:"d M" }}</p>
+          <p class="text-slate-500 text-xs">Start</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-slate-700 font-bold text-sm">{{ leave.end_date|date:"d M" }}</p>
+          <p class="text-slate-500 text-xs">End</p>
+        </div>
+        <div class="rounded-xl p-3 text-center
+          {% if leave.status == 'pending' %}bg-amber-50{% elif leave.status == 'approved' %}bg-emerald-50{% else %}bg-red-50{% endif %}">
+          <p class="font-bold text-sm {% if leave.status == 'pending' %}text-amber-700{% elif leave.status == 'approved' %}text-emerald-700{% else %}text-red-600{% endif %}">
+            {{ leave.get_status_display }}
+          </p>
+          <p class="text-xs text-slate-400">Status</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leave Info -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-4 flex items-center gap-2">
+        <i class="fas fa-umbrella-beach text-amber-500 text-xs"></i> Leave Details
+      </h3>
+      <div class="space-y-3">
+        <div class="flex items-start gap-3">
+          <span class="text-slate-400 text-xs w-24 flex-shrink-0 pt-0.5">Leave Type</span>
+          <span class="text-slate-700 text-sm font-medium">{{ leave.leave_type.name }}
+            <span class="text-xs text-slate-400 font-normal ml-1">({% if leave.leave_type.is_paid %}Paid{% else %}Unpaid{% endif %})</span>
+          </span>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-slate-400 text-xs w-24 flex-shrink-0 pt-0.5">Reason</span>
+          <span class="text-slate-700 text-sm">{{ leave.reason }}</span>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-slate-400 text-xs w-24 flex-shrink-0 pt-0.5">Applied On</span>
+          <span class="text-slate-700 text-sm">{{ leave.created_at|date:"d M Y, H:i" }}</span>
+        </div>
+        {% if leave.approved_by %}
+        <div class="flex items-start gap-3">
+          <span class="text-slate-400 text-xs w-24 flex-shrink-0 pt-0.5">Actioned By</span>
+          <span class="text-slate-700 text-sm">{{ leave.approved_by.full_name }} on {{ leave.approved_at|date:"d M Y, H:i" }}</span>
+        </div>
+        {% endif %}
+        {% if leave.rejection_reason %}
+        <div class="flex items-start gap-3">
+          <span class="text-slate-400 text-xs w-24 flex-shrink-0 pt-0.5">Reject Reason</span>
+          <span class="text-red-500 text-sm">{{ leave.rejection_reason }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Comment History -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-4 flex items-center gap-2">
+        <i class="fas fa-comments text-brand-500 text-xs"></i>
+        Activity & Comments
+        <span class="bg-slate-100 text-slate-600 text-xs px-1.5 py-0.5 rounded-full">{{ comments.count }}</span>
+      </h3>
+
+      <div class="space-y-3 mb-4">
+        {% for c in comments %}
+        <div class="flex items-start gap-3">
+          <div class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5
+            {% if c.action == 'approved' %}bg-emerald-100 text-emerald-700
+            {% elif c.action == 'rejected' %}bg-red-100 text-red-600
+            {% else %}bg-brand-100 text-brand-700{% endif %}">
+            {{ c.commented_by.first_name|first|upper }}{{ c.commented_by.last_name|first|upper }}
+          </div>
+          <div class="flex-1 bg-slate-50 rounded-xl p-3">
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <span class="text-slate-700 text-xs font-semibold">{{ c.commented_by.full_name }}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium
+                  {% if c.action == 'approved' %}bg-emerald-100 text-emerald-700
+                  {% elif c.action == 'rejected' %}bg-red-100 text-red-600
+                  {% elif c.action == 'forwarded' %}bg-blue-100 text-blue-700
+                  {% else %}bg-slate-200 text-slate-600{% endif %}">
+                  {{ c.get_action_display }}
+                </span>
+              </div>
+              <span class="text-[10px] text-slate-400">{{ c.created_at|date:"d M, H:i" }}</span>
+            </div>
+            <p class="text-slate-600 text-xs">{{ c.comment }}</p>
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-slate-400 text-xs text-center py-3">No comments yet</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Panel -->
+  <div class="space-y-4">
+
+    <!-- Quick Action Buttons -->
+    {% if leave.status == 'pending' %}
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-4">Quick Actions</h3>
+
+      <!-- Approve Form -->
+      <form method="post" class="mb-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="approved">
+        <textarea name="comment" rows="2" placeholder="Approval comment (optional)..."
+          class="w-full border border-slate-200 rounded-xl px-3 py-2 text-slate-700 text-xs focus:outline-none focus:border-emerald-400 resize-none mb-2"></textarea>
+        <button type="submit"
+          class="w-full py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2">
+          <i class="fas fa-check text-xs"></i> Approve Leave
+        </button>
+      </form>
+
+      <!-- Reject Form -->
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="rejected">
+        <textarea name="comment" rows="2" placeholder="Rejection reason (required)..." required
+          class="w-full border border-slate-200 rounded-xl px-3 py-2 text-slate-700 text-xs focus:outline-none focus:border-red-400 resize-none mb-2"></textarea>
+        <button type="submit"
+          class="w-full py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors flex items-center justify-center gap-2">
+          <i class="fas fa-xmark text-xs"></i> Reject Leave
+        </button>
+      </form>
+    </div>
+    {% endif %}
+
+    <!-- Add Comment -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-3 flex items-center gap-2">
+        <i class="fas fa-comment text-brand-500 text-xs"></i> Add Comment
+      </h3>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="comment">
+        <textarea name="comment" rows="3" required
+          placeholder="Write your comment or query to employee..."
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 resize-none mb-3"></textarea>
+        <button type="submit"
+          class="w-full py-2 rounded-xl text-white text-sm font-semibold hover:opacity-90"
+          style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+          <i class="fas fa-paper-plane mr-1.5 text-xs"></i> Send Comment
+        </button>
+      </form>
+    </div>
+
+    <!-- Back Button -->
+    <a href="{% url 'manager_leave_dashboard' %}"
+      class="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors">
+      <i class="fas fa-arrow-left text-xs"></i> Back to Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}

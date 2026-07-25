@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block title %}Leave Management{% endblock %}
+{% block page_title %}Leave Management{% endblock %}
+{% block page_subtitle %}
+  {% if is_ceo_or_admin %}All Departments{% else %}{{ manager.department.name }} Department{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Manager Info Banner -->
+<div class="rounded-2xl p-4 mb-5 flex items-center gap-4" style="background: linear-gradient(135deg, #4338ca, #6366f1)">
+  {% if manager.photo %}
+    <img src="{{ manager.photo.url }}" class="w-12 h-12 rounded-xl object-cover border-2 border-white border-opacity-30">
+  {% else %}
+    <div class="w-12 h-12 rounded-xl bg-white bg-opacity-20 flex items-center justify-center text-white text-lg font-bold">
+      {{ manager.first_name|first|upper }}{{ manager.last_name|first|upper }}
+    </div>
+  {% endif %}
+  <div class="flex-1">
+    <p class="text-white font-bold text-sm">{{ manager.full_name }}</p>
+    <p class="text-indigo-200 text-xs">{{ manager.designation.title|default:"Manager" }} · {{ manager.department.name|default:"All Departments" }}</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="{% url 'manager_wfh_dashboard' %}"
+      class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white bg-opacity-15 text-white text-xs font-medium hover:bg-opacity-25 transition-colors">
+      <i class="fas fa-house-laptop text-[10px]"></i> WFH Requests
+      {% if wfh_pending > 0 %}
+      <span class="bg-amber-400 text-amber-900 text-[9px] font-bold px-1.5 py-0.5 rounded-full">{{ wfh_pending }}</span>
+      {% endif %}
+    </a>
+    <a href="{% url 'project_list' %}"
+      class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white bg-opacity-15 text-white text-xs font-medium hover:bg-opacity-25 transition-colors">
+      <i class="fas fa-diagram-project text-[10px]"></i> Projects
+    </a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center"><i class="fas fa-hourglass-half text-amber-500"></i></div>
+    <div><p class="text-2xl font-bold text-slate-800">{{ pending }}</p><p class="text-slate-500 text-xs">Pending</p></div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center"><i class="fas fa-circle-check text-emerald-500"></i></div>
+    <div><p class="text-2xl font-bold text-slate-800">{{ leaves|length }}</p><p class="text-slate-500 text-xs">Showing</p></div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center"><i class="fas fa-house-laptop text-blue-500"></i></div>
+    <div><p class="text-2xl font-bold text-slate-800">{{ wfh_pending }}</p><p class="text-slate-500 text-xs">WFH Pending</p></div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center"><i class="fas fa-diagram-project text-purple-500"></i></div>
+    <div><p class="text-2xl font-bold text-slate-800">-</p><p class="text-slate-500 text-xs">Projects</p></div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+  <form method="get" class="flex flex-wrap items-center gap-2">
+    <input type="text" name="search" value="{{ search }}" placeholder="Search employee..."
+      class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none focus:border-brand-400 bg-white w-44">
+    <select name="status" onchange="this.form.submit()"
+      class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none bg-white">
+      <option value="">All Status</option>
+      <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+      <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+      <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+    </select>
+    {% if is_ceo_or_admin %}
+    <select name="department" onchange="this.form.submit()"
+      class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none bg-white">
+      <option value="">All Departments</option>
+      {% for dept in departments %}
+        <option value="{{ dept.id }}" {% if dept_filter == dept.id|stringformat:'s' %}selected{% endif %}>{{ dept.name }}</option>
+      {% endfor %}
+    </select>
+    {% endif %}
+    <button type="submit" class="bg-brand-600 text-white px-3 py-2 rounded-xl text-sm hover:bg-brand-700">
+      <i class="fas fa-magnifying-glass"></i>
+    </button>
+    {% if search or status_filter or dept_filter %}
+    <a href="{% url 'manager_leave_dashboard' %}" class="text-xs text-slate-400 hover:text-red-500">
+      <i class="fas fa-xmark mr-1"></i>Clear
+    </a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Leave Requests Table -->
+<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead>
+        <tr class="bg-slate-50 border-b border-slate-100">
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-5 py-3.5">Employee</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Leave Type</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Duration</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Reason</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Status</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Applied</th>
+          <th class="px-4 py-3.5 text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for leave in leaves %}
+        <tr class="hover:bg-slate-50/60 transition-colors">
+
+          <td class="px-5 py-3.5">
+            <div class="flex items-center gap-3">
+              {% if leave.employee.photo %}
+                <img src="{{ leave.employee.photo.url }}" class="w-9 h-9 rounded-full object-cover border border-slate-200 flex-shrink-0">
+              {% else %}
+                <div class="w-9 h-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  {{ leave.employee.first_name|first|upper }}{{ leave.employee.last_name|first|upper }}
+                </div>
+              {% endif %}
+              <div>
+                <p class="text-slate-700 text-sm font-semibold">{{ leave.employee.full_name }}</p>
+                <p class="text-slate-400 text-xs">{{ leave.employee.designation.title|default:"—" }}</p>
+                <span class="text-[9px] px-1.5 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
+                  {{ leave.employee.department.name|default:"—" }}
+                </span>
+              </div>
+            </div>
+          </td>
+
+          <td class="px-4 py-3.5">
+            <span class="inline-flex items-center gap-1 bg-brand-50 text-brand-700 text-xs font-medium px-2.5 py-1 rounded-lg">
+              {{ leave.leave_type.name }}
+            </span>
+            <p class="text-[10px] text-slate-400 mt-0.5">{% if leave.leave_type.is_paid %}Paid{% else %}Unpaid{% endif %}</p>
+          </td>
+
+          <td class="px-4 py-3.5">
+            <p class="text-slate-700 text-xs font-medium">{{ leave.start_date|date:"d M" }} - {{ leave.end_date|date:"d M Y" }}</p>
+            <p class="text-slate-500 text-xs">{{ leave.days }} day{{ leave.days|pluralize }}</p>
+          </td>
+
+          <td class="px-4 py-3.5">
+            <p class="text-slate-600 text-xs max-w-[160px] truncate" title="{{ leave.reason }}">
+              {{ leave.reason|truncatechars:40 }}
+            </p>
+            {% with comment_count=leave.comments.count %}
+            {% if comment_count > 0 %}
+            <p class="text-brand-600 text-[10px] mt-0.5">
+              <i class="fas fa-comment text-[9px] mr-0.5"></i>{{ comment_count }} comment{{ comment_count|pluralize }}
+            </p>
+            {% endif %}
+            {% endwith %}
+          </td>
+
+          <td class="px-4 py-3.5">
+            <span class="text-xs px-2.5 py-1 rounded-full font-medium
+              {% if leave.status == 'pending' %}bg-amber-100 text-amber-700
+              {% elif leave.status == 'approved' %}bg-emerald-100 text-emerald-700
+              {% elif leave.status == 'rejected' %}bg-red-100 text-red-600
+              {% else %}bg-slate-100 text-slate-500{% endif %}">
+              {{ leave.get_status_display }}
+            </span>
+          </td>
+
+          <td class="px-4 py-3.5 text-slate-400 text-xs">{{ leave.created_at|date:"d M Y" }}</td>
+
+          <td class="px-4 py-3.5">
+            <a href="{% url 'manager_leave_detail' leave.pk %}"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-50 text-brand-600 text-xs font-medium hover:bg-brand-100 transition-colors">
+              <i class="fas fa-eye text-[10px]"></i>
+              {% if leave.status == 'pending' %}Review{% else %}View{% endif %}
+            </a>
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="py-14 text-center">
+            <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <i class="fas fa-umbrella-beach text-slate-300 text-xl"></i>
+            </div>
+            <p class="text-slate-500 font-medium text-sm">No leave requests found</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

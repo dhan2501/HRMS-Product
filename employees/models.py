@@ -75,3 +75,55 @@ class Employee(models.Model):
 
     class Meta:
         ordering = ['first_name', 'last_name']
+
+
+
+# Existing models ke neeche add karo
+
+class EmployeeRole(models.Model):
+    """Defines what access each department/designation has."""
+    ROLE_CHOICES = [
+        ('hr_manager', 'HR Manager'),
+        ('ceo', 'CEO'),
+        ('pmo', 'Product Manager Officer'),
+        ('team_leader', 'Team Leader'),
+        ('employee', 'Employee'),
+    ]
+    employee    = models.OneToOneField(Employee, on_delete=models.CASCADE, related_name='role')
+    role        = models.CharField(max_length=30, choices=ROLE_CHOICES, default='employee')
+    can_approve_leave    = models.BooleanField(default=False)
+    can_approve_wfh      = models.BooleanField(default=False)
+    can_view_team_salary = models.BooleanField(default=False)
+    can_assign_project   = models.BooleanField(default=False)
+    manages_department   = models.ForeignKey(
+        'Department', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='managers'
+    )
+
+    def __str__(self):
+        return f"{self.employee.full_name} - {self.role}"
+
+
+class Project(models.Model):
+    STATUS_CHOICES = [
+        ('planning', 'Planning'),
+        ('active', 'Active'),
+        ('on_hold', 'On Hold'),
+        ('completed', 'Completed'),
+    ]
+    name        = models.CharField(max_length=200)
+    code        = models.CharField(max_length=20, unique=True)
+    description = models.TextField(blank=True)
+    department  = models.ForeignKey('Department', on_delete=models.SET_NULL, null=True, related_name='projects')
+    manager     = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='managed_projects')
+    members     = models.ManyToManyField(Employee, related_name='projects', blank=True)
+    start_date  = models.DateField()
+    end_date    = models.DateField(null=True, blank=True)
+    status      = models.CharField(max_length=20, choices=STATUS_CHOICES, default='planning')
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+    class Meta:
+        ordering = ['-created_at']

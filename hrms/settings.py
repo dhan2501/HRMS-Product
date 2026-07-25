@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import anthropic
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-hrms-secret-key-change-in-production-2024'
@@ -24,6 +25,7 @@ INSTALLED_APPS = [
     'leaves',
     'payroll',
     'recruitment',
+    'messaging',
 ]
 
 MIDDLEWARE = [
@@ -90,9 +92,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # LOGOUT_REDIRECT_URL = '/auth/login/'
 
 # HR Admin
-LOGIN_URL          = '/admin-login/'
-LOGIN_REDIRECT_URL = '/dashboard/'
-LOGOUT_REDIRECT_URL = '/admin-login/'
+# LOGIN_URL          = '/admin-login/'
+# LOGIN_REDIRECT_URL = '/dashboard/'
+# LOGOUT_REDIRECT_URL = '/admin-login/'
+
+
+LOGIN_URL = '/employee-login/'
+LOGIN_REDIRECT_URL = '/portal/'
+LOGOUT_REDIRECT_URL = '/employee-login/'
 
 # Employee portal redirect alag handle hoga views mein
 

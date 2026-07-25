@@ -60,3 +60,24 @@ class LeaveRequest(models.Model):
 
     def __str__(self):
         return f"{self.employee.full_name} - {self.leave_type.name} ({self.start_date})"
+
+
+# Existing models ke neeche add karo
+
+class LeaveComment(models.Model):
+    leave      = models.ForeignKey(LeaveRequest, on_delete=models.CASCADE, related_name='comments')
+    commented_by = models.ForeignKey('employees.Employee', on_delete=models.CASCADE)
+    comment    = models.TextField()
+    action     = models.CharField(max_length=20, choices=[
+        ('comment', 'Comment'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('forwarded', 'Forwarded'),
+    ], default='comment')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.commented_by.full_name} - {self.action}"

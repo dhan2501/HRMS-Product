@@ -28,6 +28,7 @@
   <a href="{% url 'add_employee' %}" class="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors inline-flex items-center gap-2">
     <i class="fas fa-plus"></i> Add Employee
   </a>
+  
 </div>
 
 <!-- Table -->
@@ -43,6 +44,7 @@
           <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Type</th>
           <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Status</th>
           <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Joined</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Login</th>
           <th class="px-4 py-3.5"></th>
         </tr>
       </thead>
@@ -69,6 +71,17 @@
               </div>
             </div>
           </td>
+          <td class="px-4 py-3.5">
+  {% if emp.user %}
+    <p class="text-slate-600 text-xs font-mono">{{ emp.user.username }}</p>
+    <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">
+      <i class="fas fa-circle-check text-[8px] mr-0.5"></i>Active
+    </span>
+  {% else %}
+    <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-500 font-medium">No Login</span>
+    <a href="#" onclick="createLogin({{ emp.pk }})" class="text-brand-600 text-[10px] hover:underline block mt-0.5">Create Login</a>
+  {% endif %}
+</td>
           <td class="px-4 py-3.5 text-slate-500 text-sm font-mono">{{ emp.employee_id }}</td>
           <td class="px-4 py-3.5 text-slate-600 text-sm">{{ emp.department.name|default:"—" }}</td>
           <td class="px-4 py-3.5 text-slate-600 text-sm">{{ emp.designation.title|default:"—" }}</td>

@@ -40,6 +40,7 @@
     ::-webkit-scrollbar-thumb { background: #e0e9ff; border-radius: 4px; }
   </style>
   {% block extra_head %}{% endblock %}
+  {% include 'chatbot/widget.html' %}
 </head>
 <body class="h-full bg-slate-50">
 
@@ -77,6 +78,23 @@
   <span class="ml-auto bg-blue-100 text-blue-700 text-xs font-semibold px-1.5 py-0.5 rounded-md">{{ pending_wfh }}</span>
   {% endif %}
 </a>
+<!-- System section mein add karo -->
+<a href="{% url 'chat_home' %}"
+  class="sidebar-item {% if 'chat' in request.resolver_match.url_name %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+  <i class="fas fa-comments w-4 text-center"></i>
+  <span>Team Chat</span>
+  <span id="sidebarUnread" class="ml-auto bg-brand-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-md hidden">0</span>
+</a>
+
+<!-- Leave Requests ke neeche -->
+<a href="{% url 'manager_leave_dashboard' %}"
+  class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+  <i class="fas fa-user-shield w-4 text-center"></i>
+  <span>Leave Approval</span>
+  {% if pending_leaves > 0 %}
+  <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-semibold px-1.5 py-0.5 rounded-md">{{ pending_leaves }}</span>
+  {% endif %}
+</a>
 
       <p class="nav-group-label text-slate-400 px-3 pt-2 pb-1">People</p>
 
@@ -96,6 +114,13 @@
         <i class="fas fa-id-badge w-4 text-center"></i>
         <span>Designations</span>
       </a>
+
+      <!-- Employees section ke andar -->
+<a href="{% url 'employee_credentials' %}"
+  class="sidebar-item {% if request.resolver_match.url_name == 'employee_credentials' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+  <i class="fas fa-key w-4 text-center"></i>
+  <span>Login Credentials</span>
+</a>
 
       <p class="nav-group-label text-slate-400 px-3 pt-4 pb-1">Time & Leave</p>
 
@@ -167,7 +192,7 @@
           <p class="text-slate-800 text-xs font-semibold truncate">{{ request.user.get_full_name|default:request.user.username }}</p>
           <p class="text-slate-400 text-[11px] truncate">Administrator</p>
         </div>
-        <a href="{% url 'logout' %}" class="text-slate-400 hover:text-red-500 transition-colors" title="Logout">
+        <a href="{% url 'admin_logout' %}" class="text-slate-400 hover:text-red-500 transition-colors" title="Logout">
           <i class="fas fa-arrow-right-from-bracket text-xs"></i>
         </a>
       </div>
@@ -210,6 +235,24 @@
     </main>
   </div>
 </div>
+<script>
+// Update unread badge in sidebar
+setInterval(async () => {
+  try {
+    const r = await fetch('/messages/unread/');
+    const d = await r.json();
+    const badge = document.getElementById('sidebarUnread');
+    if (badge) {
+      if (d.count > 0) {
+        badge.textContent = d.count;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+  } catch(e) {}
+}, 5000);
+</script>
 
 {% block extra_js %}{% endblock %}
 </body>

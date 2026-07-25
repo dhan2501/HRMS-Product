@@ -1,0 +1,436 @@
+{% extends 'base.html' %}
+{% block title %}Messages{% endblock %}
+{% block page_title %}Team Chat{% endblock %}
+
+{% block content %}
+<div style="height: calc(100vh - 120px); display: flex; gap: 0; background: white; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+
+  <!-- ── Left Sidebar ── -->
+  <div style="width: 300px; border-right: 1px solid #f1f5f9; display: flex; flex-direction: column; flex-shrink: 0;">
+
+    <!-- Sidebar Header -->
+    <div style="padding: 16px; border-bottom: 1px solid #f1f5f9; background: #fafbff;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+        <h2 style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">💬 Messages</h2>
+        <button onclick="document.getElementById('newGroupModal').style.display='flex'"
+          style="background: #4f46e5; color: white; border: none; border-radius: 8px; padding: 5px 10px; font-size: 11px; cursor: pointer; font-family: inherit; font-weight: 500;">
+          + Group
+        </button>
+      </div>
+      <input type="text" id="searchConv" placeholder="Search conversations..."
+        oninput="filterConvs(this.value)"
+        style="width: 100%; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 7px 12px; font-size: 12px; outline: none; font-family: inherit; color: #334155; box-sizing: border-box;">
+    </div>
+
+    <!-- New DM -->
+    <div style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9;">
+      <div style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Team Members</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+        {% for emp in all_employees %}
+        {% if emp.user %}
+        <a href="{% url 'open_chat' emp.user.id %}" title="{{ emp.full_name }}"
+          style="text-decoration: none;">
+          <div style="position: relative;">
+            {% if emp.photo %}
+              <img src="{{ emp.photo.url }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0;">
+            {% else %}
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #6366f1); color: white; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;">
+                {{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}
+              </div>
+            {% endif %}
+            <span style="position: absolute; bottom: 0; right: 0; width: 9px; height: 9px; background: #22c55e; border-radius: 50%; border: 2px solid white;"></span>
+          </div>
+        </a>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Conversations List -->
+    <div style="flex: 1; overflow-y: auto;" id="convList">
+      {% for cd in conv_data %}
+      <a href="{% url 'chat_room' cd.conv.id %}" style="text-decoration: none; display: block;"
+        class="conv-item {% if cd.is_active %}active-conv{% endif %}">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #f8fafc; cursor: pointer; background: {% if cd.is_active %}#f0f4ff{% else %}white{% endif %}; transition: background 0.15s;"
+          onmouseover="if(!this.parentElement.classList.contains('active-conv'))this.style.background='#f8fafc'"
+          onmouseout="if(!this.parentElement.classList.contains('active-conv'))this.style.background='white'">
+
+          <!-- Avatar -->
+          <div style="position: relative; flex-shrink: 0;">
+            {% if cd.conv.conv_type == 'group' %}
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #8b5cf6, #a78bfa); color: white; font-size: 16px; display: flex; align-items: center; justify-content: center;">👥</div>
+            {% elif cd.other_emp and cd.other_emp.photo %}
+              <img src="{{ cd.other_emp.photo.url }}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0;">
+            {% else %}
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #6366f1); color: white; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;">
+                {% if cd.other_emp %}{{ cd.other_emp.first_name|first|upper }}{{ cd.other_emp.last_name|first|upper }}{% else %}??{% endif %}
+              </div>
+            {% endif %}
+            <span style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; border: 2px solid white;"></span>
+          </div>
+
+          <!-- Info -->
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 12px; font-weight: {% if cd.unread %}700{% else %}600{% endif %}; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">
+                {% if cd.conv.conv_type == 'group' %}
+                  {{ cd.conv.name }}
+                {% elif cd.other_emp %}
+                  {{ cd.other_emp.full_name }}
+                {% else %}
+                  {{ cd.other_user.username }}
+                {% endif %}
+              </span>
+              {% if cd.last_msg %}
+              <span style="font-size: 10px; color: #94a3b8; flex-shrink: 0; margin-left: 4px;">
+                {{ cd.last_msg.created_at|time:"H:i" }}
+              </span>
+              {% endif %}
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+              <span style="font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px;">
+                {% if cd.last_msg %}
+                  {% if cd.last_msg.sender == request.user %}You: {% endif %}
+                  {{ cd.last_msg.content|truncatechars:30 }}
+                {% else %}
+                  Start a conversation
+                {% endif %}
+              </span>
+              {% if cd.unread %}
+              <span style="background: #4f46e5; color: white; font-size: 9px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                {{ cd.unread }}
+              </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </a>
+      {% empty %}
+      <div style="text-align: center; padding: 30px 20px; color: #94a3b8; font-size: 12px;">
+        <div style="font-size: 30px; margin-bottom: 8px;">💬</div>
+        No conversations yet.<br>Click a team member above!
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── Chat Area ── -->
+  <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+
+    <!-- Chat Header -->
+    <div style="padding: 14px 20px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; background: white; flex-shrink: 0;">
+      {% if conv.conv_type == 'group' %}
+        <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #8b5cf6, #a78bfa); color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">👥</div>
+        <div>
+          <div style="font-size: 14px; font-weight: 700; color: #1e293b;">{{ conv.name }}</div>
+          <div style="font-size: 11px; color: #94a3b8;">{{ conv.participants.count }} members</div>
+        </div>
+      {% else %}
+        <div style="position: relative; flex-shrink: 0;">
+          {% if other_emp and other_emp.photo %}
+            <img src="{{ other_emp.photo.url }}" style="width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0;">
+          {% else %}
+            <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #6366f1); color: white; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center;">
+              {% if other_emp %}{{ other_emp.first_name|first|upper }}{{ other_emp.last_name|first|upper }}{% else %}??{% endif %}
+            </div>
+          {% endif %}
+          <span style="position: absolute; bottom: 1px; right: 1px; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; border: 2px solid white;"></span>
+        </div>
+        <div>
+          <div style="font-size: 14px; font-weight: 700; color: #1e293b;">
+            {% if other_emp %}{{ other_emp.full_name }}{% else %}{{ other_user.username }}{% endif %}
+          </div>
+          <div style="font-size: 11px; color: #94a3b8;">
+            {% if other_emp %}{{ other_emp.designation.title|default:"—" }} · {{ other_emp.department.name|default:"—" }}{% endif %}
+            · <span style="color: #22c55e; font-weight: 500;">Online</span>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Messages Area -->
+    <div id="messagesArea" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; background: #f8fafc;">
+      {% for msg in messages_list %}
+      {% if msg.sender == request.user %}
+      <!-- My message -->
+      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+        <div style="background: linear-gradient(135deg, #4f46e5, #6366f1); color: white; border-radius: 16px; border-bottom-right-radius: 3px; padding: 10px 14px; max-width: 65%; font-size: 13px; line-height: 1.5; word-break: break-word;">
+          {{ msg.content }}
+        </div>
+        <div style="font-size: 10px; color: #94a3b8;">{{ msg.created_at|time:"H:i" }} · You</div>
+      </div>
+      {% else %}
+      <!-- Other message -->
+      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+        <div style="display: flex; align-items: flex-end; gap: 7px;">
+          {% with s_emp=msg.sender|stringformat:'s' %}
+          <div style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            {{ msg.sender.first_name|first|upper }}{{ msg.sender.last_name|first|upper }}
+          </div>
+          {% endwith %}
+          <div>
+            <div style="font-size: 10px; color: #94a3b8; margin-bottom: 3px;">{{ msg.sender.get_full_name|default:msg.sender.username }}</div>
+            <div style="background: white; color: #334155; border: 1px solid #e2e8f0; border-radius: 16px; border-bottom-left-radius: 3px; padding: 10px 14px; max-width: 65%; font-size: 13px; line-height: 1.5; word-break: break-word; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
+              {{ msg.content }}
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 10px; color: #94a3b8; padding-left: 35px;">{{ msg.created_at|time:"H:i" }}</div>
+      </div>
+      {% endif %}
+      {% empty %}
+      <div style="text-align: center; color: #94a3b8; font-size: 13px; margin: auto;">
+        <div style="font-size: 40px; margin-bottom: 10px;">👋</div>
+        Say hello to start the conversation!
+      </div>
+      {% endfor %}
+      <div id="msgEnd"></div>
+    </div>
+
+    <!-- Typing Indicator -->
+    <div id="typingIndicator" style="display: none; padding: 6px 20px; font-size: 11px; color: #94a3b8; font-style: italic;">
+      Someone is typing...
+    </div>
+
+    <!-- Input Area -->
+    <div style="padding: 12px 16px; border-top: 1px solid #f1f5f9; background: white; flex-shrink: 0;">
+      <div style="display: flex; gap: 8px; align-items: flex-end;">
+        <!-- Emoji picker toggle -->
+        <button onclick="toggleEmojiPicker()"
+          style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; width: 40px; height: 40px; cursor: pointer; font-size: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+          😊
+        </button>
+
+        <!-- Message Input -->
+        <textarea id="msgInput" placeholder="Type a message..." rows="1"
+          style="flex: 1; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; font-size: 13px; outline: none; font-family: inherit; color: #334155; resize: none; max-height: 100px; line-height: 1.5; transition: border-color 0.2s;"
+          onfocus="this.style.borderColor='#6366f1'"
+          onblur="this.style.borderColor='#e2e8f0'"
+          onkeydown="handleKey(event)"
+          oninput="autoResize(this)"></textarea>
+
+        <!-- Send button -->
+        <button onclick="sendMsg()" id="sendBtn"
+          style="background: linear-gradient(135deg, #4f46e5, #6366f1); color: white; border: none; border-radius: 12px; width: 42px; height: 42px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; transition: opacity 0.2s; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
+          ➤
+        </button>
+      </div>
+
+      <!-- Emoji Picker -->
+      <div id="emojiPicker" style="display: none; flex-wrap: wrap; gap: 4px; padding: 8px 0; margin-top: 6px; border-top: 1px solid #f1f5f9;">
+        {% for emoji in emoji_list %}
+        <button onclick="addEmoji('{{ emoji }}')"
+          style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px; border-radius: 6px; line-height: 1;"
+          onmouseover="this.style.background='#f0f4ff'"
+          onmouseout="this.style.background='none'">{{ emoji }}</button>
+        {% endfor %}
+      </div>
+
+      <div style="font-size: 10px; color: #cbd5e1; text-align: center; margin-top: 6px;">Enter to send · Shift+Enter for new line</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- New Group Modal -->
+<div id="newGroupModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:20px;width:100%;max-width:440px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">Create Group Chat</h3>
+      <button onclick="document.getElementById('newGroupModal').style.display='none'"
+        style="background:#f1f5f9;border:none;border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:16px;">×</button>
+    </div>
+    <form method="post" action="{% url 'create_group' %}">
+      {% csrf_token %}
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:11px;font-weight:600;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">Group Name *</label>
+        <input type="text" name="name" placeholder="e.g. Engineering Team, Project Alpha..."
+          style="width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;font-size:13px;outline:none;font-family:inherit;box-sizing:border-box;"
+          required>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:11px;font-weight:600;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">Add Members</label>
+        <div style="max-height:200px;overflow-y:auto;border:1.5px solid #e2e8f0;border-radius:10px;padding:8px;">
+          {% for emp in all_employees %}
+          {% if emp.user %}
+          <label style="display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;cursor:pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='none'">
+            <input type="checkbox" name="members" value="{{ emp.user.id }}" style="width:14px;height:14px;accent-color:#4f46e5;">
+            {% if emp.photo %}
+              <img src="{{ emp.photo.url }}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;">
+            {% else %}
+              <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#6366f1);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;">{{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}</div>
+            {% endif %}
+            <div>
+              <div style="font-size:12px;font-weight:600;color:#1e293b;">{{ emp.full_name }}</div>
+              <div style="font-size:10px;color:#94a3b8;">{{ emp.designation.title|default:"—" }}</div>
+            </div>
+          </label>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button type="button" onclick="document.getElementById('newGroupModal').style.display='none'"
+          style="flex:1;padding:10px;border-radius:10px;border:1.5px solid #e2e8f0;background:white;color:#64748b;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;">Cancel</button>
+        <button type="submit"
+          style="flex:1;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#4f46e5,#6366f1);color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Create Group</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CONV_ID  = {{ conv.id }};
+const SEND_URL = "{% url 'send_message' conv.id %}";
+const POLL_URL = "{% url 'poll_messages' conv.id %}";
+const CSRF     = "{{ csrf_token }}";
+
+let lastMsgId  = {% if messages_list %}{{ messages_list.last.id }}{% else %}0{% endif %};
+let polling    = null;
+
+// Auto scroll to bottom
+function scrollBottom() {
+  const area = document.getElementById('messagesArea');
+  area.scrollTop = area.scrollHeight;
+}
+scrollBottom();
+
+// Auto resize textarea
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+// Handle Enter key
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMsg();
+  }
+}
+
+// Emoji
+function toggleEmojiPicker() {
+  const p = document.getElementById('emojiPicker');
+  p.style.display = p.style.display === 'none' ? 'flex' : 'none';
+}
+function addEmoji(e) {
+  const input = document.getElementById('msgInput');
+  input.value += e;
+  input.focus();
+  document.getElementById('emojiPicker').style.display = 'none';
+}
+
+// Send message
+async function sendMsg() {
+  const input   = document.getElementById('msgInput');
+  const content = input.value.trim();
+  if (!content) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Optimistic UI — show immediately
+  appendMessage({
+    content:  content,
+    sender:   '{{ request.user.get_full_name|default:request.user.username }}',
+    initials: '{{ current_emp.first_name|first|upper }}{{ current_emp.last_name|first|upper }}',
+    photo:    {% if current_emp and current_emp.photo %}'{{ current_emp.photo.url }}'{% else %}null{% endif %},
+    time:     new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+    is_mine:  true,
+    temp:     true,
+  });
+
+  try {
+    const form = new FormData();
+    form.append('content', content);
+    form.append('csrfmiddlewaretoken', CSRF);
+
+    const resp = await fetch(SEND_URL, { method: 'POST', body: form });
+    const data = await resp.json();
+    if (data.id) lastMsgId = data.id;
+  } catch(e) {
+    console.error('Send failed', e);
+  }
+}
+
+// Append message to UI
+function appendMessage(msg) {
+  const area = document.getElementById('messagesArea');
+  const end  = document.getElementById('msgEnd');
+
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;flex-direction:column;align-items:${msg.is_mine ? 'flex-end' : 'flex-start'};gap:2px;`;
+
+  if (msg.is_mine) {
+    div.innerHTML = `
+      <div style="background:linear-gradient(135deg,#4f46e5,#6366f1);color:white;border-radius:16px;border-bottom-right-radius:3px;padding:10px 14px;max-width:65%;font-size:13px;line-height:1.5;word-break:break-word;">
+        ${escHtml(msg.content)}
+      </div>
+      <div style="font-size:10px;color:#94a3b8;">${msg.time} · You</div>`;
+  } else {
+    const initials = msg.initials || msg.sender.slice(0,2).toUpperCase();
+    div.innerHTML = `
+      <div style="display:flex;align-items:flex-end;gap:7px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#0891b2);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>
+        <div>
+          <div style="font-size:10px;color:#94a3b8;margin-bottom:3px;">${msg.sender}</div>
+          <div style="background:white;color:#334155;border:1px solid #e2e8f0;border-radius:16px;border-bottom-left-radius:3px;padding:10px 14px;max-width:400px;font-size:13px;line-height:1.5;word-break:break-word;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+            ${escHtml(msg.content)}
+          </div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:#94a3b8;padding-left:35px;">${msg.time}</div>`;
+  }
+
+  area.insertBefore(div, end);
+  scrollBottom();
+}
+
+function escHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+// Poll for new messages every 2 seconds
+async function pollMessages() {
+  try {
+    const resp = await fetch(`${POLL_URL}?last_id=${lastMsgId}`);
+    const data = await resp.json();
+    data.messages.forEach(msg => {
+      if (!msg.is_mine) {
+        appendMessage(msg);
+        lastMsgId = Math.max(lastMsgId, msg.id);
+      } else {
+        lastMsgId = Math.max(lastMsgId, msg.id);
+      }
+    });
+  } catch(e) {}
+}
+
+// Start polling
+polling = setInterval(pollMessages, 2000);
+
+// Stop polling when page hidden
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    clearInterval(polling);
+  } else {
+    polling = setInterval(pollMessages, 2000);
+  }
+});
+
+// Search conversations
+function filterConvs(q) {
+  document.querySelectorAll('.conv-item').forEach(item => {
+    const text = item.textContent.toLowerCase();
+    item.style.display = text.includes(q.toLowerCase()) ? 'block' : 'none';
+  });
+}
+
+// Focus input
+document.getElementById('msgInput').focus();
+</script>
+{% endblock %}

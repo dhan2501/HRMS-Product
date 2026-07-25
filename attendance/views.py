@@ -9,6 +9,27 @@ from .models import AttendanceRecord, Holiday,WorkFromHomeRequest
 # from .models import AttendanceRecord, Holiday, WorkFromHomeRequest
 
 
+
+from functools import wraps
+from django.shortcuts import redirect
+from employees.models import Employee
+
+
+def admin_required(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('admin_login')
+        if not (request.user.is_staff or request.user.is_superuser):
+            try:
+                Employee.objects.get(user=request.user)
+                return redirect('portal_dashboard')
+            except Employee.DoesNotExist:
+                return redirect('employee_login')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
 # ── Daily Attendance ──────────────────────────────────────────────────────────
 @login_required
 def daily_attendance(request):

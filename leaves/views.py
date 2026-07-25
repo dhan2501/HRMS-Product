@@ -9,6 +9,91 @@ from employees.models import Employee
 from .models import LeaveType, LeaveBalance, LeaveRequest
 
 
+from functools import wraps
+from django.shortcuts import redirect
+from employees.models import Employee
+
+
+def admin_required(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('admin_login')
+        if not (request.user.is_staff or request.user.is_superuser):
+            try:
+                Employee.objects.get(user=request.user)
+                return redirect('portal_dashboard')
+            except Employee.DoesNotExist:
+                return redirect('employee_login')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+from employees.models import Employee
+
+def get_current_employee(request):
+    try:
+        return Employee.objects.select_related('department', 'role').get(user=request.user)
+    except:
+        return None
+
+def is_manager_or_above(employee):
+    """HR, PMO, CEO, Team Lead, Super Admin check."""
+    if not employee:
+        return False
+    if employee.user.is_superuser or employee.user.is_staff:
+        return True
+    try:
+        return employee.role.can_approve_leave
+    except:
+        return False
+
+
+@login_required
+def leave_requests(request):
+    current_emp = get_current_employee(request)
+
+    # ✅ Super admin / HR / Manager — saare leaves dekhe
+    if request.user.is_superuser or request.user.is_staff or is_manager_or_above(current_emp):
+        leaves = LeaveRequest.objects.select_related(
+            'employee', 'leave_type', 'approved_by'
+        ).order_by('-created_at')
+    else:
+        # ✅ Normal employee — SIRF APNA
+        if current_emp:
+            leaves = LeaveRequest.objects.filter(
+                employee=current_emp
+            ).select_related('leave_type').order_by('-created_at')
+        else:
+            leaves = LeaveRequest.objects.none()
+
+    # Filters
+    status_filter = request.GET.get('status', '')
+    search        = request.GET.get('search', '')
+    if status_filter:
+        leaves = leaves.filter(status=status_filter)
+    if search and (request.user.is_staff or request.user.is_superuser):
+        leaves = leaves.filter(
+            Q(employee__first_name__icontains=search) |
+            Q(employee__last_name__icontains=search)
+        )
+
+    pending  = LeaveRequest.objects.filter(status='pending').count() if request.user.is_staff else leaves.filter(status='pending').count()
+    approved = leaves.filter(status='approved').count()
+    rejected = leaves.filter(status='rejected').count()
+    total    = leaves.count()
+
+    return render(request, 'leaves/requests.html', {
+        'leaves':        leaves,
+        'pending':       pending,
+        'approved':      approved,
+        'rejected':      rejected,
+        'total':         total,
+        'status_filter': status_filter,
+        'search':        search,
+        'is_manager':    request.user.is_staff or is_manager_or_above(current_emp),
+    })
+
+
 # ── Leave Requests List ───────────────────────────────────────────────────────
 @login_required
 def leave_requests(request):
