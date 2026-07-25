@@ -6,6 +6,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-hrms-secret-key-change-in-production-2024'
 DEBUG = True
 ALLOWED_HOSTS = ['*']
+# ALLOWED_HOSTS = [
+#     "hrms-product-production.up.railway.app",
+#     "localhost",
+#     "127.0.0.1",
+# ]
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -122,3 +132,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://hrms-product-production.up.railway.app",
+]
