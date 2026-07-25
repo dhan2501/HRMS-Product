@@ -12,6 +12,14 @@ ALLOWED_HOSTS = ['*']
 #     "127.0.0.1",
 # ]
 
+
+
+
+   
+    # print("Username: djsuperadmin")
+
+    # print("Password: Admindj@2026")
+
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 CSRF_COOKIE_SECURE = True
