@@ -24,19 +24,35 @@ from leaves.models import LeaveRequest
 from datetime import date
 
 
+
+# def admin_required(view_func):
+#     """Sirf staff/superadmin access kar sake."""
+#     @wraps(view_func)
+#     def wrapper(request, *args, **kwargs):
+#         if not request.user.is_authenticated:
+#             return redirect('admin_login')
+#         if not (request.user.is_staff or request.user.is_superuser):
+#             try:
+#                 Employee.objects.get(user=request.user)
+#                 return redirect('portal_dashboard')
+#             except Employee.DoesNotExist:
+#                 return redirect('employee_login')
+#         return view_func(request, *args, **kwargs)
+#     return wrapper
+
 def admin_required(view_func):
-    """Sirf staff/superadmin access kar sake."""
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('admin_login')
-        if not (request.user.is_staff or request.user.is_superuser):
-            try:
-                Employee.objects.get(user=request.user)
-                return redirect('portal_dashboard')
-            except Employee.DoesNotExist:
-                return redirect('employee_login')
-        return view_func(request, *args, **kwargs)
+            return redirect('admin_login')  # employee-login nahi
+        if request.user.is_staff or request.user.is_superuser:
+            return view_func(request, *args, **kwargs)
+        # Employee ko portal pe bhejo — dashboard nahi dikhega
+        try:
+            Employee.objects.get(user=request.user)
+            return redirect('portal_dashboard')
+        except Employee.DoesNotExist:
+            return redirect('employee_login')
     return wrapper
 
 
@@ -79,30 +95,131 @@ class EmployeeForm(forms.ModelForm):
 
 
 # ── Dashboard ────────────────────────────────────────────────────────────────
+# @login_required
+# def dashboard(request):
+#     today = date.today()
+#     total_employees = Employee.objects.filter(status='active').count()
+#     today_present   = AttendanceRecord.objects.filter(
+#         date=today, status__in=['present', 'late', 'work_from_home']
+#     ).count()
+#     pending_leaves  = LeaveRequest.objects.filter(status='pending').count()
+#     departments     = Department.objects.annotate(
+#         emp_count=Count('employees', filter=Q(employees__status='active'))
+#     )
+#     recent_employees = Employee.objects.filter(status='active').order_by('-date_joined')[:5]
+#     recent_leaves    = LeaveRequest.objects.filter(status='pending').order_by('-created_at')[:5]
+
+#     return render(request, 'dashboard/index.html', {
+#         'total_employees': total_employees,
+#         'today_present':   today_present,
+#         'pending_leaves':  pending_leaves,
+#         'departments':     departments,
+#         'recent_employees': recent_employees,
+#         'recent_leaves':   recent_leaves,
+#         'today':           today,
+#     })
+
+
+
+# from django.db.models import Count, Q
+
+
+# @login_required
+# def dashboard(request):
+
+#     # Employee ko admin dashboard access na do
+#     if not request.user.is_staff:
+#         return redirect('/portal/')
+
+#     # Agar custom User model me role field hai to ye check rakho
+#     if hasattr(request.user, "role"):
+#         if request.user.role not in ["SUPER_ADMIN", "HR"]:
+#             return redirect('/portal/')
+
+#     today = date.today()
+
+#     total_employees = Employee.objects.filter(status='active').count()
+
+#     today_present = AttendanceRecord.objects.filter(
+#         date=today,
+#         status__in=['present', 'late', 'work_from_home']
+#     ).count()
+
+#     pending_leaves = LeaveRequest.objects.filter(
+#         status='pending'
+#     ).count()
+
+#     departments = Department.objects.annotate(
+#         emp_count=Count(
+#             'employees',
+#             filter=Q(employees__status='active')
+#         )
+#     )
+
+#     recent_employees = Employee.objects.filter(
+#         status='active'
+#     ).order_by('-date_joined')[:5]
+
+#     recent_leaves = LeaveRequest.objects.filter(
+#         status='pending'
+#     ).order_by('-created_at')[:5]
+
+#     return render(request, 'dashboard/index.html', {
+#         'total_employees': total_employees,
+#         'today_present': today_present,
+#         'pending_leaves': pending_leaves,
+#         'departments': departments,
+#         'recent_employees': recent_employees,
+#         'recent_leaves': recent_leaves,
+#         'today': today,
+#     })
+
+
+# new code
+
+
+from django.db.models import Count, Q
+
+
+
 @login_required
 def dashboard(request):
-    today = date.today()
-    total_employees = Employee.objects.filter(status='active').count()
-    today_present   = AttendanceRecord.objects.filter(
-        date=today, status__in=['present', 'late', 'work_from_home']
+    # ── Access Control ─────────────────────────────────────────────
+    # Sirf superadmin ya staff access kar sakta hai
+    # Employee ko portal pe redirect karo
+    if not request.user.is_authenticated:
+        return redirect('/admin-login/')
+
+    if not (request.user.is_staff or request.user.is_superuser):
+        return redirect('/portal/')
+
+    # ── Dashboard Data ─────────────────────────────────────────────
+    today            = date.today()
+    total_employees  = Employee.objects.filter(status='active').count()
+    today_present    = AttendanceRecord.objects.filter(
+        date=today,
+        status__in=['present', 'late', 'work_from_home']
     ).count()
-    pending_leaves  = LeaveRequest.objects.filter(status='pending').count()
-    departments     = Department.objects.annotate(
+    pending_leaves   = LeaveRequest.objects.filter(status='pending').count()
+    departments      = Department.objects.annotate(
         emp_count=Count('employees', filter=Q(employees__status='active'))
     )
-    recent_employees = Employee.objects.filter(status='active').order_by('-date_joined')[:5]
-    recent_leaves    = LeaveRequest.objects.filter(status='pending').order_by('-created_at')[:5]
+    recent_employees = Employee.objects.filter(
+        status='active'
+    ).order_by('-date_joined')[:5]
+    recent_leaves    = LeaveRequest.objects.filter(
+        status='pending'
+    ).order_by('-created_at')[:5]
 
     return render(request, 'dashboard/index.html', {
-        'total_employees': total_employees,
-        'today_present':   today_present,
-        'pending_leaves':  pending_leaves,
-        'departments':     departments,
+        'total_employees':  total_employees,
+        'today_present':    today_present,
+        'pending_leaves':   pending_leaves,
+        'departments':      departments,
         'recent_employees': recent_employees,
-        'recent_leaves':   recent_leaves,
-        'today':           today,
+        'recent_leaves':    recent_leaves,
+        'today':            today,
     })
-
 
 # ── Employee List ─────────────────────────────────────────────────────────────
 @login_required

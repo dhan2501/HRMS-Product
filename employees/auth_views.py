@@ -30,15 +30,32 @@ from .models import Employee, Department, Designation
 #     except Employee.DoesNotExist:
 #         return redirect('employee_login')
 
+# def root_redirect(request):
+#     if not request.user.is_authenticated:
+#         return redirect('employee_login')
+
+#     # Super admin / Staff → Admin Dashboard
+#     if request.user.is_superuser or request.user.is_staff:
+#         return redirect('dashboard')
+
+#     # Employee check
+#     try:
+#         emp = Employee.objects.get(user=request.user)
+#         if emp.status in ['active', 'on_leave']:
+#             return redirect('portal_dashboard')
+#         else:
+#             from django.contrib.auth import logout
+#             logout(request)
+#             return redirect('employee_login')
+#     except Employee.DoesNotExist:
+#         return redirect('employee_login')
+
 def root_redirect(request):
     if not request.user.is_authenticated:
         return redirect('employee_login')
-
-    # Super admin / Staff → Admin Dashboard
     if request.user.is_superuser or request.user.is_staff:
+    
         return redirect('dashboard')
-
-    # Employee check
     try:
         emp = Employee.objects.get(user=request.user)
         if emp.status in ['active', 'on_leave']:

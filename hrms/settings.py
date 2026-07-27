@@ -4,8 +4,11 @@ import anthropic
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-hrms-secret-key-change-in-production-2024'
-DEBUG = True
-ALLOWED_HOSTS = ['*']
+DEBUG = False
+
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'hrms-product-production.up.railway.app']
+# DEBUG = True
+# ALLOWED_HOSTS = ['*']
 # ALLOWED_HOSTS = [
 #     "hrms-product-production.up.railway.app",
 #     "localhost",
@@ -118,6 +121,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/employee-login/'
 LOGIN_REDIRECT_URL = '/portal/'
 LOGOUT_REDIRECT_URL = '/employee-login/'
+
+
 
 # Employee portal redirect alag handle hoga views mein
 
