@@ -70,8 +70,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from employees import auth_views
 
+# ✅ Custom 404 handler
+handler404 = 'hrms.views.custom_404'
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', auth_views.root_redirect, name='root_redirect'),
 
     # Root URL — Smart redirect
     path('', auth_views.root_redirect, name='root_redirect'),
