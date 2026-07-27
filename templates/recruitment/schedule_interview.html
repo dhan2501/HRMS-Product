@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Schedule Interview{% endblock %}
+{% block page_title %}Schedule Interview{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  <div class="bg-white rounded-2xl border border-slate-100 p-6">
+
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center">
+        <i class="fas fa-calendar-plus text-brand-600"></i>
+      </div>
+      <div>
+        <h2 class="text-slate-800 font-semibold text-sm">Schedule New Interview</h2>
+        <p class="text-slate-400 text-xs">Fill in interview details</p>
+      </div>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="space-y-4">
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Candidate <span class="text-red-500">*</span></label>
+          <select name="candidate" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 bg-white" required>
+            <option value="">-- Select Candidate --</option>
+            {% for c in candidates %}
+              <option value="{{ c.id }}" {% if selected_candidate and selected_candidate.id == c.id %}selected{% endif %}>
+                {{ c.full_name }} — {{ c.job.title }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Interview Round <span class="text-red-500">*</span></label>
+            <select name="interview_type" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 bg-white" required>
+              <option value="">-- Select --</option>
+              <option value="phone">Phone Screening</option>
+              <option value="technical">Technical Round</option>
+              <option value="hr">HR Round</option>
+              <option value="final">Final Round</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Duration (minutes)</label>
+            <input type="number" name="duration_minutes" value="60" min="15"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Date & Time <span class="text-red-500">*</span></label>
+          <input type="datetime-local" name="scheduled_at" required
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Interviewer Name <span class="text-red-500">*</span></label>
+          <input type="text" name="interviewer" placeholder="e.g. Rahul Verma" required
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Location / Mode</label>
+          <input type="text" name="location" value="Online" placeholder="Online / Office / Google Meet..."
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+          <a href="{% url 'interview_list' %}"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+            <i class="fas fa-arrow-left text-xs"></i> Cancel
+          </a>
+          <button type="submit"
+            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90"
+            style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+            <i class="fas fa-calendar-plus text-xs"></i> Schedule Interview
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

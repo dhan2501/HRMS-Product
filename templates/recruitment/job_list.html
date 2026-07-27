@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% block title %}Job Openings{% endblock %}
+{% block page_title %}Job Openings{% endblock %}
+{% block page_subtitle %}Manage hiring pipeline{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-briefcase text-emerald-600"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">{{ open_count }}</p>
+      <p class="text-slate-500 text-xs">Open Positions</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-users text-brand-600"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">{{ total_candidates }}</p>
+      <p class="text-slate-500 text-xs">Total Candidates</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-list text-purple-600"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">{{ jobs.count }}</p>
+      <p class="text-slate-500 text-xs">Total Jobs</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-comments text-amber-600"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">0</p>
+      <p class="text-slate-500 text-xs">Interviews Today</p>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+  <form method="get" class="flex flex-wrap items-center gap-2">
+    <input type="text" name="search" value="{{ search }}" placeholder="Search job title..."
+      class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none focus:border-brand-400 bg-white w-44">
+    <select name="status" onchange="this.form.submit()"
+      class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none bg-white">
+      <option value="">All Status</option>
+      <option value="open" {% if status_f == 'open' %}selected{% endif %}>Open</option>
+      <option value="on_hold" {% if status_f == 'on_hold' %}selected{% endif %}>On Hold</option>
+      <option value="filled" {% if status_f == 'filled' %}selected{% endif %}>Filled</option>
+      <option value="closed" {% if status_f == 'closed' %}selected{% endif %}>Closed</option>
+    </select>
+    <select name="department" onchange="this.form.submit()"
+      class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none bg-white">
+      <option value="">All Departments</option>
+      {% for dept in departments %}
+        <option value="{{ dept.id }}" {% if dept_f == dept.id|stringformat:'s' %}selected{% endif %}>{{ dept.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="bg-brand-600 text-white px-3 py-2 rounded-xl text-sm hover:bg-brand-700">
+      <i class="fas fa-magnifying-glass"></i>
+    </button>
+    {% if search or status_f or dept_f %}
+    <a href="{% url 'job_list' %}" class="text-xs text-slate-400 hover:text-red-500">
+      <i class="fas fa-xmark mr-1"></i>Clear
+    </a>
+    {% endif %}
+  </form>
+  <div class="flex gap-2">
+    <a href="{% url 'candidate_list' %}"
+      class="inline-flex items-center gap-2 border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50">
+      <i class="fas fa-users text-xs"></i> Candidates
+    </a>
+    <a href="{% url 'interview_list' %}"
+      class="inline-flex items-center gap-2 border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50">
+      <i class="fas fa-comments text-xs"></i> Interviews
+    </a>
+    <a href="{% url 'add_job' %}"
+      class="inline-flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700">
+      <i class="fas fa-plus text-xs"></i> Post Job
+    </a>
+  </div>
+</div>
+
+<!-- Job Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+  {% for job in jobs %}
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 hover:border-brand-200 hover:shadow-sm transition-all">
+
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-3">
+      <div class="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-briefcase text-brand-600 text-sm"></i>
+      </div>
+      <span class="text-xs px-2.5 py-1 rounded-full font-medium
+        {% if job.status == 'open' %}bg-emerald-100 text-emerald-700
+        {% elif job.status == 'on_hold' %}bg-amber-100 text-amber-700
+        {% elif job.status == 'filled' %}bg-blue-100 text-blue-700
+        {% else %}bg-slate-100 text-slate-500{% endif %}">
+        {{ job.get_status_display }}
+      </span>
+    </div>
+
+    <h3 class="text-slate-800 font-semibold text-sm mb-1">{{ job.title }}</h3>
+    <p class="text-slate-400 text-xs mb-3">{{ job.department.name }}</p>
+
+    <!-- Tags -->
+    <div class="flex flex-wrap gap-1.5 mb-4">
+      <span class="text-[10px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 font-medium">
+        {{ job.get_experience_level_display }}
+      </span>
+      <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">
+        {{ job.get_employment_type_display }}
+      </span>
+      <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-medium">
+        {{ job.vacancies }} vacanc{{ job.vacancies|pluralize:"y,ies" }}
+      </span>
+    </div>
+
+    <!-- Salary -->
+    {% if job.salary_min or job.salary_max %}
+    <p class="text-slate-600 text-xs mb-3 font-medium">
+      <i class="fas fa-indian-rupee-sign mr-1 text-slate-400"></i>
+      {% if job.salary_min %}{{ job.salary_min|floatformat:0 }}{% endif %}
+      {% if job.salary_min and job.salary_max %} - {% endif %}
+      {% if job.salary_max %}{{ job.salary_max|floatformat:0 }}{% endif %}
+      /month
+    </p>
+    {% endif %}
+
+    <!-- Footer -->
+    <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+      <div class="flex items-center gap-3">
+        <span class="text-slate-500 text-xs">
+          <i class="fas fa-users mr-1 text-slate-400"></i>
+          {{ job.candidate_count }} applied
+        </span>
+        {% if job.deadline %}
+        <span class="text-slate-400 text-xs">
+          <i class="fas fa-calendar mr-1"></i>{{ job.deadline|date:"d M" }}
+        </span>
+        {% endif %}
+      </div>
+      <div class="flex gap-1.5">
+        <a href="{% url 'job_detail' job.pk %}"
+          class="w-7 h-7 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 flex items-center justify-center text-xs">
+          <i class="fas fa-eye"></i>
+        </a>
+        <a href="{% url 'edit_job' job.pk %}"
+          class="w-7 h-7 rounded-lg bg-slate-50 text-slate-500 hover:bg-slate-100 flex items-center justify-center text-xs">
+          <i class="fas fa-pencil"></i>
+        </a>
+        <a href="{% url 'delete_job' job.pk %}"
+          onclick="return confirm('Delete this job opening?')"
+          class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 flex items-center justify-center text-xs">
+          <i class="fas fa-trash"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-span-3 bg-white rounded-2xl border border-slate-100 py-16 text-center">
+    <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+      <i class="fas fa-briefcase text-slate-300 text-xl"></i>
+    </div>
+    <p class="text-slate-500 font-medium text-sm">No job openings found</p>
+    <p class="text-slate-400 text-xs mt-1 mb-4">Post your first job opening</p>
+    <a href="{% url 'add_job' %}"
+      class="inline-flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700">
+      <i class="fas fa-plus text-xs"></i> Post Job
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
