@@ -117,6 +117,7 @@
   <!-- ── Chat Area ── -->
   <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
 
+    {% if conv %}
     <!-- Chat Header -->
     <div style="padding: 14px 20px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; background: white; flex-shrink: 0;">
       {% if conv.conv_type == 'group' %}
@@ -228,6 +229,14 @@
 
       <div style="font-size: 10px; color: #cbd5e1; text-align: center; margin-top: 6px;">Enter to send · Shift+Enter for new line</div>
     </div>
+    {% else %}
+    <!-- Empty state — no conversation selected -->
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; background: #f8fafc;">
+      <div style="font-size: 48px; margin-bottom: 12px;">💬</div>
+      <p style="font-size: 14px; font-weight: 600; color: #64748b; margin: 0 0 4px 0;">Select a conversation</p>
+      <p style="font-size: 12px; margin: 0;">Pick a chat from the left, or start one with a team member above.</p>
+    </div>
+    {% endif %}
   </div>
 
 </div>
@@ -282,6 +291,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if conv %}
 <script>
 const CONV_ID  = {{ conv.id }};
 const SEND_URL = "{% url 'send_message' conv.id %}";
@@ -432,5 +442,18 @@ function filterConvs(q) {
 
 // Focus input
 document.getElementById('msgInput').focus();
+</script>
+{% endif %}
+
+<script>
+// Filters the conversation list — available even when no chat is open yet
+if (typeof filterConvs === 'undefined') {
+  window.filterConvs = function(q) {
+    document.querySelectorAll('.conv-item').forEach(item => {
+      const text = item.textContent.toLowerCase();
+      item.style.display = text.includes(q.toLowerCase()) ? 'block' : 'none';
+    });
+  };
+}
 </script>
 {% endblock %}

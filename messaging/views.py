@@ -83,6 +83,48 @@ def open_chat(request, user_id):
 
 # ── Chat Room ─────────────────────────────────────────────────────────────────
 @login_required
+# def chat_room(request, conv_id):
+#     conv = get_object_or_404(Conversation, id=conv_id, participants=request.user)
+
+#     # Mark messages as read
+#     conv.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
+
+#     messages_list = conv.messages.select_related('sender').order_by('created_at')
+
+#     # All conversations for sidebar
+#     conversations = Conversation.objects.filter(
+#         participants=request.user
+#     ).prefetch_related('participants').order_by('-updated_at')
+
+#     conv_data = []
+#     for c in conversations:
+#         last_msg   = c.last_message()
+#         unread     = c.messages.filter(is_read=False).exclude(sender=request.user).count()
+#         other_user = c.get_other_participant(request.user)
+#         other_emp  = get_employee_or_none(other_user) if other_user else None
+#         conv_data.append({
+#             'conv': c, 'last_msg': last_msg,
+#             'unread': unread, 'other_user': other_user, 'other_emp': other_emp,
+#             'is_active': c.id == conv.id,
+#         })
+
+#     other_user = conv.get_other_participant(request.user)
+#     other_emp  = get_employee_or_none(other_user) if other_user else None
+#     current_emp = get_employee_or_none(request.user)
+#     all_employees = Employee.objects.filter(
+#         status='active'
+#     ).select_related('user', 'department').exclude(user=request.user)
+
+#     return render(request, 'messaging/chat_room.html', {
+#         'conv':          conv,
+#         'messages_list': messages_list,
+#         'conv_data':     conv_data,
+#         'other_user':    other_user,
+#         'other_emp':     other_emp,
+#         'current_emp':   current_emp,
+#         'all_employees': all_employees,
+#     })
+
 def chat_room(request, conv_id):
     conv = get_object_or_404(Conversation, id=conv_id, participants=request.user)
 
@@ -115,7 +157,7 @@ def chat_room(request, conv_id):
         status='active'
     ).select_related('user', 'department').exclude(user=request.user)
 
-    return render(request, 'messaging/chat_room.html', {
+    return render(request, 'messaging/chat_home.html', {
         'conv':          conv,
         'messages_list': messages_list,
         'conv_data':     conv_data,

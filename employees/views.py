@@ -12,16 +12,28 @@
 # from django.core.exceptions import PermissionDenied
 
 
+# from django.shortcuts import render, get_object_or_404, redirect
+# from django.contrib.auth.decorators import login_required
+# from django.contrib import messages
+# from django.db.models import Count, Q
+# from django import forms
+# from functools import wraps
+# from .models import Employee, Department, Designation
+# from attendance.models import AttendanceRecord
+# from leaves.models import LeaveRequest
+# from datetime import date
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Q
 from django import forms
 from functools import wraps
-from .models import Employee, Department, Designation
+from .models import Employee, Department, Designation, EmployeeStatusLog
 from attendance.models import AttendanceRecord
 from leaves.models import LeaveRequest
 from datetime import date
+from django.utils import timezone
 
 
 
@@ -337,10 +349,93 @@ def edit_employee(request, pk):
 
 
 # ── Employee Detail ───────────────────────────────────────────────────────────
+# @login_required
+# def employee_detail(request, pk):
+#     employee = get_object_or_404(Employee, pk=pk)
+#     return render(request, 'employees/detail.html', {'employee': employee})
+
+# ── Employee Detail ───────────────────────────────────────────────────────────
 @login_required
 def employee_detail(request, pk):
     employee = get_object_or_404(Employee, pk=pk)
-    return render(request, 'employees/detail.html', {'employee': employee})
+    status_logs = employee.status_logs.select_related('changed_by')[:10]
+    return render(request, 'employees/detail.html', {
+        'employee': employee,
+        'status_logs': status_logs,
+    })
+
+
+# ── Deactivate / Hold / Reactivate Employee ─────────────────────────────────────
+@login_required
+def update_employee_status(request, pk):
+    """
+    HR/Admin-only action to deactivate an employee (resigned/left the
+    company), put them on hold (long leave — 6 months, 1 year, etc. with
+    an expected return date), terminate them, or reactivate them.
+    Every change is written to EmployeeStatusLog with a mandatory reason,
+    so there is always a record of why and when the status changed.
+    """
+    if not (request.user.is_staff or request.user.is_superuser):
+        messages.error(request, 'You do not have permission to change employee status.')
+        return redirect('employee_detail', pk=pk)
+
+    employee = get_object_or_404(Employee, pk=pk)
+
+    if request.method == 'POST':
+        new_status = request.POST.get('new_status', '').strip()
+        reason     = request.POST.get('reason', '').strip()
+        hold_until = request.POST.get('hold_until', '').strip() or None
+
+        valid_statuses = dict(Employee.STATUS_CHOICES)
+        if new_status not in valid_statuses:
+            messages.error(request, 'Invalid status selected.')
+            return redirect('employee_detail', pk=pk)
+
+        if not reason:
+            messages.error(request, 'A reason is required to change employee status.')
+            return redirect('employee_detail', pk=pk)
+
+        if new_status == 'on_leave' and not hold_until:
+            messages.error(request, 'Please provide an expected return date for "On Leave / Hold".')
+            return redirect('employee_detail', pk=pk)
+
+        previous_status = employee.status
+
+        # Log the change first (keeps a full audit trail)
+        EmployeeStatusLog.objects.create(
+            employee=employee,
+            previous_status=previous_status,
+            new_status=new_status,
+            reason=reason,
+            hold_until=hold_until if new_status == 'on_leave' else None,
+            changed_by=request.user,
+        )
+
+        # Apply the change
+        employee.status = new_status
+        employee.status_reason = reason
+        employee.status_changed_at = timezone.now()
+        employee.hold_until = hold_until if new_status == 'on_leave' else None
+        employee.save()
+
+        # Deactivating/terminating an employee also locks their portal login;
+        # reactivating restores it.
+        if employee.user:
+            employee.user.is_active = (new_status not in ('inactive', 'terminated'))
+            employee.user.save(update_fields=['is_active'])
+
+        status_labels = {
+            'active':     'reactivated',
+            'inactive':   'deactivated',
+            'on_leave':   'put on hold / long leave',
+            'terminated': 'terminated',
+        }
+        messages.success(
+            request,
+            f'{employee.full_name} has been {status_labels.get(new_status, "updated")}.'
+        )
+
+    return redirect('employee_detail', pk=pk)
 
 
 # ── Department List ───────────────────────────────────────────────────────────

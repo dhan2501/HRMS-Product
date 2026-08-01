@@ -58,6 +58,7 @@ urlpatterns = [
     path('employees/add/', views.add_employee, name='add_employee'),
     path('employees/<int:pk>/', views.employee_detail, name='employee_detail'),
     path('employees/<int:pk>/edit/', views.edit_employee, name='edit_employee'),
+    path('employees/<int:pk>/status/', views.update_employee_status, name='update_employee_status'),
 
     # ✅ Login Credentials Management
     path('employees/credentials/', views.employee_credentials, name='employee_credentials'),
