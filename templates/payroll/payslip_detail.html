@@ -24,6 +24,9 @@
             {% else %}bg-amber-300 text-amber-900{% endif %}">
             {{ slip.get_status_display }}
           </span>
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-white bg-opacity-20 text-white ml-1">
+            {{ slip.get_tax_regime_display }}
+          </span>
         </div>
       </div>
     </div>

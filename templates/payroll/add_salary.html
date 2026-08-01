@@ -154,6 +154,426 @@
         </div>
       </div>
 
+      <!-- Taxation Policy -->
+      <div class="bg-white rounded-2xl border border-slate-100 p-6">
+        <h3 class="text-slate-700 font-semibold text-sm mb-1 flex items-center gap-2">
+          <span class="w-5 h-5 bg-indigo-100 rounded-md flex items-center justify-center">
+            <i class="fas fa-file-invoice-dollar text-indigo-600 text-[10px]"></i>
+          </span>
+          Taxation Policy
+        </h3>
+        <p class="text-slate-400 text-xs mb-4">Choose the income-tax regime this employee's package will be taxed under. TDS is auto-calculated every month.</p>
+
+        <!-- Regime toggle -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+          <label class="regime-card cursor-pointer border-2 rounded-xl p-4 flex items-start gap-3 transition-colors"
+                 data-regime="new">
+            <input type="radio" name="tax_regime" value="new" class="mt-1"
+              {% if not is_edit or structure.tax_regime == 'new' %}checked{% endif %}
+              onchange="onRegimeChange()">
+            <span>
+              <span class="block text-slate-700 text-sm font-semibold">New Regime</span>
+              <span class="block text-slate-400 text-xs mt-0.5">Lower slab rates, flat ₹75,000 standard deduction, no 80C/80D. Default regime.</span>
+            </span>
+          </label>
+          <label class="regime-card cursor-pointer border-2 rounded-xl p-4 flex items-start gap-3 transition-colors"
+                 data-regime="old">
+            <input type="radio" name="tax_regime" value="old" class="mt-1"
+              {% if is_edit and structure.tax_regime == 'old' %}checked{% endif %}
+              onchange="onRegimeChange()">
+            <span>
+              <span class="block text-slate-700 text-sm font-semibold">Old Regime</span>
+              <span class="block text-slate-400 text-xs mt-0.5">Higher slab rates, but allows 80C, 80D & other deductions.</span>
+            </span>
+          </label>
+        </div>
+
+        <!-- Old-regime-only deductions -->
+        <div id="oldRegimeFields" class="grid grid-cols-1 sm:grid-cols-2 gap-4 {% if not is_edit or structure.tax_regime != 'old' %}hidden{% endif %}">
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Section 80C (annual)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-2.5 text-slate-400 text-sm font-medium">₹</span>
+              <input type="number" name="deduction_80c" id="deduction_80c"
+                value="{% if is_edit %}{{ structure.deduction_80c }}{% endif %}"
+                placeholder="0" min="0" max="150000" step="0.01"
+                oninput="calculateTotal()"
+                class="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+            </div>
+            <p class="text-slate-400 text-[10px] mt-1">Capped at ₹1,50,000 (PF, ELSS, LIC, tuition fee, etc.)</p>
+          </div>
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Section 80D (annual)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-2.5 text-slate-400 text-sm font-medium">₹</span>
+              <input type="number" name="deduction_80d" id="deduction_80d"
+                value="{% if is_edit %}{{ structure.deduction_80d }}{% endif %}"
+                placeholder="0" min="0" step="0.01"
+                oninput="calculateTotal()"
+                class="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+            </div>
+            <p class="text-slate-400 text-[10px] mt-1">Health insurance premium</p>
+          </div>
+        </div>
+
+        <!-- Tax estimate -->
+        <div class="mt-5 bg-slate-50 rounded-xl p-4 grid grid-cols-3 gap-3 text-center">
+          <div>
+            <p class="text-slate-400 text-[10px] uppercase tracking-wide mb-1">Taxable Income (Annual)</p>
+            <p class="text-slate-700 font-semibold text-sm" id="previewTaxableIncome">₹0</p>
+          </div>
+          <div>
+            <p class="text-slate-400 text-[10px] uppercase tracking-wide mb-1">Est. Annual Tax</p>
+            <p class="text-slate-700 font-semibold text-sm" id="previewAnnualTax">₹0</p>
+          </div>
+          <div>
+            <p class="text-slate-400 text-[10px] uppercase tracking-wide mb-1">Monthly TDS</p>
+            <p class="text-red-500 font-bold text-sm" id="previewMonthlyTDS">₹0</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Salary Breakdown -->
+      <div class="bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-5 text-white">
+        <h3 class="font-semibold text-sm mb-4 opacity-90">💰 Salary Breakdown (Live Preview)</h3>
+        <div class="space-y-2">
+          <div class="flex justify-between text-sm">
+            <span class="opacity-75">Basic</span>
+            <span class="font-medium" id="previewBasic">₹0</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="opacity-75">HRA</span>
+            <span class="font-medium" id="previewHRA">₹0</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="opacity-75">Special Allowance</span>
+            <span class="font-medium" id="previewSpecial">₹0</span>
+          </div>
+          <div class="border-t border-white border-opacity-20 my-2"></div>
+          <div class="flex justify-between text-sm">
+            <span class="opacity-75">Gross Salary</span>
+            <span class="font-semibold" id="previewGross">₹0</span>
+          </div>
+          <div class="flex justify-between text-sm text-red-200">
+            <span>(-) PF Deduction</span>
+            <span id="previewPF">₹0</span>
+          </div>
+          <div class="flex justify-between text-sm text-red-200">
+            <span>(-) Professional Tax</span>
+            <span id="previewPT">₹0</span>
+          </div>
+          <div class="flex justify-between text-sm text-red-200">
+            <span>(-) TDS (Income Tax)</span>
+            <span id="previewTDS">₹0</span>
+          </div>
+          <div class="border-t border-white border-opacity-20 my-2"></div>
+          <div class="flex justify-between">
+            <span class="font-bold text-base">Net Salary</span>
+            <span class="font-bold text-xl" id="previewNet">₹0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Effective From -->
+      <div class="bg-white rounded-2xl border border-slate-100 p-5">
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">
+          Effective From <span class="text-red-500">*</span>
+        </label>
+        <input type="date" name="effective_from"
+          value="{% if is_edit %}{{ structure.effective_from|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}"
+          class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+          required>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex items-center justify-between">
+        <a href="{% url 'salary_structure' %}"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+          <i class="fas fa-arrow-left text-xs"></i> Cancel
+        </a>
+        <button type="submit"
+          class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 active:scale-[0.98] shadow-sm"
+          style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+          <i class="fas {% if is_edit %}fa-floppy-disk{% else %}fa-plus{% endif %} text-xs"></i>
+          {% if is_edit %}Save Changes{% else %}Add Salary Structure{% endif %}
+        </button>
+      </div>
+
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function val(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function fmt(n)  { return '₹' + Math.round(n).toLocaleString('en-IN', {maximumFractionDigits: 0}); }
+
+// Mirrors payroll/tax_utils.py — India Income Tax slabs FY 2024-25 (simplified)
+const NEW_REGIME_SLABS = [[300000, 0], [700000, 0.05], [1000000, 0.10], [1200000, 0.15], [1500000, 0.20], [Infinity, 0.30]];
+const OLD_REGIME_SLABS = [[250000, 0], [500000, 0.05], [1000000, 0.20], [Infinity, 0.30]];
+const NEW_REGIME_STD_DEDUCTION = 75000;
+const OLD_REGIME_STD_DEDUCTION = 50000;
+const SECTION_80C_LIMIT = 150000;
+const CESS_RATE = 0.04;
+const NEW_REGIME_REBATE_LIMIT = 700000;
+const OLD_REGIME_REBATE_LIMIT = 500000;
+
+function slabTax(taxableIncome, slabs) {
+  if (taxableIncome <= 0) return 0;
+  let tax = 0, lower = 0;
+  for (const [upper, rate] of slabs) {
+    if (taxableIncome > upper) {
+      tax += (upper - lower) * rate;
+      lower = upper;
+    } else {
+      tax += (taxableIncome - lower) * rate;
+      break;
+    }
+  }
+  return tax;
+}
+
+function getSelectedRegime() {
+  const checked = document.querySelector('input[name="tax_regime"]:checked');
+  return checked ? checked.value : 'new';
+}
+
+function calculateTax(regime, annualGross, ded80c, ded80d, profTaxAnnual) {
+  let taxableIncome, tax;
+  if (regime === 'old') {
+    const capped80c = Math.min(ded80c, SECTION_80C_LIMIT);
+    taxableIncome = Math.max(0, annualGross - OLD_REGIME_STD_DEDUCTION - profTaxAnnual - capped80c - ded80d);
+    tax = slabTax(taxableIncome, OLD_REGIME_SLABS);
+    if (taxableIncome <= OLD_REGIME_REBATE_LIMIT) tax = 0;
+  } else {
+    taxableIncome = Math.max(0, annualGross - NEW_REGIME_STD_DEDUCTION);
+    tax = slabTax(taxableIncome, NEW_REGIME_SLABS);
+    if (taxableIncome <= NEW_REGIME_REBATE_LIMIT) tax = 0;
+  }
+  const totalTax = tax + (tax * CESS_RATE);
+  return { taxableIncome, totalAnnualTax: totalTax, monthlyTDS: totalTax / 12 };
+}
+
+function onRegimeChange() {
+  const regime = getSelectedRegime();
+  document.getElementById('oldRegimeFields').classList.toggle('hidden', regime !== 'old');
+  document.querySelectorAll('.regime-card').forEach(card => {
+    card.classList.toggle('border-brand-500', card.dataset.regime === regime);
+    card.classList.toggle('bg-brand-50', card.dataset.regime === regime);
+    card.classList.toggle('border-slate-200', card.dataset.regime !== regime);
+  });
+  calculateTotal();
+}
+
+function calculateTotal() {
+  const basic   = val('basic');
+  const hra     = val('hra');
+  const special = val('special_allowance');
+  const pf      = val('pf_deduction');
+  const pt      = val('professional_tax');
+  const gross   = basic + hra + special;
+
+  const regime  = getSelectedRegime();
+  const ded80c  = val('deduction_80c');
+  const ded80d  = val('deduction_80d');
+
+  const { taxableIncome, totalAnnualTax, monthlyTDS } = calculateTax(
+    regime, gross * 12, ded80c, ded80d, pt * 12
+  );
+
+  const net = gross - pf - pt - monthlyTDS;
+
+  document.getElementById('previewBasic').textContent   = fmt(basic);
+  document.getElementById('previewHRA').textContent     = fmt(hra);
+  document.getElementById('previewSpecial').textContent = fmt(special);
+  document.getElementById('previewGross').textContent   = fmt(gross);
+  document.getElementById('previewPF').textContent      = fmt(pf);
+  document.getElementById('previewPT').textContent      = fmt(pt);
+  document.getElementById('previewTDS').textContent     = fmt(monthlyTDS);
+  document.getElementById('previewNet').textContent     = fmt(net);
+
+  document.getElementById('previewTaxableIncome').textContent = fmt(taxableIncome);
+  document.getElementById('previewAnnualTax').textContent     = fmt(totalAnnualTax);
+  document.getElementById('previewMonthlyTDS').textContent    = fmt(monthlyTDS);
+}
+
+function autoHRA() {
+  const basic = val('basic');
+  document.getElementById('hra').value = (basic * 0.4).toFixed(0);
+  calculateTotal();
+}
+
+function autoPF() {
+  const basic = val('basic');
+  document.getElementById('pf_deduction').value = (basic * 0.12).toFixed(0);
+  calculateTotal();
+}
+
+// Init on load / edit
+document.addEventListener('DOMContentLoaded', function () {
+  onRegimeChange();
+  calculateTotal();
+});
+</script>
+{% endblock %}
+{% comment %} {% extends 'base.html' %}
+{% block title %}{% if is_edit %}Edit Salary{% else %}Add Salary Structure{% endif %}{% endblock %}
+{% block page_title %}{% if is_edit %}Edit Salary Structure{% else %}Add Salary Structure{% endif %}{% endblock %}
+{% block page_subtitle %}{% if is_edit %}Update for {{ structure.employee.full_name }}{% else %}Assign compensation to employee{% endif %}{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-xs text-slate-400 mb-6">
+  <a href="{% url 'dashboard' %}" class="hover:text-brand-600">Dashboard</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <a href="{% url 'salary_structure' %}" class="hover:text-brand-600">Salary Structure</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <span class="text-slate-600 font-medium">{% if is_edit %}Edit{% else %}Add{% endif %}</span>
+</div>
+
+<div class="max-w-2xl">
+  <form method="post" id="salaryForm">
+    {% csrf_token %}
+    <div class="space-y-5">
+
+      <!-- Employee select (only for add) -->
+      {% if not is_edit %}
+      <div class="bg-white rounded-2xl border border-slate-100 p-6">
+        <h3 class="text-slate-700 font-semibold text-sm mb-4 flex items-center gap-2">
+          <span class="w-5 h-5 bg-brand-100 rounded-md flex items-center justify-center">
+            <i class="fas fa-user text-brand-600 text-[10px]"></i>
+          </span>
+          Select Employee
+        </h3>
+        <select name="employee" required
+          class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 bg-white">
+          <option value="">-- Select Employee --</option>
+          {% for emp in employees %}
+            <option value="{{ emp.id }}">{{ emp.full_name }} — {{ emp.department.name|default:"No Dept" }}</option>
+          {% endfor %}
+        </select>
+        {% if not employees %}
+          <p class="text-amber-500 text-xs mt-2">
+            <i class="fas fa-triangle-exclamation mr-1"></i>
+            All active employees already have salary structures.
+          </p>
+        {% endif %}
+      </div>
+      {% else %}
+      <!-- Show employee info in edit mode -->
+      <div class="bg-white rounded-2xl border border-slate-100 p-5 flex items-center gap-4">
+        {% if structure.employee.photo %}
+          <img src="{{ structure.employee.photo.url }}" class="w-12 h-12 rounded-xl object-cover border border-slate-200">
+        {% else %}
+          <div class="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center text-base font-bold">
+            {{ structure.employee.first_name|first|upper }}{{ structure.employee.last_name|first|upper }}
+          </div>
+        {% endif %}
+        <div>
+          <p class="text-slate-800 font-semibold">{{ structure.employee.full_name }}</p>
+          <p class="text-slate-500 text-xs">{{ structure.employee.employee_id }} · {{ structure.employee.designation.title|default:"—" }}</p>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Earnings -->
+      <div class="bg-white rounded-2xl border border-slate-100 p-6">
+        <h3 class="text-slate-700 font-semibold text-sm mb-5 flex items-center gap-2">
+          <span class="w-5 h-5 bg-emerald-100 rounded-md flex items-center justify-center">
+            <i class="fas fa-arrow-trend-up text-emerald-600 text-[10px]"></i>
+          </span>
+          Earnings
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Basic Salary <span class="text-red-500">*</span></label>
+            <div class="relative">
+              <span class="absolute left-3 top-2.5 text-slate-400 text-sm font-medium">₹</span>
+              <input type="number" name="basic" id="basic"
+                value="{% if is_edit %}{{ structure.basic }}{% endif %}"
+                placeholder="0" min="0" step="0.01"
+                oninput="calculateTotal()"
+                class="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+                required>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">HRA</label>
+            <div class="relative">
+              <span class="absolute left-3 top-2.5 text-slate-400 text-sm font-medium">₹</span>
+              <input type="number" name="hra" id="hra"
+                value="{% if is_edit %}{{ structure.hra }}{% endif %}"
+                placeholder="0" min="0" step="0.01"
+                oninput="calculateTotal()"
+                class="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+            </div>
+            <button type="button" onclick="autoHRA()"
+              class="text-brand-600 text-[10px] font-medium mt-1 hover:underline">
+              Auto (40% of Basic)
+            </button>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Special Allowance</label>
+            <div class="relative">
+              <span class="absolute left-3 top-2.5 text-slate-400 text-sm font-medium">₹</span>
+              <input type="number" name="special_allowance" id="special_allowance"
+                value="{% if is_edit %}{{ structure.special_allowance }}{% endif %}"
+                placeholder="0" min="0" step="0.01"
+                oninput="calculateTotal()"
+                class="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Deductions -->
+      <div class="bg-white rounded-2xl border border-slate-100 p-6">
+        <h3 class="text-slate-700 font-semibold text-sm mb-5 flex items-center gap-2">
+          <span class="w-5 h-5 bg-red-100 rounded-md flex items-center justify-center">
+            <i class="fas fa-arrow-trend-down text-red-500 text-[10px]"></i>
+          </span>
+          Deductions
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">PF Deduction</label>
+            <div class="relative">
+              <span class="absolute left-3 top-2.5 text-slate-400 text-sm font-medium">₹</span>
+              <input type="number" name="pf_deduction" id="pf_deduction"
+                value="{% if is_edit %}{{ structure.pf_deduction }}{% endif %}"
+                placeholder="0" min="0" step="0.01"
+                oninput="calculateTotal()"
+                class="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+            </div>
+            <button type="button" onclick="autoPF()"
+              class="text-brand-600 text-[10px] font-medium mt-1 hover:underline">
+              Auto (12% of Basic)
+            </button>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Professional Tax</label>
+            <div class="relative">
+              <span class="absolute left-3 top-2.5 text-slate-400 text-sm font-medium">₹</span>
+              <input type="number" name="professional_tax" id="professional_tax"
+                value="{% if is_edit %}{{ structure.professional_tax }}{% endif %}"
+                placeholder="0" min="0" step="0.01"
+                oninput="calculateTotal()"
+                class="w-full border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <!-- Live Salary Breakdown -->
       <div class="bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-5 text-white">
         <h3 class="font-semibold text-sm mb-4 opacity-90">💰 Salary Breakdown (Live Preview)</h3>
@@ -260,4 +680,4 @@ function autoPF() {
 // Init on edit
 document.addEventListener('DOMContentLoaded', calculateTotal);
 </script>
-{% endblock %}
+{% endblock %} {% endcomment %}
