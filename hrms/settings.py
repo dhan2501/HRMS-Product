@@ -229,6 +229,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'hrms.context_processors.notifications',
+                'hrms.context_processors.unread_messages',
             ],
         },
     },

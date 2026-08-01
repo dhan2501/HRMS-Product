@@ -1,9 +1,42 @@
-{% extends 'base.html' %}
+{% extends base_template|default:'base.html' %}
 {% block title %}Messages{% endblock %}
 {% block page_title %}Team Chat{% endblock %}
 
 {% block content %}
-<div style="height: calc(100vh - 120px); display: flex; gap: 0; background: white; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+<style>
+  .member-avatar { display: inline-block; }
+  .member-tooltip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #1e293b;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 9px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 20;
+  }
+  .member-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #1e293b;
+  }
+  .member-avatar:hover .member-tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+<div style="height: calc(100vh - 180px); min-height: 480px; display: flex; gap: 0; background: white; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
 
   <!-- ── Left Sidebar ── -->
   <div style="width: 300px; border-right: 1px solid #f1f5f9; display: flex; flex-direction: column; flex-shrink: 0;">
@@ -28,8 +61,8 @@
       <div style="display: flex; flex-wrap: wrap; gap: 5px;">
         {% for emp in all_employees %}
         {% if emp.user %}
-        <a href="{% url 'open_chat' emp.user.id %}" title="{{ emp.full_name }}"
-          style="text-decoration: none;">
+        <a href="{% url 'open_chat' emp.user.id %}"
+          class="member-avatar" style="text-decoration: none; position: relative;">
           <div style="position: relative;">
             {% if emp.photo %}
               <img src="{{ emp.photo.url }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0;">
@@ -40,6 +73,7 @@
             {% endif %}
             <span style="position: absolute; bottom: 0; right: 0; width: 9px; height: 9px; background: #22c55e; border-radius: 50%; border: 2px solid white;"></span>
           </div>
+          <span class="member-tooltip">{{ emp.full_name }}</span>
         </a>
         {% endif %}
         {% endfor %}
@@ -360,11 +394,28 @@ async function sendMsg() {
     form.append('csrfmiddlewaretoken', CSRF);
 
     const resp = await fetch(SEND_URL, { method: 'POST', body: form });
+    if (!resp.ok) throw new Error('Send failed: ' + resp.status);
     const data = await resp.json();
     if (data.id) lastMsgId = data.id;
   } catch(e) {
     console.error('Send failed', e);
+    showConnectionNotice('Message failed to send — check your connection.');
   }
+}
+
+// Small non-blocking connection notice above the composer
+function showConnectionNotice(text) {
+  let notice = document.getElementById('connNotice');
+  if (!notice) {
+    notice = document.createElement('div');
+    notice.id = 'connNotice';
+    notice.style.cssText = 'font-size:11px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:6px 10px;margin-bottom:8px;text-align:center;';
+    document.getElementById('typingIndicator').insertAdjacentElement('afterend', notice);
+  }
+  notice.textContent = text;
+  notice.style.display = 'block';
+  clearTimeout(window._connNoticeTimeout);
+  window._connNoticeTimeout = setTimeout(() => { notice.style.display = 'none'; }, 4000);
 }
 
 // Append message to UI
@@ -420,17 +471,22 @@ async function pollMessages() {
   } catch(e) {}
 }
 
-// Start polling
+// Start polling — immediately, then every 2s (snappier + resumes fast after tab switch)
+pollMessages();
 polling = setInterval(pollMessages, 2000);
 
-// Stop polling when page hidden
+// Stop polling when page hidden, poll immediately + resume when it's visible again
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     clearInterval(polling);
   } else {
+    pollMessages();
     polling = setInterval(pollMessages, 2000);
   }
 });
+
+// Also catch the case where the browser tab regains OS-level focus
+window.addEventListener('focus', pollMessages);
 
 // Search conversations
 function filterConvs(q) {

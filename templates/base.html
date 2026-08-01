@@ -2075,10 +2075,20 @@ document.addEventListener('DOMContentLoaded', function() {
       <!-- System -->
       <p class="nav-group-label text-slate-400 px-3 pt-4 pb-1">System</p>
 
+      {% comment %} <a href="{% url 'chat_home' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if 'chat' in request.resolver_match.url_name %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-message w-4 text-center"></i>
+        <span>Team Chat</span>
+      </a> {% endcomment %}
       <a href="{% url 'chat_home' %}" onclick="closeSidebar()"
         class="sidebar-item {% if 'chat' in request.resolver_match.url_name %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
         <i class="fas fa-message w-4 text-center"></i>
         <span>Team Chat</span>
+        {% if unread_messages_count > 0 %}
+        <span class="ml-auto bg-red-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-md">
+          {{ unread_messages_count }}
+        </span>
+        {% endif %}
       </a>
       <a href="#" onclick="closeSidebar()"
         class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
@@ -2191,7 +2201,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 <p class="text-xs text-slate-400">No pending requests</p>
               </div>
               {% endfor %}
-            </div>
+            </div> 
+            {% comment %} <div class="max-h-80 overflow-y-auto divide-y divide-slate-50">
+  {% for n in notification_list %}
+  <a href="{% url n.url_name %}" class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
+    <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+      <i class="fas {{ n.icon }} text-amber-600 text-xs"></i>
+    </div>
+    <div class="min-w-0">
+      <p class="text-slate-700 text-xs font-medium truncate">{{ n.title }}</p>
+      <p class="text-slate-400 text-[11px]">{{ n.subtitle }}</p>
+    </div>
+  </a>
+  {% empty %}
+  <div class="px-4 py-8 text-center">
+    <i class="fas fa-circle-check text-emerald-400 text-xl mb-2"></i>
+    <p class="text-slate-400 text-xs">You're all caught up!</p>
+  </div>
+  {% endfor %}
+</div> {% endcomment %}
 
             {% if total_notifications > 0 %}
             <div class="px-4 py-2.5 border-t border-slate-100 flex items-center justify-between bg-slate-50">

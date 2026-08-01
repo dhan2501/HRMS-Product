@@ -1,3 +1,96 @@
+# from django.utils import timezone
+
+
+# def notifications(request):
+#     """
+#     Site-wide notification context (bell icon + sidebar badge).
+#     Only computed for authenticated admin/staff users so it stays cheap
+#     and doesn't leak leave data to regular employees on the portal side.
+
+#     notification_list is a list of dicts (not raw model objects) so the
+#     template can safely do {% url n.url_name %} for any notification type
+#     without needing to know what kind of object produced it.
+#     """
+#     if not request.user.is_authenticated:
+#         return {}
+
+#     if not (request.user.is_staff or request.user.is_superuser):
+#         return {}
+
+#     combined = []
+
+#     # Pending leave requests
+#     try:
+#         from leaves.models import LeaveRequest
+#         leave_qs = LeaveRequest.objects.filter(status='pending').select_related(
+#             'employee', 'leave_type'
+#         ).order_by('-created_at')[:10]
+#         for lv in leave_qs:
+#             combined.append({
+#                 'type':        'leave',
+#                 'title':       f"{lv.employee.full_name} applied for leave",
+#                 'subtitle':    f"{lv.leave_type.name} · {lv.days} day{'s' if lv.days != 1 else ''}",
+#                 'url_name':    'leave_requests',
+#                 'created_at':  lv.created_at,
+#                 'icon':        'fa-umbrella-beach',
+#             })
+#         pending_leaves_count = LeaveRequest.objects.filter(status='pending').count()
+#     except Exception:
+#         pending_leaves_count = 0
+
+#     # Pending WFH requests
+#     wfh_pending_count = 0
+#     try:
+#         from attendance.models import WorkFromHomeRequest
+#         wfh_qs = WorkFromHomeRequest.objects.filter(status='pending').select_related('employee')[:10]
+#         for wfh in wfh_qs:
+#             combined.append({
+#                 'type':        'wfh',
+#                 'title':       f"{wfh.employee.full_name} requested WFH",
+#                 'subtitle':    wfh.date.strftime('%d %b %Y'),
+#                 'url_name':    'wfh_requests',
+#                 'created_at':  wfh.created_at,
+#                 'icon':        'fa-house-laptop',
+#             })
+#         wfh_pending_count = WorkFromHomeRequest.objects.filter(status='pending').count()
+#     except Exception:
+#         pass
+
+#     combined.sort(key=lambda n: n['created_at'], reverse=True)
+#     notification_list = combined[:6]
+
+#     total_notifications = pending_leaves_count + wfh_pending_count
+
+#     return {
+#         'pending_leaves': pending_leaves_count,
+#         'notification_list': notification_list,
+#         'wfh_pending_count': wfh_pending_count,
+#         'total_notifications': total_notifications,
+#         'notifications_generated_at': timezone.now(),
+#     }
+
+
+# def unread_messages(request):
+#     """
+#     Unread chat-message count for the sidebar/navbar "Team Chat" badge.
+#     Available to EVERY logged-in user (HR staff and employees alike),
+#     unlike notifications() above which is staff-only.
+#     """
+#     if not request.user.is_authenticated:
+#         return {}
+
+#     try:
+#         from messaging.models import Message
+#     except Exception:
+#         return {}
+
+#     count = Message.objects.filter(
+#         conversation__participants=request.user,
+#         is_read=False,
+#     ).exclude(sender=request.user).count()
+
+#     return {'unread_messages_count': count}
+
 from django.utils import timezone
 
 
@@ -6,6 +99,10 @@ def notifications(request):
     Site-wide notification context (bell icon + sidebar badge).
     Only computed for authenticated admin/staff users so it stays cheap
     and doesn't leak leave data to regular employees on the portal side.
+
+    notification_list is a list of dicts (not raw model objects) so the
+    template can safely do {% url n.url_name %} for any notification type
+    without needing to know what kind of object produced it.
     """
     if not request.user.is_authenticated:
         return {}
@@ -13,66 +110,78 @@ def notifications(request):
     if not (request.user.is_staff or request.user.is_superuser):
         return {}
 
-    items = []
+    combined = []
 
     # Pending leave requests
-    pending_leaves_count = 0
     try:
         from leaves.models import LeaveRequest
         leave_qs = LeaveRequest.objects.filter(status='pending').select_related(
             'employee', 'leave_type'
-        ).order_by('-created_at')
-        pending_leaves_count = leave_qs.count()
-        for lr in leave_qs[:8]:
-            items.append({
-                'type': 'leave',
-                'icon': 'fa-umbrella-beach',
-                'color': 'amber',
-                'employee': lr.employee.full_name,
-                'title': f"{lr.employee.full_name} applied for {lr.leave_type.name}",
-                'subtitle': f"{lr.start_date:%d %b} – {lr.end_date:%d %b} · {lr.days} day(s)",
-                'created_at': lr.created_at,
-                'url_name': 'leave_requests',
-                'object_id': lr.id,
+        ).order_by('-created_at')[:10]
+        for lv in leave_qs:
+            combined.append({
+                'type':        'leave',
+                'title':       f"{lv.employee.full_name} applied for leave",
+                'subtitle':    f"{lv.leave_type.name} · {lv.days} day{'s' if lv.days != 1 else ''}",
+                'url_name':    'leave_requests',
+                'created_at':  lv.created_at,
+                'icon':        'fa-umbrella-beach',
+                'color':       'amber',
             })
+        pending_leaves_count = LeaveRequest.objects.filter(status='pending').count()
     except Exception:
-        pass
+        pending_leaves_count = 0
 
     # Pending WFH requests
     wfh_pending_count = 0
     try:
         from attendance.models import WorkFromHomeRequest
-        wfh_qs = WorkFromHomeRequest.objects.filter(status='pending').select_related(
-            'employee'
-        ).order_by('-created_at')
-        wfh_pending_count = wfh_qs.count()
-        for wfh in wfh_qs[:8]:
-            items.append({
-                'type': 'wfh',
-                'icon': 'fa-house-laptop',
-                'color': 'blue',
-                'employee': wfh.employee.full_name,
-                'title': f"{wfh.employee.full_name} requested Work From Home",
-                'subtitle': f"{wfh.date:%d %b %Y}",
-                'created_at': wfh.created_at,
-                'url_name': 'wfh_requests',
-                'object_id': wfh.id,
+        wfh_qs = WorkFromHomeRequest.objects.filter(status='pending').select_related('employee')[:10]
+        for wfh in wfh_qs:
+            combined.append({
+                'type':        'wfh',
+                'title':       f"{wfh.employee.full_name} requested WFH",
+                'subtitle':    wfh.date.strftime('%d %b %Y'),
+                'url_name':    'wfh_requests',
+                'created_at':  wfh.created_at,
+                'icon':        'fa-house-laptop',
+                'color':       'blue',
             })
+        wfh_pending_count = WorkFromHomeRequest.objects.filter(status='pending').count()
     except Exception:
         pass
 
-    # Any other future "request" type models can be appended here the same way,
-    # each contributing {type, icon, color, employee, title, subtitle, created_at, url_name}.
+    combined.sort(key=lambda n: n['created_at'], reverse=True)
+    notification_list = combined[:6]
 
-    # Merge everything into one feed, newest first.
-    items.sort(key=lambda i: i['created_at'], reverse=True)
-    notification_list = items[:8]
     total_notifications = pending_leaves_count + wfh_pending_count
 
     return {
         'pending_leaves': pending_leaves_count,
-        'wfh_pending_count': wfh_pending_count,
         'notification_list': notification_list,
+        'wfh_pending_count': wfh_pending_count,
         'total_notifications': total_notifications,
         'notifications_generated_at': timezone.now(),
     }
+
+
+def unread_messages(request):
+    """
+    Unread chat-message count for the sidebar/navbar "Team Chat" badge.
+    Available to EVERY logged-in user (HR staff and employees alike),
+    unlike notifications() above which is staff-only.
+    """
+    if not request.user.is_authenticated:
+        return {}
+
+    try:
+        from messaging.models import Message
+    except Exception:
+        return {}
+
+    count = Message.objects.filter(
+        conversation__participants=request.user,
+        is_read=False,
+    ).exclude(sender=request.user).count()
+
+    return {'unread_messages_count': count}
