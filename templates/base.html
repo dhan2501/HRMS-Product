@@ -2085,9 +2085,11 @@ document.addEventListener('DOMContentLoaded', function() {
         <i class="fas fa-message w-4 text-center"></i>
         <span>Team Chat</span>
         {% if unread_messages_count > 0 %}
-        <span class="ml-auto bg-red-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-md">
+        <span class="nav-chat-badge ml-auto bg-red-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-md">
           {{ unread_messages_count }}
         </span>
+        {% else %}
+        <span class="nav-chat-badge ml-auto bg-red-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-md" style="display:none;"></span>
         {% endif %}
       </a>
       <a href="#" onclick="closeSidebar()"

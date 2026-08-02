@@ -82,7 +82,9 @@
             class="nav-item {% if 'chat' in request.resolver_match.url_name %}active{% endif %} relative flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
             <i class="fas fa-message text-[11px]"></i> Chat
             {% if unread_messages_count > 0 %}
-            <span class="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center">{{ unread_messages_count }}</span>
+            <span class="nav-chat-badge absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center">{{ unread_messages_count }}</span>
+            {% else %}
+            <span class="nav-chat-badge absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-white text-[9px] font-bold items-center justify-center" style="display:none;"></span>
             {% endif %}
           </a>
         </div>
@@ -134,7 +136,9 @@
         <a href="{% url 'chat_home' %}" class="nav-item flex-shrink-0 relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium">
           <i class="fas fa-message text-[10px]"></i> Chat
           {% if unread_messages_count > 0 %}
-          <span class="absolute -top-1 -right-1 min-w-[14px] h-3.5 px-1 bg-red-500 rounded-full text-white text-[8px] font-bold flex items-center justify-center">{{ unread_messages_count }}</span>
+          <span class="nav-chat-badge absolute -top-1 -right-1 min-w-[14px] h-3.5 px-1 bg-red-500 rounded-full text-white text-[8px] font-bold flex items-center justify-center">{{ unread_messages_count }}</span>
+          {% else %}
+          <span class="nav-chat-badge absolute -top-1 -right-1 min-w-[14px] h-3.5 px-1 bg-red-500 rounded-full text-white text-[8px] font-bold items-center justify-center" style="display:none;"></span>
           {% endif %}
         </a>
       </div>

@@ -35,11 +35,43 @@
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+
+  /* ── Responsive chat shell ── */
+  .chat-shell {
+    height: calc(100vh - 180px);
+    min-height: 480px;
+    display: flex;
+    gap: 0;
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  }
+  .chat-sidebar { width: 300px; border-right: 1px solid #f1f5f9; display: flex; flex-direction: column; flex-shrink: 0; }
+  .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .chat-back-btn { display: none; }
+
+  @media (max-width: 860px) {
+    .chat-shell { height: calc(100vh - 150px); min-height: 420px; }
+    .chat-sidebar { width: 260px; }
+  }
+
+  /* Below this width: WhatsApp-style single-pane — list OR chat, not both */
+  @media (max-width: 680px) {
+    .chat-shell { border-radius: 12px; height: calc(100dvh - 130px); }
+    .chat-sidebar { width: 100%; display: flex; }
+    .chat-area { display: none; }
+    .chat-shell.conv-open .chat-sidebar { display: none; }
+    .chat-shell.conv-open .chat-area { display: flex; }
+    .chat-back-btn { display: inline-flex !important; }
+    .msg-bubble-mine, .msg-bubble-other { max-width: 82% !important; }
+  }
 </style>
-<div style="height: calc(100vh - 180px); min-height: 480px; display: flex; gap: 0; background: white; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+<div class="chat-shell {% if conv %}conv-open{% endif %}">
 
   <!-- ── Left Sidebar ── -->
-  <div style="width: 300px; border-right: 1px solid #f1f5f9; display: flex; flex-direction: column; flex-shrink: 0;">
+  <div class="chat-sidebar">
 
     <!-- Sidebar Header -->
     <div style="padding: 16px; border-bottom: 1px solid #f1f5f9; background: #fafbff;">
@@ -84,7 +116,7 @@
     <div style="flex: 1; overflow-y: auto;" id="convList">
       {% for cd in conv_data %}
       <a href="{% url 'chat_room' cd.conv.id %}" style="text-decoration: none; display: block;"
-        class="conv-item {% if cd.is_active %}active-conv{% endif %}">
+        class="conv-item {% if cd.is_active %}active-conv{% endif %}" data-conv-id="{{ cd.conv.id }}">
         <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #f8fafc; cursor: pointer; background: {% if cd.is_active %}#f0f4ff{% else %}white{% endif %}; transition: background 0.15s;"
           onmouseover="if(!this.parentElement.classList.contains('active-conv'))this.style.background='#f8fafc'"
           onmouseout="if(!this.parentElement.classList.contains('active-conv'))this.style.background='white'">
@@ -106,7 +138,7 @@
           <!-- Info -->
           <div style="flex: 1; min-width: 0;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 12px; font-weight: {% if cd.unread %}700{% else %}600{% endif %}; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">
+              <span class="conv-name" style="font-size: 12px; font-weight: {% if cd.unread %}700{% else %}600{% endif %}; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">
                 {% if cd.conv.conv_type == 'group' %}
                   {{ cd.conv.name }}
                 {% elif cd.other_emp %}
@@ -115,14 +147,12 @@
                   {{ cd.other_user.username }}
                 {% endif %}
               </span>
-              {% if cd.last_msg %}
-              <span style="font-size: 10px; color: #94a3b8; flex-shrink: 0; margin-left: 4px;">
-                {{ cd.last_msg.created_at|time:"H:i" }}
+              <span class="conv-time" style="font-size: 10px; color: #94a3b8; flex-shrink: 0; margin-left: 4px; {% if not cd.last_msg %}display:none;{% endif %}">
+                {% if cd.last_msg %}{{ cd.last_msg.created_at|time:"H:i" }}{% endif %}
               </span>
-              {% endif %}
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
-              <span style="font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px;">
+              <span class="conv-last-msg" style="font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px;">
                 {% if cd.last_msg %}
                   {% if cd.last_msg.sender == request.user %}You: {% endif %}
                   {{ cd.last_msg.content|truncatechars:30 }}
@@ -130,17 +160,15 @@
                   Start a conversation
                 {% endif %}
               </span>
-              {% if cd.unread %}
-              <span style="background: #4f46e5; color: white; font-size: 9px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <span class="conv-unread" style="background: #4f46e5; color: white; font-size: 9px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%; display: {% if cd.unread %}flex{% else %}none{% endif %}; align-items: center; justify-content: center; flex-shrink: 0;">
                 {{ cd.unread }}
               </span>
-              {% endif %}
             </div>
           </div>
         </div>
       </a>
       {% empty %}
-      <div style="text-align: center; padding: 30px 20px; color: #94a3b8; font-size: 12px;">
+      <div id="noConvsMsg" style="text-align: center; padding: 30px 20px; color: #94a3b8; font-size: 12px;">
         <div style="font-size: 30px; margin-bottom: 8px;">💬</div>
         No conversations yet.<br>Click a team member above!
       </div>
@@ -149,11 +177,14 @@
   </div>
 
   <!-- ── Chat Area ── -->
-  <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+  <div class="chat-area">
 
     {% if conv %}
     <!-- Chat Header -->
     <div style="padding: 14px 20px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; background: white; flex-shrink: 0;">
+      <a href="{% url 'chat_home' %}" class="chat-back-btn" style="align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 10px; background: #f8fafc; color: #4f46e5; text-decoration: none; flex-shrink: 0;">
+        <i class="fas fa-arrow-left" style="font-size: 13px;"></i>
+      </a>
       {% if conv.conv_type == 'group' %}
         <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #8b5cf6, #a78bfa); color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">👥</div>
         <div>
@@ -189,7 +220,7 @@
       {% if msg.sender == request.user %}
       <!-- My message -->
       <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
-        <div style="background: linear-gradient(135deg, #4f46e5, #6366f1); color: white; border-radius: 16px; border-bottom-right-radius: 3px; padding: 10px 14px; max-width: 65%; font-size: 13px; line-height: 1.5; word-break: break-word;">
+        <div class="msg-bubble-mine" style="background: linear-gradient(135deg, #4f46e5, #6366f1); color: white; border-radius: 16px; border-bottom-right-radius: 3px; padding: 10px 14px; max-width: 65%; font-size: 13px; line-height: 1.5; word-break: break-word;">
           {{ msg.content }}
         </div>
         <div style="font-size: 10px; color: #94a3b8;">{{ msg.created_at|time:"H:i" }} · You</div>
@@ -205,7 +236,7 @@
           {% endwith %}
           <div>
             <div style="font-size: 10px; color: #94a3b8; margin-bottom: 3px;">{{ msg.sender.get_full_name|default:msg.sender.username }}</div>
-            <div style="background: white; color: #334155; border: 1px solid #e2e8f0; border-radius: 16px; border-bottom-left-radius: 3px; padding: 10px 14px; max-width: 65%; font-size: 13px; line-height: 1.5; word-break: break-word; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
+            <div class="msg-bubble-other" style="background: white; color: #334155; border: 1px solid #e2e8f0; border-radius: 16px; border-bottom-left-radius: 3px; padding: 10px 14px; max-width: 65%; font-size: 13px; line-height: 1.5; word-break: break-word; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
               {{ msg.content }}
             </div>
           </div>
@@ -428,7 +459,7 @@ function appendMessage(msg) {
 
   if (msg.is_mine) {
     div.innerHTML = `
-      <div style="background:linear-gradient(135deg,#4f46e5,#6366f1);color:white;border-radius:16px;border-bottom-right-radius:3px;padding:10px 14px;max-width:65%;font-size:13px;line-height:1.5;word-break:break-word;">
+      <div class="msg-bubble-mine" style="background:linear-gradient(135deg,#4f46e5,#6366f1);color:white;border-radius:16px;border-bottom-right-radius:3px;padding:10px 14px;max-width:65%;font-size:13px;line-height:1.5;word-break:break-word;">
         ${escHtml(msg.content)}
       </div>
       <div style="font-size:10px;color:#94a3b8;">${msg.time} · You</div>`;
@@ -439,7 +470,7 @@ function appendMessage(msg) {
         <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#0891b2);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>
         <div>
           <div style="font-size:10px;color:#94a3b8;margin-bottom:3px;">${msg.sender}</div>
-          <div style="background:white;color:#334155;border:1px solid #e2e8f0;border-radius:16px;border-bottom-left-radius:3px;padding:10px 14px;max-width:400px;font-size:13px;line-height:1.5;word-break:break-word;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+          <div class="msg-bubble-other" style="background:white;color:#334155;border:1px solid #e2e8f0;border-radius:16px;border-bottom-left-radius:3px;padding:10px 14px;max-width:400px;font-size:13px;line-height:1.5;word-break:break-word;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
             ${escHtml(msg.content)}
           </div>
         </div>
@@ -502,6 +533,9 @@ document.getElementById('msgInput').focus();
 {% endif %}
 
 <script>
+const CONV_LIST_URL = "{% url 'conv_list_json' %}";
+const CURRENT_CONV_ID = {% if conv %}{{ conv.id }}{% else %}null{% endif %};
+
 // Filters the conversation list — available even when no chat is open yet
 if (typeof filterConvs === 'undefined') {
   window.filterConvs = function(q) {
@@ -511,5 +545,44 @@ if (typeof filterConvs === 'undefined') {
     });
   };
 }
+
+// Live-refresh the conversation list (previews + unread badges) without a page reload
+async function refreshConvList() {
+  try {
+    const resp = await fetch(CONV_LIST_URL);
+    const data = await resp.json();
+
+    data.conversations.forEach(c => {
+      const item = document.querySelector(`.conv-item[data-conv-id="${c.id}"]`);
+      if (!item) return; // brand-new conversation — will appear on next full navigation
+
+      const nameEl  = item.querySelector('.conv-name');
+      const msgEl   = item.querySelector('.conv-last-msg');
+      const timeEl  = item.querySelector('.conv-time');
+      const badgeEl = item.querySelector('.conv-unread');
+
+      if (msgEl) msgEl.textContent = c.last_text;
+      if (timeEl) { timeEl.textContent = c.last_time; timeEl.style.display = c.last_time ? 'inline' : 'none'; }
+
+      // Don't show an unread badge for the conversation currently open — it's already read
+      const unread = (c.id === CURRENT_CONV_ID) ? 0 : c.unread;
+      if (badgeEl) {
+        badgeEl.textContent = unread;
+        badgeEl.style.display = unread > 0 ? 'flex' : 'none';
+      }
+      if (nameEl) nameEl.style.fontWeight = unread > 0 ? '700' : '600';
+    });
+
+    // Update every "Team Chat" nav badge on the page (sidebar/navbar)
+    document.querySelectorAll('.nav-chat-badge').forEach(b => {
+      b.textContent = data.total_unread;
+      b.style.display = data.total_unread > 0 ? 'flex' : 'none';
+    });
+  } catch (e) { /* silent — will retry on next tick */ }
+}
+
+refreshConvList();
+setInterval(refreshConvList, 3000);
+window.addEventListener('focus', refreshConvList);
 </script>
 {% endblock %}
