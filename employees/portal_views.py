@@ -810,3 +810,21 @@ def portal_performance_acknowledge(request, pk):
 
     return redirect('portal_performance')
 
+# ── Portal Wellness / Mind Relaxation ─────────────────────────────────────────
+@employee_required
+def portal_wellness(request):
+    from wellness.models import WellnessResource
+
+    employee = get_employee(request)
+    category = request.GET.get('category', '')
+
+    resources = WellnessResource.objects.filter(is_active=True)
+    if category:
+        resources = resources.filter(category=category)
+
+    return render(request, 'portal/wellness.html', {
+        'employee':          employee,
+        'resources':         resources,
+        'selected_category': category,
+        'category_choices':  WellnessResource.CATEGORY_CHOICES,
+    })

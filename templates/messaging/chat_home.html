@@ -229,11 +229,13 @@
       <!-- Other message -->
       <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
         <div style="display: flex; align-items: flex-end; gap: 7px;">
-          {% with s_emp=msg.sender|stringformat:'s' %}
+          {% if msg.sender_photo_url %}
+          <img src="{{ msg.sender_photo_url }}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid #e2e8f0;">
+          {% else %}
           <div style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            {{ msg.sender.first_name|first|upper }}{{ msg.sender.last_name|first|upper }}
+            {{ msg.sender_initials }}
           </div>
-          {% endwith %}
+          {% endif %}
           <div>
             <div style="font-size: 10px; color: #94a3b8; margin-bottom: 3px;">{{ msg.sender.get_full_name|default:msg.sender.username }}</div>
             <div class="msg-bubble-other" style="background: white; color: #334155; border: 1px solid #e2e8f0; border-radius: 16px; border-bottom-left-radius: 3px; padding: 10px 14px; max-width: 65%; font-size: 13px; line-height: 1.5; word-break: break-word; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
@@ -465,12 +467,15 @@ function appendMessage(msg) {
       <div style="font-size:10px;color:#94a3b8;">${msg.time} · You</div>`;
   } else {
     const initials = msg.initials || msg.sender.slice(0,2).toUpperCase();
+    const avatarHtml = msg.photo
+      ? `<img src="${msg.photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #e2e8f0;">`
+      : `<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#0891b2);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>`;
     div.innerHTML = `
       <div style="display:flex;align-items:flex-end;gap:7px;">
-        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#0891b2);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>
+        ${avatarHtml}
         <div>
           <div style="font-size:10px;color:#94a3b8;margin-bottom:3px;">${msg.sender}</div>
-          <div class="msg-bubble-other" style="background:white;color:#334155;border:1px solid #e2e8f0;border-radius:16px;border-bottom-left-radius:3px;padding:10px 14px;max-width:400px;font-size:13px;line-height:1.5;word-break:break-word;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+          <div style="background:white;color:#334155;border:1px solid #e2e8f0;border-radius:16px;border-bottom-left-radius:3px;padding:10px 14px;max-width:400px;font-size:13px;line-height:1.5;word-break:break-word;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
             ${escHtml(msg.content)}
           </div>
         </div>

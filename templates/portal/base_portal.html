@@ -82,6 +82,9 @@
             class="nav-item {% if request.resolver_match.url_name == 'portal_events' %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
             <i class="fas fa-calendar-days text-[11px]"></i> Events
           </a>
+          <a href="{% url 'portal_wellness' %}" class="nav-item flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium">
+            <i class="fas fa-spa text-[10px]"></i> Relax
+          </a>
           <a href="{% url 'chat_home' %}"
             class="nav-item {% if 'chat' in request.resolver_match.url_name %}active{% endif %} relative flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
             <i class="fas fa-message text-[11px]"></i> Chat
@@ -90,6 +93,11 @@
             {% else %}
             <span class="nav-chat-badge absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-white text-[9px] font-bold items-center justify-center" style="display:none;"></span>
             {% endif %}
+          </a>
+
+          <a href="{% url 'help_home' %}"
+            class="nav-item {% if 'help' in request.resolver_match.url_name or 'polic' in request.resolver_match.url_name %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
+            <i class="fas fa-circle-question text-[11px]"></i> Help
           </a>
         </div>
 
@@ -141,6 +149,10 @@
         <a href="{% url 'portal_events' %}" class="nav-item flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium">
           <i class="fas fa-calendar-days text-[10px]"></i> Events
         </a>
+        <a href="{% url 'portal_wellness' %}"
+            class="nav-item {% if request.resolver_match.url_name == 'portal_wellness' %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
+            <i class="fas fa-spa text-[11px]"></i> Relax
+          </a>
         <a href="{% url 'chat_home' %}" class="nav-item flex-shrink-0 relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium">
           <i class="fas fa-message text-[10px]"></i> Chat
           {% if unread_messages_count > 0 %}
@@ -149,6 +161,10 @@
           <span class="nav-chat-badge absolute -top-1 -right-1 min-w-[14px] h-3.5 px-1 bg-red-500 rounded-full text-white text-[8px] font-bold items-center justify-center" style="display:none;"></span>
           {% endif %}
         </a>
+        <a href="{% url 'help_home' %}"
+            class="nav-item {% if 'help' in request.resolver_match.url_name or 'polic' in request.resolver_match.url_name %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
+            <i class="fas fa-circle-question text-[11px]"></i> Help
+          </a>
       </div>
     </div>
   </nav>

@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block title %}Mind Relaxation{% endblock %}
+{% block page_title %}Mind Relaxation{% endblock %}
+{% block page_subtitle %}Add relaxation content for employees — visible to everyone{% endblock %}
+
+{% block content %}
+
+<!-- Summary -->
+<div class="bg-white rounded-2xl border border-slate-100 p-5 flex items-center gap-3 mb-5 max-w-xs">
+  <div class="w-11 h-11 bg-teal-50 rounded-xl flex items-center justify-center flex-shrink-0">
+    <i class="fas fa-spa text-teal-600"></i>
+  </div>
+  <div>
+    <p class="text-slate-500 text-xs">Active Resources</p>
+    <p class="text-xl font-bold text-slate-800">{{ active_count }}</p>
+  </div>
+</div>
+
+<!-- Filters & Actions -->
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+  <form method="get" class="flex flex-wrap items-center gap-2">
+    <select name="category" onchange="this.form.submit()"
+      class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none bg-white">
+      <option value="" {% if not selected_category %}selected{% endif %}>All Categories</option>
+      {% for value, label in category_choices %}
+        <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <a href="{% url 'add_wellness' %}"
+    class="inline-flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors">
+    <i class="fas fa-plus text-xs"></i> Add Relaxation Content
+  </a>
+</div>
+
+<!-- Resource Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+  {% for r in resources %}
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 hover:border-brand-200 hover:shadow-sm transition-all {% if not r.is_active %}opacity-60{% endif %}">
+    <div class="flex items-start justify-between mb-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-teal-50">
+        <i class="fas
+          {% if r.category == 'breathing' %}fa-wind
+          {% elif r.category == 'music' %}fa-music
+          {% elif r.category == 'video' %}fa-video
+          {% elif r.category == 'quote' %}fa-quote-left
+          {% elif r.category == 'game' %}fa-puzzle-piece
+          {% else %}fa-lightbulb{% endif %} text-teal-600 text-sm"></i>
+      </div>
+      <div class="flex items-center gap-1.5">
+        {% if not r.is_active %}
+          <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-500">HIDDEN</span>
+        {% endif %}
+        <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-teal-100 text-teal-700">
+          {{ r.get_category_display|upper }}
+        </span>
+      </div>
+    </div>
+
+    <h3 class="text-slate-800 font-semibold text-sm mb-1">{{ r.title }}</h3>
+    <p class="text-slate-400 text-xs mb-3">{{ r.description|default:"No description"|truncatechars:70 }}</p>
+
+    <div class="space-y-1.5 mb-4">
+      {% if r.duration_minutes %}
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-500">Duration</span>
+        <span class="font-semibold text-slate-700">{{ r.duration_minutes }} min</span>
+      </div>
+      {% endif %}
+      {% if r.resource_url %}
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-500">Link</span>
+        <a href="{{ r.resource_url }}" target="_blank" class="font-semibold text-brand-600 hover:underline truncate max-w-[140px]">
+          Open <i class="fas fa-arrow-up-right-from-square text-[9px] ml-0.5"></i>
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="flex items-center gap-2 pt-3 border-t border-slate-100">
+      <a href="{% url 'edit_wellness' r.pk %}"
+        class="flex-1 text-center text-xs font-medium text-brand-600 hover:underline py-1">
+        <i class="fas fa-pencil mr-1 text-[10px]"></i>Edit
+      </a>
+      <span class="text-slate-200">|</span>
+      <button onclick="confirmDelete('{{ r.title|escapejs }}', '{% url 'delete_wellness' r.pk %}')"
+        class="flex-1 text-center text-xs font-medium text-red-500 hover:underline py-1">
+        <i class="fas fa-trash mr-1 text-[10px]"></i>Delete
+      </button>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-span-3 bg-white rounded-2xl border border-slate-100 py-16 text-center">
+    <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+      <i class="fas fa-spa text-slate-300 text-xl"></i>
+    </div>
+    <p class="text-slate-500 font-medium text-sm">No relaxation content yet</p>
+    <p class="text-slate-400 text-xs mt-1 mb-4">Add breathing exercises, music, quotes or tips for employees</p>
+    <a href="{% url 'add_wellness' %}"
+      class="inline-flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700">
+      <i class="fas fa-plus text-xs"></i> Add First Resource
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+  <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+    <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+      <i class="fas fa-trash text-red-500 text-lg"></i>
+    </div>
+    <h3 class="text-slate-800 font-semibold text-center mb-1">Delete Resource?</h3>
+    <p class="text-slate-500 text-sm text-center mb-5">
+      "<span id="wName" class="font-medium text-slate-700"></span>" will be permanently deleted and hidden from employees.
+    </p>
+    <div class="flex gap-3">
+      <button onclick="document.getElementById('deleteModal').classList.add('hidden')"
+        class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+        Cancel
+      </button>
+      <form id="deleteForm" method="post" class="flex-1">
+        {% csrf_token %}
+        <button type="submit"
+          class="w-full px-4 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600">
+          Delete
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(name, url) {
+  document.getElementById('wName').textContent = name;
+  document.getElementById('deleteForm').action = url;
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}

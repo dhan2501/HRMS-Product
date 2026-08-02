@@ -354,6 +354,8 @@ INSTALLED_APPS = [
     'recruitment',
     'messaging',
     'events', 
+    'wellness',
+    'helpcenter', 
 ]
 
 MIDDLEWARE = [

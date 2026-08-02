@@ -642,6 +642,17 @@ def chat_room(request, conv_id):
 
     messages_list = conv.messages.select_related('sender').order_by('created_at')
 
+    # Har message ke sender ki photo/initials attach karein (chat bubble avatar ke liye)
+    for msg in messages_list:
+        sender_emp = get_employee_or_none(msg.sender)
+        msg.sender_emp = sender_emp
+        if sender_emp:
+            msg.sender_photo_url = sender_emp.photo.url if sender_emp.photo else None
+            msg.sender_initials  = f"{sender_emp.first_name[0]}{sender_emp.last_name[0]}".upper()
+        else:
+            msg.sender_photo_url = None
+            msg.sender_initials  = msg.sender.username[:2].upper()
+
     # All conversations for sidebar
     conversations = Conversation.objects.filter(
         participants=request.user

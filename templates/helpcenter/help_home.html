@@ -1,0 +1,113 @@
+{% extends base_template|default:'base.html' %}
+{% block title %}Help & Policies{% endblock %}
+{% block page_title %}Help & Policies{% endblock %}
+{% block page_subtitle %}Company policies and documents{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-5">
+  <div></div>
+  {% if is_admin %}
+  <a href="{% url 'manage_policies' %}"
+    class="inline-flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors">
+    <i class="fas fa-gear text-xs"></i> Manage Policies
+  </a>
+  {% endif %}
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-5">
+
+  <!-- Category Tabs -->
+  <div class="lg:col-span-1">
+    <div class="bg-white rounded-2xl border border-slate-100 p-2 space-y-1 lg:sticky lg:top-4">
+      {% for cat in categories %}
+      <a href="?category={{ cat.id }}"
+        class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors
+          {% if active_category.id == cat.id %}bg-brand-50 text-brand-700 font-semibold{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+        <i class="fas {{ cat.icon }} w-4 text-center"></i>
+        <span class="flex-1">{{ cat.name }}</span>
+        <span class="text-xs text-slate-400">{{ cat.documents.count }}</span>
+      </a>
+      {% empty %}
+      <div class="text-center py-8 px-3">
+        <i class="fas fa-folder-open text-slate-300 text-2xl mb-2"></i>
+        <p class="text-slate-400 text-xs">No policy categories yet.</p>
+        {% if is_admin %}
+        <a href="{% url 'manage_policies' %}" class="text-brand-600 text-xs font-medium hover:underline mt-1 inline-block">Add one →</a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Documents -->
+  <div class="lg:col-span-3 space-y-4">
+    {% if active_category %}
+      <div class="flex items-center gap-3 mb-1">
+        <div class="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center">
+          <i class="fas {{ active_category.icon }} text-brand-600"></i>
+        </div>
+        <div>
+          <h2 class="text-slate-800 font-semibold text-base">{{ active_category.name }}</h2>
+          <p class="text-slate-400 text-xs">{{ active_category.documents.count }} document{{ active_category.documents.count|pluralize }}</p>
+        </div>
+      </div>
+
+      {% for doc in active_category.documents.all %}
+      <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+        <button type="button" onclick="document.getElementById('doc-{{ doc.id }}').classList.toggle('hidden'); this.querySelector('.chevron').classList.toggle('rotate-180')"
+          class="w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-slate-50 transition-colors text-left">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
+              {% if doc.file_ext == 'pdf' %}<i class="fas fa-file-pdf text-red-500"></i>
+              {% elif doc.file_ext == 'docx' or doc.file_ext == 'doc' %}<i class="fas fa-file-word text-blue-500"></i>
+              {% else %}<i class="fas fa-file-lines text-slate-400"></i>{% endif %}
+            </div>
+            <div class="min-w-0">
+              <p class="text-slate-700 text-sm font-medium truncate">{{ doc.title }}</p>
+              <p class="text-slate-400 text-xs">Updated {{ doc.updated_at|date:"d M Y" }}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 flex-shrink-0">
+            {% if doc.file and is_admin %}
+            <a href="{{ doc.file.url }}" target="_blank" onclick="event.stopPropagation()"
+              class="text-brand-600 text-xs font-medium hover:underline flex items-center gap-1">
+              <i class="fas fa-download text-[10px]"></i> Download
+            </a>
+            {% endif %}
+            <i class="fas fa-chevron-down chevron text-slate-400 text-xs transition-transform"></i>
+          </div>
+        </button>
+        <div id="doc-{{ doc.id }}" class="hidden px-5 pb-5 border-t border-slate-50">
+          {% if doc.notes %}
+          <div class="bg-brand-50 text-brand-700 text-sm rounded-xl p-3 mt-4 mb-3">{{ doc.notes|linebreaksbr }}</div>
+          {% endif %}
+          {% if doc.extracted_text %}
+          <div class="text-slate-600 text-sm leading-relaxed whitespace-pre-line mt-3 max-h-96 overflow-y-auto">{{ doc.extracted_text }}</div>
+          {% elif doc.extraction_note %}
+          <p class="text-amber-600 text-xs mt-3"><i class="fas fa-triangle-exclamation mr-1"></i>{{ doc.extraction_note }}</p>
+          {% elif not doc.file %}
+          <p class="text-slate-400 text-xs mt-3">No file or content added yet.</p>
+          {% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <div class="bg-white rounded-2xl border border-slate-100 py-16 text-center">
+        <i class="fas fa-file-circle-plus text-slate-300 text-2xl mb-3"></i>
+        <p class="text-slate-500 font-medium text-sm">No documents in this category yet</p>
+        {% if is_admin %}
+        <a href="{% url 'manage_policies' %}" class="text-brand-600 text-xs font-medium hover:underline mt-1 inline-block">Add a document →</a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="bg-white rounded-2xl border border-slate-100 py-16 text-center">
+        <i class="fas fa-circle-info text-slate-300 text-2xl mb-3"></i>
+        <p class="text-slate-500 font-medium text-sm">No policies published yet</p>
+        {% if is_admin %}
+        <a href="{% url 'manage_policies' %}" class="text-brand-600 text-xs font-medium hover:underline mt-1 inline-block">Set up categories & documents →</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

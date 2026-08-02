@@ -57,4 +57,7 @@ urlpatterns = [
     # Events & Holidays
     path('events/', portal_views.portal_events, name='portal_events'),
 
+    # Mind Relaxation
+    path('wellness/', portal_views.portal_wellness, name='portal_wellness'),
+
 ]

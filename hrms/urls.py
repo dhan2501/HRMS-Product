@@ -96,6 +96,10 @@ urlpatterns = [
     path('payroll/', include('payroll.urls')),
     path('recruitment/', include('recruitment.urls')),
     path('events/', include('events.urls')),
+    path('wellness/', include('wellness.urls')),
+
+    # Help & Policies
+    path('help/', include('helpcenter.urls')),
 
     # Employee Portal
     path('portal/', include('employees.portal_urls')),
