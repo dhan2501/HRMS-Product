@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block title %}{% if is_edit %}Edit{% else %}Add{% endif %} Performance Review{% endblock %}
+{% block page_title %}{% if is_edit %}Edit{% else %}Add{% endif %} Performance Review{% endblock %}
+{% block page_subtitle %}For {{ employee.full_name }} ({{ employee.employee_id }}){% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-xs text-slate-400 mb-5">
+  <a href="{% url 'dashboard' %}" class="hover:text-brand-600 transition-colors">Dashboard</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <a href="{% url 'employee_list' %}" class="hover:text-brand-600 transition-colors">Employees</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <a href="{% url 'employee_detail' employee.pk %}" class="hover:text-brand-600 transition-colors">{{ employee.full_name }}</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <span class="text-slate-600 font-medium">{% if is_edit %}Edit{% else %}Add{% endif %} Review</span>
+</div>
+
+<form method="post" class="max-w-3xl">
+{% csrf_token %}
+
+<div class="bg-white rounded-2xl border border-slate-100 p-6 space-y-5">
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Review Period</label>
+      {{ form.review_period_type }}
+      {% if form.review_period_type.errors %}<p class="text-red-500 text-[11px] mt-1">{{ form.review_period_type.errors.0 }}</p>{% endif %}
+    </div>
+    <div>
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Reviewer (Reporting Manager)</label>
+      {{ form.reviewer }}
+      {% if form.reviewer.errors %}<p class="text-red-500 text-[11px] mt-1">{{ form.reviewer.errors.0 }}</p>{% endif %}
+    </div>
+    <div>
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Period Start <span class="text-red-500">*</span></label>
+      {{ form.period_start }}
+      {% if form.period_start.errors %}<p class="text-red-500 text-[11px] mt-1">{{ form.period_start.errors.0 }}</p>{% endif %}
+    </div>
+    <div>
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Period End <span class="text-red-500">*</span></label>
+      {{ form.period_end }}
+      {% if form.period_end.errors %}<p class="text-red-500 text-[11px] mt-1">{{ form.period_end.errors.0 }}</p>{% endif %}
+    </div>
+    <div>
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Overall Rating <span class="text-red-500">*</span></label>
+      {{ form.overall_rating }}
+      {% if form.overall_rating.errors %}<p class="text-red-500 text-[11px] mt-1">{{ form.overall_rating.errors.0 }}</p>{% endif %}
+    </div>
+    <div>
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Status</label>
+      {{ form.status }}
+      {% if form.status.errors %}<p class="text-red-500 text-[11px] mt-1">{{ form.status.errors.0 }}</p>{% endif %}
+    </div>
+  </div>
+
+  <div>
+    <label class="block text-slate-600 text-xs font-medium mb-1.5">Goals Achieved</label>
+    {{ form.goals_achieved }}
+  </div>
+  <div>
+    <label class="block text-slate-600 text-xs font-medium mb-1.5">Strengths</label>
+    {{ form.strengths }}
+  </div>
+  <div>
+    <label class="block text-slate-600 text-xs font-medium mb-1.5">Areas of Improvement</label>
+    {{ form.areas_of_improvement }}
+  </div>
+  <div>
+    <label class="block text-slate-600 text-xs font-medium mb-1.5">Reviewer Comments</label>
+    {{ form.reviewer_comments }}
+  </div>
+
+  <div class="flex gap-3 pt-2">
+    <a href="{% url 'employee_detail' employee.pk %}"
+      class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 text-center">
+      Cancel
+    </a>
+    <button type="submit"
+      class="flex-1 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700">
+      {% if is_edit %}Update{% else %}Save{% endif %} Review
+    </button>
+  </div>
+
+</div>
+</form>
+
+<style>
+  #id_review_period_type, #id_reviewer, #id_period_start, #id_period_end,
+  #id_overall_rating, #id_status, #id_goals_achieved, #id_strengths,
+  #id_areas_of_improvement, #id_reviewer_comments {
+    width: 100%;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.875rem;
+    color: rgb(51 65 85);
+    background: white;
+  }
+  #id_review_period_type:focus, #id_reviewer:focus, #id_period_start:focus,
+  #id_period_end:focus, #id_overall_rating:focus, #id_status:focus,
+  #id_goals_achieved:focus, #id_strengths:focus,
+  #id_areas_of_improvement:focus, #id_reviewer_comments:focus {
+    outline: none;
+    border-color: rgb(96 165 250);
+  }
+</style>
+
+{% endblock %}

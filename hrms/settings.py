@@ -353,6 +353,7 @@ INSTALLED_APPS = [
     'payroll',
     'recruitment',
     'messaging',
+    'events', 
 ]
 
 MIDDLEWARE = [

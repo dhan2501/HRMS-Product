@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}{% if is_edit %}Edit Event{% else %}Add Event / Holiday{% endif %}{% endblock %}
+{% block page_title %}{% if is_edit %}Edit Event{% else %}Add Event / Holiday{% endif %}{% endblock %}
+{% block page_subtitle %}{% if is_edit %}Update details for {{ event.title }}{% else %}This will be visible to all employees{% endif %}{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-xs text-slate-400 mb-6">
+  <a href="{% url 'dashboard' %}" class="hover:text-brand-600">Dashboard</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <a href="{% url 'event_list' %}" class="hover:text-brand-600">Events & Holidays</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <span class="text-slate-600 font-medium">{% if is_edit %}Edit{% else %}Add{% endif %}</span>
+</div>
+
+<div class="max-w-xl">
+  <form method="post">
+    {% csrf_token %}
+    <div class="space-y-5">
+
+      <div class="bg-white rounded-2xl border border-slate-100 p-6">
+        <h3 class="text-slate-700 font-semibold text-sm mb-5 flex items-center gap-2">
+          <span class="w-5 h-5 bg-indigo-100 rounded-md flex items-center justify-center">
+            <i class="fas fa-calendar-days text-indigo-600 text-[10px]"></i>
+          </span>
+          Details
+        </h3>
+
+        <div class="space-y-4">
+
+          <!-- Type -->
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Type <span class="text-red-500">*</span></label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="cursor-pointer border-2 rounded-xl p-3 flex items-center gap-2 transition-colors
+                {% if not is_edit or event.event_type == 'event' %}border-brand-500 bg-brand-50{% else %}border-slate-200{% endif %}">
+                <input type="radio" name="event_type" value="event"
+                  {% if not is_edit or event.event_type == 'event' %}checked{% endif %}>
+                <span class="text-slate-700 text-sm font-medium">Event</span>
+              </label>
+              <label class="cursor-pointer border-2 rounded-xl p-3 flex items-center gap-2 transition-colors
+                {% if is_edit and event.event_type == 'holiday' %}border-brand-500 bg-brand-50{% else %}border-slate-200{% endif %}">
+                <input type="radio" name="event_type" value="holiday"
+                  {% if is_edit and event.event_type == 'holiday' %}checked{% endif %}>
+                <span class="text-slate-700 text-sm font-medium">Holiday</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Title -->
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Title <span class="text-red-500">*</span></label>
+            <input type="text" name="title" value="{% if is_edit %}{{ event.title }}{% endif %}"
+              placeholder="e.g. Diwali, Annual Day, Independence Day"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+              required>
+          </div>
+
+          <!-- Description -->
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Description</label>
+            <textarea name="description" rows="3" placeholder="Optional details for employees…"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">{% if is_edit %}{{ event.description }}{% endif %}</textarea>
+          </div>
+
+          <!-- Dates -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-slate-600 text-xs font-medium mb-1.5">Date <span class="text-red-500">*</span></label>
+              <input type="date" name="date"
+                value="{% if is_edit %}{{ event.date|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}"
+                class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+                required>
+            </div>
+            <div>
+              <label class="block text-slate-600 text-xs font-medium mb-1.5">End Date</label>
+              <input type="date" name="end_date"
+                value="{% if is_edit and event.end_date %}{{ event.end_date|date:'Y-m-d' }}{% endif %}"
+                class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+              <p class="text-slate-400 text-[10px] mt-1">Optional — for multi-day events</p>
+            </div>
+          </div>
+
+          {% if is_edit %}
+          <!-- Active toggle -->
+          <label class="flex items-center gap-2.5 cursor-pointer">
+            <input type="checkbox" name="is_active" {% if event.is_active %}checked{% endif %}
+              class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-200">
+            <span class="text-slate-600 text-sm">Visible to employees</span>
+          </label>
+          {% endif %}
+
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex items-center justify-between">
+        <a href="{% url 'event_list' %}"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+          <i class="fas fa-arrow-left text-xs"></i> Cancel
+        </a>
+        <button type="submit"
+          class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 active:scale-[0.98] shadow-sm"
+          style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+          <i class="fas {% if is_edit %}fa-floppy-disk{% else %}fa-plus{% endif %} text-xs"></i>
+          {% if is_edit %}Save Changes{% else %}Add{% endif %}
+        </button>
+      </div>
+
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Highlight the selected type card
+document.querySelectorAll('input[name="event_type"]').forEach(function (radio) {
+  radio.addEventListener('change', function () {
+    document.querySelectorAll('input[name="event_type"]').forEach(function (r) {
+      const card = r.closest('label');
+      card.classList.toggle('border-brand-500', r.checked);
+      card.classList.toggle('bg-brand-50', r.checked);
+      card.classList.toggle('border-slate-200', !r.checked);
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}My Team{% endblock %}
+{% block page_title %}My Team{% endblock %}
+{% block page_subtitle %}Employees reporting to you{% endblock %}
+
+{% block content %}
+
+{% if not manager_employee %}
+<div class="bg-white rounded-2xl border border-slate-100 p-6 text-center text-slate-500 text-sm">
+  No employee profile linked to your login.
+</div>
+{% elif not team_members %}
+<div class="bg-white rounded-2xl border border-slate-100 p-6 text-center text-slate-500 text-sm">
+  <i class="fas fa-people-group text-2xl text-slate-300 mb-2 block"></i>
+  No one is currently reporting to you.
+</div>
+{% else %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for member in team_members %}
+  <a href="{% url 'employee_detail' member.pk %}"
+    class="bg-white rounded-2xl border border-slate-100 p-5 hover:border-brand-300 hover:shadow-sm transition-all">
+    <div class="flex items-center gap-3 mb-3">
+      {% if member.photo %}
+      <img src="{{ member.photo.url }}" class="w-12 h-12 rounded-xl object-cover border border-slate-200">
+      {% else %}
+      <div class="w-12 h-12 rounded-xl bg-brand-100 flex items-center justify-center text-sm font-bold text-brand-700">
+        {{ member.first_name|first|upper }}{{ member.last_name|first|upper }}
+      </div>
+      {% endif %}
+      <div class="min-w-0">
+        <p class="text-slate-800 font-semibold text-sm truncate">{{ member.full_name }}</p>
+        <p class="text-slate-500 text-xs truncate">{{ member.designation.title|default:"—" }}</p>
+      </div>
+    </div>
+    <div class="flex items-center justify-between">
+      <span class="text-xs px-2 py-0.5 rounded-full font-medium
+        {% if member.status == 'active' %}bg-emerald-100 text-emerald-700
+        {% elif member.status == 'on_leave' %}bg-amber-100 text-amber-700
+        {% else %}bg-slate-200 text-slate-600{% endif %}">
+        {{ member.get_status_display }}
+      </span>
+      <span class="text-slate-400 text-xs">{{ member.department.name|default:"—" }}</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

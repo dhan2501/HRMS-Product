@@ -1,0 +1,127 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}My Performance{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-5">
+
+  <div class="flex items-center justify-between">
+    <h2 class="text-slate-800 font-bold text-lg">My Performance</h2>
+    {% if employee.reporting_manager %}
+    <p class="text-slate-500 text-xs">Reviewed by <span class="font-medium text-slate-700">{{ employee.reporting_manager.full_name }}</span></p>
+    {% endif %}
+  </div>
+
+  {% if not reviews %}
+  <div class="bg-white rounded-2xl border border-slate-100 p-8 text-center">
+    <i class="fas fa-chart-line text-3xl text-slate-200 mb-3 block"></i>
+    <p class="text-slate-500 text-sm">No performance reviews yet.</p>
+    <p class="text-slate-400 text-xs mt-1">Your reporting manager will add one after your review period.</p>
+  </div>
+  {% else %}
+
+  {% for review in reviews %}
+  <div class="bg-white rounded-2xl border border-slate-100 p-6">
+
+    <div class="flex items-start justify-between mb-3">
+      <div>
+        <p class="text-slate-800 font-semibold text-sm">
+          {{ review.get_review_period_type_display }} Review
+        </p>
+        <p class="text-slate-500 text-xs mt-0.5">
+          {{ review.period_start|date:"d M Y" }} — {{ review.period_end|date:"d M Y" }}
+        </p>
+      </div>
+      <span class="text-xs px-2.5 py-1 rounded-full font-medium
+        {% if review.status == 'acknowledged' %}bg-emerald-100 text-emerald-700
+        {% elif review.status == 'submitted' %}bg-amber-100 text-amber-700
+        {% else %}bg-slate-200 text-slate-600{% endif %}">
+        {{ review.get_status_display }}
+      </span>
+    </div>
+
+    <div class="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
+      <span class="text-slate-400 text-xs">Overall rating</span>
+      <span class="text-sm font-semibold
+        {% if review.overall_rating >= 4 %}text-emerald-600
+        {% elif review.overall_rating == 3 %}text-amber-600
+        {% else %}text-red-500{% endif %}">
+        {{ review.get_overall_rating_display }}
+      </span>
+    </div>
+
+    {% if review.goals_achieved %}
+    <div class="mb-3">
+      <p class="text-slate-400 text-xs mb-1">Goals achieved</p>
+      <p class="text-slate-700 text-sm">{{ review.goals_achieved|linebreaksbr }}</p>
+    </div>
+    {% endif %}
+
+    {% if review.strengths %}
+    <div class="mb-3">
+      <p class="text-slate-400 text-xs mb-1">Strengths</p>
+      <p class="text-slate-700 text-sm">{{ review.strengths|linebreaksbr }}</p>
+    </div>
+    {% endif %}
+
+    {% if review.areas_of_improvement %}
+    <div class="mb-3">
+      <p class="text-slate-400 text-xs mb-1">Areas of improvement</p>
+      <p class="text-slate-700 text-sm">{{ review.areas_of_improvement|linebreaksbr }}</p>
+    </div>
+    {% endif %}
+
+    {% if review.reviewer_comments %}
+    <div class="mb-3">
+      <p class="text-slate-400 text-xs mb-1">Manager's comments</p>
+      <p class="text-slate-700 text-sm">{{ review.reviewer_comments|linebreaksbr }}</p>
+    </div>
+    {% endif %}
+
+    {% if review.goals.all %}
+    <div class="mb-3">
+      <p class="text-slate-400 text-xs mb-2">Goals / KPIs</p>
+      <div class="space-y-2">
+        {% for goal in review.goals.all %}
+        <div class="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2">
+          <div>
+            <p class="text-slate-700 text-xs font-medium">{{ goal.title }}</p>
+            {% if goal.target_value %}<p class="text-slate-400 text-[11px]">Target: {{ goal.target_value }}{% if goal.achieved_value %} · Achieved: {{ goal.achieved_value }}{% endif %}</p>{% endif %}
+          </div>
+          <span class="text-[11px] px-2 py-0.5 rounded-full font-medium
+            {% if goal.status == 'completed' %}bg-emerald-100 text-emerald-700
+            {% elif goal.status == 'missed' %}bg-red-100 text-red-600
+            {% elif goal.status == 'in_progress' %}bg-amber-100 text-amber-700
+            {% else %}bg-slate-200 text-slate-600{% endif %}">
+            {{ goal.get_status_display }}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if review.status == 'acknowledged' and review.employee_comments %}
+    <div class="mt-4 pt-4 border-t border-slate-100">
+      <p class="text-slate-400 text-xs mb-1">Your remarks</p>
+      <p class="text-slate-700 text-sm">{{ review.employee_comments|linebreaksbr }}</p>
+    </div>
+    {% elif review.status == 'submitted' %}
+    <form method="post" action="{% url 'portal_performance_acknowledge' review.pk %}" class="mt-4 pt-4 border-t border-slate-100">
+      {% csrf_token %}
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Your remarks (optional)</label>
+      <textarea name="employee_comments" rows="2"
+        placeholder="Add your thoughts on this review..."
+        class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-brand-400 resize-none mb-3"></textarea>
+      <button type="submit"
+        class="w-full py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700">
+        Acknowledge review
+      </button>
+    </form>
+    {% endif %}
+
+  </div>
+  {% endfor %}
+
+  {% endif %}
+</div>
+{% endblock %}

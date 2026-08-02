@@ -466,7 +466,7 @@ def portal_dashboard(request):
     except SalaryStructure.DoesNotExist:
         salary = None
 
-    # Is hafte ki attendance
+# Is hafte ki attendance
     week_start   = today - timedelta(days=today.weekday())
     week_records = AttendanceRecord.objects.filter(
         employee=employee,
@@ -474,19 +474,26 @@ def portal_dashboard(request):
         date__lte=today
     ).order_by('date')
 
+    # Upcoming events & holidays (next 3)
+    from events.models import Event
+    upcoming_events = Event.objects.filter(
+        is_active=True, date__gte=today
+    ).order_by('date')[:3]
+
     return render(request, 'portal/dashboard.html', {
-        'employee':       employee,
-        'today':          today,
-        'today_att':      today_att,
-        'present_days':   present_days,
-        'absent_days':    absent_days,
-        'late_days':      late_days,
-        'leave_balances': leave_balances,
-        'recent_leaves':  recent_leaves,
-        'latest_payslip': latest_payslip,
-        'salary':         salary,
-        'week_records':   week_records,
-        'month_name':     calendar.month_name[month],
+        'employee':        employee,
+        'today':           today,
+        'today_att':       today_att,
+        'present_days':    present_days,
+        'absent_days':     absent_days,
+        'late_days':       late_days,
+        'leave_balances':  leave_balances,
+        'recent_leaves':   recent_leaves,
+        'latest_payslip':  latest_payslip,
+        'salary':          salary,
+        'week_records':    week_records,
+        'month_name':      calendar.month_name[month],
+        'upcoming_events': upcoming_events,
     })
 
 
@@ -736,3 +743,70 @@ def portal_payslip_detail(request, pk):
 def portal_profile(request):
     employee = get_employee(request)
     return render(request, 'portal/profile.html', {'employee': employee})
+
+# ── Portal Events & Holidays ──────────────────────────────────────────────────
+@employee_required
+def portal_events(request):
+    from events.models import Event
+
+    employee   = get_employee(request)
+    event_type = request.GET.get('type', '')
+    today      = date.today()
+
+    events = Event.objects.filter(is_active=True)
+    if event_type in ['holiday', 'event']:
+        events = events.filter(event_type=event_type)
+
+    upcoming = events.filter(date__gte=today).order_by('date')
+    past     = events.filter(date__lt=today).order_by('-date')[:10]
+
+    upcoming_holiday_count = upcoming.filter(event_type='holiday').count()
+    upcoming_event_count   = upcoming.filter(event_type='event').count()
+
+    return render(request, 'portal/events.html', {
+        'employee':               employee,
+        'upcoming':                upcoming,
+        'past':                    past,
+        'selected_type':           event_type,
+        'upcoming_holiday_count':  upcoming_holiday_count,
+        'upcoming_event_count':    upcoming_event_count,
+        'today':                   today,
+    })
+
+# ── Portal Performance (My Performance) ─────────────────────────────────────
+@employee_required
+def portal_performance(request):
+    """
+    Lets the logged-in employee see their own performance reviews
+    (read-only) — this is the 'Employee ko bhi dikhana hai' part.
+    """
+    employee = get_employee(request)
+
+    reviews = employee.performance_reviews.select_related('reviewer').prefetch_related('goals')
+
+    return render(request, 'portal/performance.html', {
+        'employee': employee,
+        'reviews': reviews,
+    })
+
+
+# ── Portal Performance — Employee Acknowledge / Comment ─────────────────────
+@employee_required
+def portal_performance_acknowledge(request, pk):
+    """
+    Employee reads a submitted review and adds their own remark, marking
+    it 'acknowledged'. Employee can only touch their own reviews.
+    """
+    from employees.models import PerformanceReview
+    employee = get_employee(request)
+    review   = get_object_or_404(PerformanceReview, pk=pk, employee=employee)
+
+    if request.method == 'POST':
+        employee_comments = request.POST.get('employee_comments', '').strip()
+        review.employee_comments = employee_comments
+        review.status = 'acknowledged'
+        review.save()
+        messages.success(request, 'Thanks — your review has been acknowledged.')
+
+    return redirect('portal_performance')
+

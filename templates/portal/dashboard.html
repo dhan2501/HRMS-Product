@@ -230,6 +230,36 @@
       </div>
     </div>
 
+    <!-- Upcoming Events & Holidays -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-slate-700 font-semibold text-sm">Upcoming Events & Holidays</h2>
+        <a href="{% url 'portal_events' %}" class="text-xs text-brand-600 font-medium hover:underline">View All</a>
+      </div>
+      <div class="space-y-2.5">
+        {% for ev in upcoming_events %}
+        <div class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+            {% if ev.event_type == 'holiday' %}bg-rose-100{% else %}bg-indigo-100{% endif %}">
+            <i class="fas {% if ev.event_type == 'holiday' %}fa-umbrella-beach text-rose-500{% else %}fa-calendar-days text-indigo-600{% endif %} text-xs"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-slate-700 text-xs font-medium truncate">{{ ev.title }}</p>
+            <p class="text-slate-400 text-[10px]">
+              {{ ev.date|date:"d M Y" }}{% if ev.is_multi_day %} - {{ ev.end_date|date:"d M Y" }}{% endif %}
+            </p>
+          </div>
+          <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0
+            {% if ev.event_type == 'holiday' %}bg-rose-100 text-rose-600{% else %}bg-indigo-100 text-indigo-700{% endif %}">
+            {{ ev.get_event_type_display }}
+          </span>
+        </div>
+        {% empty %}
+        <p class="text-slate-400 text-xs text-center py-4">No upcoming events or holidays</p>
+        {% endfor %}
+      </div>
+    </div>
+
   </div>
 </div>
 {% endblock %}

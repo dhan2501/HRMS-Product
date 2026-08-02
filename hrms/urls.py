@@ -95,6 +95,7 @@ urlpatterns = [
     path('leaves/', include('leaves.urls')),
     path('payroll/', include('payroll.urls')),
     path('recruitment/', include('recruitment.urls')),
+    path('events/', include('events.urls')),
 
     # Employee Portal
     path('portal/', include('employees.portal_urls')),
