@@ -565,6 +565,12 @@ def _base_template(user):
     """HR/admin users get the admin shell, everyone else (employees) get the portal shell."""
     return 'base.html' if (user.is_staff or user.is_superuser) else 'portal/base_portal.html'
 
+# Emoji picker options (chat_home.html loops over this to render the picker)
+EMOJI_LIST = [
+    '😀', '😂', '😊', '😍', '😎', '🤔', '😅', '😢', '😡', '👍',
+    '👎', '👏', '🙏', '🔥', '🎉', '❤️', '💯', '✅', '❌', '🚀',
+    '😴', '🤝', '👋', '💪', '😁', '🙌', '🥳', '😇', '🤷', '📌',
+]
 
 # ── Chat Home ─────────────────────────────────────────────────────────────────
 @login_required
@@ -605,6 +611,8 @@ def chat_home(request):
         'current_emp':   current_emp,
         'total_unread':  total_unread,
         'base_template': _base_template(request.user),
+        'emoji_list':    EMOJI_LIST, 
+        
     })
 
 
@@ -640,9 +648,23 @@ def chat_room(request, conv_id):
     # Mark messages as read
     conv.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
 
+    # messages_list = conv.messages.select_related('sender').order_by('created_at')
+
+    # # Har message ke sender ki photo/initials attach karein (chat bubble avatar ke liye)
+    # for msg in messages_list:
+    #     sender_emp = get_employee_or_none(msg.sender)
+    #     msg.sender_emp = sender_emp
+    #     if sender_emp:
+    #         msg.sender_photo_url = sender_emp.photo.url if sender_emp.photo else None
+    #         msg.sender_initials  = f"{sender_emp.first_name[0]}{sender_emp.last_name[0]}".upper()
+    #     else:
+    #         msg.sender_photo_url = None
+    #         msg.sender_initials  = msg.sender.username[:2].upper()
+
     messages_list = conv.messages.select_related('sender').order_by('created_at')
 
     # Har message ke sender ki photo/initials attach karein (chat bubble avatar ke liye)
+    prev_sender = None
     for msg in messages_list:
         sender_emp = get_employee_or_none(msg.sender)
         msg.sender_emp = sender_emp
@@ -652,6 +674,9 @@ def chat_room(request, conv_id):
         else:
             msg.sender_photo_url = None
             msg.sender_initials  = msg.sender.username[:2].upper()
+
+        msg.show_header = (msg.sender_id != prev_sender)
+        prev_sender = msg.sender_id
 
     # All conversations for sidebar
     conversations = Conversation.objects.filter(
@@ -686,6 +711,7 @@ def chat_room(request, conv_id):
         'current_emp':   current_emp,
         'all_employees': all_employees,
         'base_template': _base_template(request.user),
+        'emoji_list':    EMOJI_LIST,
     })
 
 
@@ -722,6 +748,7 @@ def send_message(request, conv_id):
         'id':         msg.id,
         'content':    msg.content,
         'sender':     request.user.get_full_name() or request.user.username,
+        'sender_id':  request.user.id, 
         'initials':   initials,
         'photo':      emp.photo.url if emp and emp.photo else None,
         'time':       msg.created_at.strftime('%I:%M %p'),
@@ -752,6 +779,7 @@ def poll_messages(request, conv_id):
             'id':       msg.id,
             'content':  msg.content,
             'sender':   msg.sender.get_full_name() or msg.sender.username,
+            'sender_id': msg.sender_id,
             'initials': initials,
             'photo':    emp.photo.url if emp and emp.photo else None,
             'time':     msg.created_at.strftime('%I:%M %p'),
