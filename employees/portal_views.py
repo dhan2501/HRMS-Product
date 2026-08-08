@@ -555,6 +555,42 @@ def portal_profile(request):
     employee = get_employee(request)
     return render(request, 'portal/profile.html', {'employee': employee})
 
+# ── Portal Profile ────────────────────────────────────────────────────────────
+@employee_required
+def portal_profile(request):
+    employee = get_employee(request)
+    return render(request, 'portal/profile.html', {'employee': employee})
+
+
+# ── Portal: Employee updates their OWN Bank / Aadhaar / PAN details ────────────
+@employee_required
+def portal_edit_bank_details(request):
+    """
+    Super Admin can set these when the employee is first added. From then
+    on, ONLY the employee themselves can update them — using
+    EmployeeBankDetailsForm, which is restricted to just these 6 fields
+    so nothing else on their Employee record can be changed here.
+    """
+    from .views import EmployeeBankDetailsForm
+
+    employee = get_employee(request)
+
+    if request.method == 'POST':
+        form = EmployeeBankDetailsForm(request.POST, instance=employee)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your bank & ID details have been updated.')
+            return redirect('portal_profile')
+        else:
+            messages.error(request, 'Please fix the errors below.')
+    else:
+        form = EmployeeBankDetailsForm(instance=employee)
+
+    return render(request, 'portal/edit_bank_details.html', {
+        'employee': employee,
+        'form':     form,
+    })
+
 # ── Portal Events & Holidays ──────────────────────────────────────────────────
 @employee_required
 def portal_events(request):

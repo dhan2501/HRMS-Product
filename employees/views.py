@@ -766,6 +766,57 @@ def admin_required(view_func):
 
 
 # ── Form ────────────────────────────────────────────────────────────────────
+# class EmployeeForm(forms.ModelForm):
+#     class Meta:
+#         model = Employee
+#         fields = [
+#             'employee_id', 'first_name', 'last_name', 'email', 'phone',
+#             'date_of_birth', 'gender', 'photo',
+#             'department', 'designation', 'reporting_manager', 'date_joined',
+#             'employment_type', 'status',
+#             'shift', 'standard_working_hours', 'biometric_id',
+#             'address', 'emergency_contact_name', 'emergency_contact_phone',
+#         ]
+#         widgets = {
+#             'date_of_birth': forms.DateInput(attrs={'type': 'date'}),
+#             'date_joined':   forms.DateInput(attrs={'type': 'date'}),
+#             'address':       forms.Textarea(attrs={'rows': 3}),
+#         }
+
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         self.fields['employee_id'].required = True
+#         self.fields['first_name'].required  = True
+#         self.fields['last_name'].required   = True
+#         self.fields['email'].required       = True
+#         self.fields['date_joined'].required = True
+#         self.fields['department'].required  = True
+#         self.fields['phone'].required                  = False
+#         self.fields['date_of_birth'].required          = False
+#         self.fields['gender'].required                 = False
+#         self.fields['photo'].required                  = False
+#         self.fields['designation'].required            = False
+#         self.fields['shift'].required                  = False
+#         self.fields['standard_working_hours'].required = False
+#         self.fields['biometric_id'].required            = False
+#         self.fields['address'].required                = False
+#         self.fields['emergency_contact_name'].required = False
+#         self.fields['emergency_contact_phone'].required= False
+#         self.fields['designation'].queryset = Designation.objects.select_related('department').all()
+#         self.fields['reporting_manager'].required = False
+#         managers_qs = Employee.objects.filter(status='active').order_by('first_name', 'last_name')
+#         if self.instance and self.instance.pk:
+#             # An employee can't report to themselves
+#             managers_qs = managers_qs.exclude(pk=self.instance.pk)
+#         self.fields['reporting_manager'].queryset = managers_qs
+
+#     def clean_biometric_id(self):
+#         # Store blank as None so multiple employees can have "no device ID"
+#         # without violating the unique constraint.
+#         value = (self.cleaned_data.get('biometric_id') or '').strip()
+#         return value or None
+
+
 class EmployeeForm(forms.ModelForm):
     class Meta:
         model = Employee
@@ -776,6 +827,8 @@ class EmployeeForm(forms.ModelForm):
             'employment_type', 'status',
             'shift', 'standard_working_hours', 'biometric_id',
             'address', 'emergency_contact_name', 'emergency_contact_phone',
+            'bank_account_holder_name', 'bank_account_number', 'bank_name', 'bank_ifsc_code',
+            'aadhar_number', 'pan_number',
         ]
         widgets = {
             'date_of_birth': forms.DateInput(attrs={'type': 'date'}),
@@ -802,6 +855,12 @@ class EmployeeForm(forms.ModelForm):
         self.fields['address'].required                = False
         self.fields['emergency_contact_name'].required = False
         self.fields['emergency_contact_phone'].required= False
+        self.fields['bank_account_holder_name'].required = False
+        self.fields['bank_account_number'].required      = False
+        self.fields['bank_name'].required                = False
+        self.fields['bank_ifsc_code'].required            = False
+        self.fields['aadhar_number'].required             = False
+        self.fields['pan_number'].required                = False
         self.fields['designation'].queryset = Designation.objects.select_related('department').all()
         self.fields['reporting_manager'].required = False
         managers_qs = Employee.objects.filter(status='active').order_by('first_name', 'last_name')
@@ -816,6 +875,56 @@ class EmployeeForm(forms.ModelForm):
         value = (self.cleaned_data.get('biometric_id') or '').strip()
         return value or None
 
+    def clean_aadhar_number(self):
+        value = (self.cleaned_data.get('aadhar_number') or '').replace(' ', '').strip()
+        if value and (not value.isdigit() or len(value) != 12):
+            raise forms.ValidationError('Aadhaar number must be exactly 12 digits.')
+        return value
+
+    def clean_pan_number(self):
+        value = (self.cleaned_data.get('pan_number') or '').strip().upper()
+        if value and len(value) != 10:
+            raise forms.ValidationError('PAN must be exactly 10 characters (e.g. ABCDE1234F).')
+        return value
+
+    def clean_bank_ifsc_code(self):
+        return (self.cleaned_data.get('bank_ifsc_code') or '').strip().upper()
+
+
+# ── Employee-only form: Bank / Aadhaar / PAN self-update ───────────────────────
+class EmployeeBankDetailsForm(forms.ModelForm):
+    """
+    Deliberately lists ONLY the bank/Aadhaar/PAN fields. Because a
+    ModelForm only ever reads/writes the fields named here, an employee
+    submitting this form can never touch any other field on their own
+    Employee record — even if the POST data were tampered with.
+    """
+    class Meta:
+        model = Employee
+        fields = [
+            'bank_account_holder_name', 'bank_account_number', 'bank_name', 'bank_ifsc_code',
+            'aadhar_number', 'pan_number',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in self.fields:
+            self.fields[name].required = False
+
+    def clean_aadhar_number(self):
+        value = (self.cleaned_data.get('aadhar_number') or '').replace(' ', '').strip()
+        if value and (not value.isdigit() or len(value) != 12):
+            raise forms.ValidationError('Aadhaar number must be exactly 12 digits.')
+        return value
+
+    def clean_pan_number(self):
+        value = (self.cleaned_data.get('pan_number') or '').strip().upper()
+        if value and len(value) != 10:
+            raise forms.ValidationError('PAN must be exactly 10 characters (e.g. ABCDE1234F).')
+        return value
+
+    def clean_bank_ifsc_code(self):
+        return (self.cleaned_data.get('bank_ifsc_code') or '').strip().upper()
 
 # ── Dashboard ────────────────────────────────────────────────────────────────
 @login_required

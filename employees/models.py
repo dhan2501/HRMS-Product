@@ -63,6 +63,16 @@ class Employee(models.Model):
     emergency_contact_name = models.CharField(max_length=100, blank=True)
     emergency_contact_phone = models.CharField(max_length=15, blank=True)
 
+     # ✅ Bank & Government ID details — added by Super Admin at creation time,
+    # and from then on can ONLY be updated by the employee themselves
+    # (via a dedicated, restricted portal form — see EmployeeBankDetailsForm).
+    bank_account_holder_name = models.CharField(max_length=100, blank=True)
+    bank_account_number      = models.CharField(max_length=30, blank=True)
+    bank_name                = models.CharField(max_length=100, blank=True)
+    bank_ifsc_code           = models.CharField(max_length=15, blank=True)
+    aadhar_number            = models.CharField(max_length=20, blank=True, help_text="12-digit Aadhaar number")
+    pan_number                = models.CharField(max_length=10, blank=True, help_text="10-character PAN")
+
     # ✅ Deactivate / Hold tracking
     status_reason = models.TextField(
         blank=True,
@@ -99,6 +109,33 @@ class Employee(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+
+    @property
+    def bank_account_masked(self):
+        """Shows only the last 4 digits — e.g. •••••••1234."""
+        num = self.bank_account_number
+        if not num:
+            return ''
+        return '•' * max(len(num) - 4, 0) + num[-4:]
+
+    @property
+    def aadhar_masked(self):
+        """Shows only the last 4 digits — e.g. XXXX XXXX 1234."""
+        num = self.aadhar_number.replace(' ', '') if self.aadhar_number else ''
+        if not num:
+            return ''
+        return f"XXXX XXXX {num[-4:]}" if len(num) >= 4 else num
+
+    @property
+    def pan_masked(self):
+        """Shows first 2 and last 2 characters only — e.g. AB••••••XY."""
+        num = self.pan_number
+        if not num:
+            return ''
+        if len(num) <= 4:
+            return num
+        return num[:2] + '•' * (len(num) - 4) + num[-2:]
+
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
@@ -114,6 +151,8 @@ class Employee(models.Model):
 
     def __str__(self):
         return f"{self.employee_id} - {self.full_name}"
+
+    
 
     class Meta:
         ordering = ['first_name', 'last_name']

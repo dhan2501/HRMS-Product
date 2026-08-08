@@ -10,6 +10,7 @@ urlpatterns = [
     path('payslips/', portal_views.portal_payslips, name='portal_payslips'),
     path('payslips/<int:pk>/', portal_views.portal_payslip_detail, name='portal_payslip_detail'),
     path('profile/', portal_views.portal_profile, name='portal_profile'),
+    path('profile/bank-details/', portal_views.portal_edit_bank_details, name='portal_edit_bank_details'),
 
     # WFH
     path('wfh/', portal_views.portal_wfh, name='portal_wfh'),
