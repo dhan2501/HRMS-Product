@@ -128,3 +128,24 @@ def team_requests(request):
         'is_reporting_manager':        True,
         'team_requests_pending_count': pending_leave + pending_wfh,
     }
+
+
+def current_employee(request):
+    """
+    Makes `employee` available in EVERY template (navbar avatar/name in
+    portal/base_portal.html relies on it) even on pages whose view forgot
+    to pass it explicitly — e.g. chat_home, help_home. If a view already
+    passes its own `employee` in the render() context, that value wins
+    (view context overrides context-processor context of the same name),
+    so this is purely a safe fallback.
+    """
+    if not request.user.is_authenticated:
+        return {}
+
+    try:
+        from employees.models import Employee
+        emp = Employee.objects.select_related('department', 'designation').get(user=request.user)
+    except Exception:
+        return {}
+
+    return {'employee': emp}
