@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+{% block title %}Employee Attendance History{% endblock %}
+{% block page_title %}Employee Attendance History{% endblock %}
+{% block page_subtitle %}Search any employee and review their Punch In/Out, breaks &amp; working hours for any date range{% endblock %}
+
+{% block content %}
+
+<!-- ── Search + Filter bar ─────────────────────────────────────────────── -->
+<form method="get" class="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5 mb-5 shadow-sm">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4 items-end">
+
+    <div class="lg:col-span-4">
+      <label class="block text-slate-500 text-[11px] font-semibold uppercase tracking-wide mb-1.5">Search Employee</label>
+      <div class="relative">
+        <i class="fas fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-sm"></i>
+        <input type="text" name="search" value="{{ search_query }}" placeholder="Employee ID or name…"
+          class="w-full border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-50 transition-shadow">
+      </div>
+    </div>
+
+    <div class="lg:col-span-4">
+      <label class="block text-slate-500 text-[11px] font-semibold uppercase tracking-wide mb-1.5">
+        Employee
+        {% if search_query %}<span class="text-brand-500 normal-case font-normal">· {{ employees|length }} match{{ employees|length|pluralize:"es" }}</span>{% endif %}
+      </label>
+      <select name="employee"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm bg-white focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-50 transition-shadow">
+        <option value="">— Select employee —</option>
+        {% for emp in employees %}
+        <option value="{{ emp.id }}" {% if selected_emp_id|stringformat:'s' == emp.id|stringformat:'s' %}selected{% endif %}>
+          {{ emp.full_name }} ({{ emp.employee_id }}){% if emp.department %} — {{ emp.department.name }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="lg:col-span-2">
+      <label class="block text-slate-500 text-[11px] font-semibold uppercase tracking-wide mb-1.5">From</label>
+      <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-50 transition-shadow">
+    </div>
+    <div class="lg:col-span-2">
+      <label class="block text-slate-500 text-[11px] font-semibold uppercase tracking-wide mb-1.5">To</label>
+      <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-50 transition-shadow">
+    </div>
+  </div>
+
+  <div class="flex items-center flex-wrap gap-3 mt-4 pt-4 border-t border-slate-50">
+    <button type="submit"
+      class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors">
+      <i class="fas fa-filter"></i> Apply
+    </button>
+    {% if search_query or selected_employee %}
+    <a href="{% url 'employee_attendance_history' %}"
+      class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-500 text-sm font-medium hover:bg-slate-50 transition-colors">
+      <i class="fas fa-rotate-left"></i> Reset
+    </a>
+    {% endif %}
+    <p class="text-slate-400 text-xs sm:ml-auto">Past dates supported, including any date on or after the employee's joining date.</p>
+  </div>
+</form>
+
+{% if selected_employee %}
+
+<!-- ── Employee identity + attendance-rate hero ────────────────────────── -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+
+  <!-- Identity card -->
+  <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex items-center gap-4">
+    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
+      {{ selected_employee.first_name|first|upper }}{{ selected_employee.last_name|first|upper }}
+    </div>
+    <div class="min-w-0">
+      <p class="text-slate-800 font-semibold text-base truncate">
+        {{ selected_employee.full_name }}
+        <span class="text-slate-400 font-normal text-sm">({{ selected_employee.employee_id }})</span>
+      </p>
+      <p class="text-slate-500 text-xs mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <span><i class="fas fa-building text-slate-300 mr-1"></i>{{ selected_employee.department.name|default:"—" }}</span>
+        <span><i class="fas fa-calendar text-slate-300 mr-1"></i>Joined {{ selected_employee.date_joined|date:"d M Y" }}</span>
+        {% if selected_employee.shift %}
+        <span><i class="fas fa-clock text-slate-300 mr-1"></i>{{ selected_employee.shift.name }} ({{ selected_employee.shift.start_time|time:"H:i" }}–{{ selected_employee.shift.end_time|time:"H:i" }})</span>
+        {% endif %}
+        <span><i class="fas fa-business-time text-slate-300 mr-1"></i>{{ selected_employee.effective_working_hours }}h/day</span>
+      </p>
+      <p class="text-slate-400 text-[11px] mt-2">
+        <i class="fas fa-calendar-week mr-1"></i>{{ start_date|date:"d M Y" }} <i class="fas fa-arrow-right-long mx-1"></i> {{ end_date|date:"d M Y" }}
+        &bull; {{ rows|length }} day{{ rows|length|pluralize }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Attendance-rate ring (signature stat) -->
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex items-center gap-4">
+    <div class="relative w-16 h-16 flex-shrink-0 rounded-full"
+      style="background: conic-gradient(#4f46e5 0% {{ attendance_pct }}%, #eef1fd {{ attendance_pct }}% 100%);">
+      <div class="absolute inset-1.5 bg-white rounded-full flex items-center justify-center">
+        <span class="text-slate-800 font-bold text-sm">{{ attendance_pct }}%</span>
+      </div>
+    </div>
+    <div>
+      <p class="text-slate-700 font-semibold text-sm">Attendance Rate</p>
+      <p class="text-slate-400 text-xs mt-0.5">{{ totals.present }} present of {{ rows|length }} day{{ rows|length|pluralize }}</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── Secondary stats ──────────────────────────────────────────────────── -->
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
+  <div class="bg-white rounded-xl border border-slate-100 p-4 flex items-center gap-3 shadow-sm">
+    <div class="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-circle-xmark text-red-400 text-sm"></i>
+    </div>
+    <div><p class="text-lg font-bold text-slate-800 leading-none">{{ totals.absent }}</p><p class="text-slate-400 text-[11px] mt-1">Absent</p></div>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-100 p-4 flex items-center gap-3 shadow-sm">
+    <div class="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-business-time text-amber-500 text-sm"></i>
+    </div>
+    <div><p class="text-lg font-bold text-slate-800 leading-none">{{ totals.late }}</p><p class="text-slate-400 text-[11px] mt-1">Late</p></div>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-100 p-4 flex items-center gap-3 shadow-sm">
+    <div class="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-house-laptop text-blue-500 text-sm"></i>
+    </div>
+    <div><p class="text-lg font-bold text-slate-800 leading-none">{{ totals.wfh }}</p><p class="text-slate-400 text-[11px] mt-1">WFH</p></div>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-100 p-4 flex items-center gap-3 shadow-sm">
+    <div class="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-mug-hot text-purple-500 text-sm"></i>
+    </div>
+    <div><p class="text-lg font-bold text-slate-800 leading-none">{{ totals.break_minutes }}m</p><p class="text-slate-400 text-[11px] mt-1">Total Break</p></div>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-100 p-4 flex items-center gap-3 shadow-sm col-span-2 sm:col-span-1">
+    <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-hourglass-half text-slate-500 text-sm"></i>
+    </div>
+    <div><p class="text-lg font-bold text-slate-800 leading-none">{{ totals.working_hours|floatformat:1 }}h</p><p class="text-slate-400 text-[11px] mt-1">Total Worked</p></div>
+  </div>
+</div>
+
+<!-- ── Daily breakdown — desktop table ─────────────────────────────────── -->
+<div class="hidden md:block bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+  <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+    <h2 class="text-slate-700 font-semibold text-sm">Daily Breakdown</h2>
+    <div class="flex items-center gap-3 text-[11px] text-slate-400">
+      <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>In</span>
+      <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span>Out</span>
+    </div>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wide">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Date</th>
+          <th class="text-left px-4 py-3 font-semibold">Status</th>
+          <th class="text-left px-4 py-3 font-semibold">In</th>
+          <th class="text-left px-4 py-3 font-semibold">Out</th>
+          <th class="text-left px-4 py-3 font-semibold">Breaks</th>
+          <th class="text-left px-4 py-3 font-semibold">Worked</th>
+          <th class="text-left px-4 py-3 font-semibold min-w-[180px]">Punch Timeline</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for row in rows %}
+        <tr class="hover:bg-slate-50/70 transition-colors {% if row.date == today %}bg-brand-50/30{% endif %}">
+          <td class="px-5 py-3.5 text-slate-700 font-medium whitespace-nowrap">
+            {{ row.date|date:"D, d M Y" }}
+            {% if row.date == today %}<span class="ml-1.5 text-[10px] text-brand-500 font-semibold">TODAY</span>{% endif %}
+          </td>
+          <td class="px-4 py-3.5">
+            {% if row.record %}
+            <span class="text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap
+              {% if row.record.status == 'present' %}bg-emerald-100 text-emerald-700
+              {% elif row.record.status == 'absent' %}bg-red-100 text-red-600
+              {% elif row.record.status == 'late' %}bg-amber-100 text-amber-700
+              {% elif row.record.status == 'work_from_home' %}bg-blue-100 text-blue-700
+              {% elif row.record.status == 'half_day' %}bg-purple-100 text-purple-700
+              {% else %}bg-slate-100 text-slate-500{% endif %}">
+              {{ row.record.get_status_display }}
+            </span>
+            {% else %}
+            <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-400 whitespace-nowrap">Not Marked</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3.5 text-slate-600 whitespace-nowrap">{{ row.record.check_in|time:"h:i A"|default:"—" }}</td>
+          <td class="px-4 py-3.5 text-slate-600 whitespace-nowrap">{{ row.record.check_out|time:"h:i A"|default:"—" }}</td>
+          <td class="px-4 py-3.5 text-slate-600 whitespace-nowrap">
+            {{ row.record.break_count|default:0 }} <span class="text-slate-400 text-xs">({{ row.record.total_break_minutes|default:0 }}m)</span>
+          </td>
+          <td class="px-4 py-3.5 text-slate-700 font-semibold whitespace-nowrap">{% if row.record.working_hours %}{{ row.record.working_hours }}h{% else %}—{% endif %}</td>
+          <td class="px-4 py-3.5">
+            {% if row.punches %}
+            <div class="flex items-center flex-wrap gap-1">
+              {% for p in row.punches %}
+              <span class="w-2.5 h-2.5 rounded-full flex-shrink-0 {% if p.punch_type == 'in' %}bg-emerald-500{% else %}bg-red-500{% endif %}"
+                title="{{ p.get_punch_type_display }} · {{ p.timestamp|time:'h:i A' }}"></span>
+              {% if not forloop.last %}<span class="w-2.5 h-px bg-slate-200 flex-shrink-0"></span>{% endif %}
+              {% endfor %}
+              <span class="text-slate-400 text-[11px] ml-1.5">{{ row.punches|length }}</span>
+            </div>
+            {% else %}
+            <span class="text-slate-300 text-xs">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="px-4 py-14 text-center">
+            <i class="fas fa-calendar-xmark text-slate-200 text-3xl mb-2 block"></i>
+            <p class="text-slate-400 text-sm">No attendance data in this date range.</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Daily breakdown — mobile cards ──────────────────────────────────── -->
+<div class="md:hidden space-y-3">
+  {% for row in rows %}
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm {% if row.date == today %}ring-1 ring-brand-200{% endif %}">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <p class="text-slate-700 font-semibold text-sm">
+          {{ row.date|date:"D, d M Y" }}
+          {% if row.date == today %}<span class="ml-1 text-[10px] text-brand-500 font-semibold">TODAY</span>{% endif %}
+        </p>
+      </div>
+      {% if row.record %}
+      <span class="text-xs px-2.5 py-1 rounded-full font-medium
+        {% if row.record.status == 'present' %}bg-emerald-100 text-emerald-700
+        {% elif row.record.status == 'absent' %}bg-red-100 text-red-600
+        {% elif row.record.status == 'late' %}bg-amber-100 text-amber-700
+        {% elif row.record.status == 'work_from_home' %}bg-blue-100 text-blue-700
+        {% elif row.record.status == 'half_day' %}bg-purple-100 text-purple-700
+        {% else %}bg-slate-100 text-slate-500{% endif %}">
+        {{ row.record.get_status_display }}
+      </span>
+      {% else %}
+      <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-400">Not Marked</span>
+      {% endif %}
+    </div>
+
+    <div class="grid grid-cols-4 gap-2 text-center mb-3">
+      <div class="bg-slate-50 rounded-lg py-2">
+        <p class="text-slate-700 text-xs font-semibold">{{ row.record.check_in|time:"h:i A"|default:"—" }}</p>
+        <p class="text-slate-400 text-[10px] mt-0.5">In</p>
+      </div>
+      <div class="bg-slate-50 rounded-lg py-2">
+        <p class="text-slate-700 text-xs font-semibold">{{ row.record.check_out|time:"h:i A"|default:"—" }}</p>
+        <p class="text-slate-400 text-[10px] mt-0.5">Out</p>
+      </div>
+      <div class="bg-slate-50 rounded-lg py-2">
+        <p class="text-slate-700 text-xs font-semibold">{{ row.record.break_count|default:0 }}</p>
+        <p class="text-slate-400 text-[10px] mt-0.5">Breaks</p>
+      </div>
+      <div class="bg-slate-50 rounded-lg py-2">
+        <p class="text-slate-700 text-xs font-semibold">{% if row.record.working_hours %}{{ row.record.working_hours }}h{% else %}—{% endif %}</p>
+        <p class="text-slate-400 text-[10px] mt-0.5">Worked</p>
+      </div>
+    </div>
+
+    {% if row.punches %}
+    <div class="flex items-center flex-wrap gap-1.5 pt-3 border-t border-slate-50">
+      {% for p in row.punches %}
+      <span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md
+        {% if p.punch_type == 'in' %}bg-emerald-50 text-emerald-600{% else %}bg-red-50 text-red-500{% endif %}">
+        <i class="fas {% if p.punch_type == 'in' %}fa-arrow-right-to-bracket{% else %}fa-arrow-right-from-bracket{% endif %} text-[9px]"></i>
+        {{ p.timestamp|time:"h:i A" }}
+      </span>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% empty %}
+  <div class="bg-white rounded-2xl border border-slate-100 p-10 text-center shadow-sm">
+    <i class="fas fa-calendar-xmark text-slate-200 text-3xl mb-2 block"></i>
+    <p class="text-slate-400 text-sm">No attendance data in this date range.</p>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="bg-white rounded-2xl border border-slate-100 p-10 sm:p-14 text-center shadow-sm">
+  <div class="w-14 h-14 rounded-2xl bg-brand-50 flex items-center justify-center mx-auto mb-4">
+    <i class="fas fa-magnifying-glass text-brand-500 text-xl"></i>
+  </div>
+  <p class="text-slate-600 font-medium text-sm mb-1">No employee selected</p>
+  <p class="text-slate-400 text-xs">Search by Employee ID or name above, then pick someone from the dropdown to view their Punch In/Out history.</p>
+</div>
+{% endif %}
+
+{% endblock %}

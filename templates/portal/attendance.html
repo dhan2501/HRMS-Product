@@ -17,6 +17,133 @@
   </div>
 </div>
 
+<!-- Punch Log (any date) -->
+<div class="bg-white rounded-2xl border border-slate-100 p-4 mb-5">
+  <form method="get" class="flex flex-wrap items-end gap-3 mb-4">
+    <!-- keep month/year navigation intact -->
+    <input type="hidden" name="month" value="{{ month }}">
+    <input type="hidden" name="year" value="{{ year }}">
+    <div>
+      <label class="block text-slate-500 text-xs font-medium mb-1">Punch Log for Date</label>
+      <input type="date" name="punch_date" value="{{ punch_date_str }}"
+        class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+    </div>
+    <button type="submit"
+      class="bg-brand-600 text-white text-sm font-medium px-4 py-1.5 rounded-lg hover:bg-brand-700">
+      <i class="fas fa-clock-rotate-left mr-1"></i> Show
+    </button>
+  </form>
+
+  <div class="grid grid-cols-2 gap-4">
+    <!-- Punch In times -->
+    <div>
+      <p class="text-slate-500 text-xs font-semibold mb-2 flex items-center gap-1.5">
+        <i class="fas fa-right-to-bracket text-emerald-500"></i>
+        Punch In ({{ day_punch_ins|length }})
+      </p>
+      <div class="space-y-1.5">
+        {% for log in day_punch_ins %}
+        <div class="flex items-center gap-2 bg-emerald-50 rounded-lg px-3 py-1.5">
+          <span class="w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center">{{ forloop.counter }}</span>
+          <span class="text-emerald-700 text-xs font-medium">{{ log.timestamp|time:"h:i A" }}</span>
+        </div>
+        {% empty %}
+        <p class="text-slate-300 text-xs">Is din koi Punch In nahi hua.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Punch Out times -->
+    <div>
+      <p class="text-slate-500 text-xs font-semibold mb-2 flex items-center gap-1.5">
+        <i class="fas fa-right-from-bracket text-red-500"></i>
+        Punch Out ({{ day_punch_outs|length }})
+      </p>
+      <div class="space-y-1.5">
+        {% for log in day_punch_outs %}
+        <div class="flex items-center gap-2 bg-red-50 rounded-lg px-3 py-1.5">
+          <span class="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{{ forloop.counter }}</span>
+          <span class="text-red-700 text-xs font-medium">{{ log.timestamp|time:"h:i A" }}</span>
+        </div>
+        {% empty %}
+        <p class="text-slate-300 text-xs">Is din koi Punch Out nahi hua.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Date-wise History Filter -->
+<div class="bg-white rounded-2xl border border-slate-100 p-4 mb-5">
+  <form method="get" class="flex flex-wrap items-end gap-3">
+    <div>
+      <label class="block text-slate-500 text-xs font-medium mb-1">From Date</label>
+      <input type="date" name="from_date" value="{{ from_date_str }}"
+        class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+    </div>
+    <div>
+      <label class="block text-slate-500 text-xs font-medium mb-1">To Date</label>
+      <input type="date" name="to_date" value="{{ to_date_str }}"
+        class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+    </div>
+    <button type="submit"
+      class="bg-brand-600 text-white text-sm font-medium px-4 py-1.5 rounded-lg hover:bg-brand-700">
+      <i class="fas fa-filter mr-1"></i> Filter
+    </button>
+    {% if filter_applied %}
+    <a href="{% url 'portal_attendance' %}"
+      class="text-slate-500 text-sm font-medium px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">
+      Clear
+    </a>
+    {% endif %}
+  </form>
+
+  {% if filter_applied %}
+  <div class="mt-4 overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-slate-400 text-xs uppercase border-b border-slate-100">
+          <th class="py-2 pr-4">Date</th>
+          <th class="py-2 pr-4">Status</th>
+          <th class="py-2 pr-4">Check In</th>
+          <th class="py-2 pr-4">Check Out</th>
+          <th class="py-2 pr-4">Working Hours</th>
+          <th class="py-2 pr-4">Breaks</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rec in filtered_records %}
+        <tr class="border-b border-slate-50">
+          <td class="py-2 pr-4 text-slate-700">{{ rec.date|date:"d M Y" }}</td>
+          <td class="py-2 pr-4">
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium
+              {% if rec.status == 'present' %}bg-emerald-100 text-emerald-700
+              {% elif rec.status == 'absent' %}bg-red-100 text-red-700
+              {% elif rec.status == 'late' %}bg-amber-100 text-amber-700
+              {% elif rec.status == 'work_from_home' %}bg-blue-100 text-blue-700
+              {% elif rec.status == 'half_day' %}bg-purple-100 text-purple-700
+              {% else %}bg-slate-100 text-slate-600{% endif %}">
+              {{ rec.get_status_display }}
+            </span>
+          </td>
+          <td class="py-2 pr-4 text-slate-600">{{ rec.check_in|time:"H:i"|default:"—" }}</td>
+          <td class="py-2 pr-4 text-slate-600">{{ rec.check_out|time:"H:i"|default:"—" }}</td>
+          <td class="py-2 pr-4 text-slate-600">{{ rec.working_hours|default:"—" }}</td>
+          <td class="py-2 pr-4 text-slate-600">{{ rec.break_count }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="py-4 text-center text-slate-400">
+            Is date range mein koi attendance record nahi mila.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
 <!-- Summary -->
 <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
   <div class="bg-white rounded-xl border border-slate-100 p-3 text-center">

@@ -25,9 +25,22 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
     body { font-family: 'Inter', sans-serif; }
-    .nav-item { transition: all 0.2s; }
-    .nav-item.active { background: rgba(255,255,255,0.15); }
-    .nav-item:hover { background: rgba(255,255,255,0.1); }
+    .nav-link { position: relative; transition: background-color .15s ease, color .15s ease; }
+    .nav-link:hover { background: rgba(255,255,255,0.12); }
+    .nav-link.active { background: rgba(255,255,255,0.16); }
+    .nav-link.active::after {
+      content: ''; position: absolute; left: 10px; right: 10px; bottom: -1px;
+      height: 2px; border-radius: 2px; background: #fff;
+    }
+    .nav-icon-btn { transition: background-color .15s ease; }
+    .nav-icon-btn:hover { background: rgba(255,255,255,0.14); }
+    .badge-dot {
+      min-width: 16px; height: 16px; font-size: 9px; line-height: 16px;
+    }
+    #mobile-menu-panel { transition: transform .25s ease, opacity .25s ease; }
+    #user-dropdown { transition: opacity .15s ease, transform .15s ease; transform-origin: top right; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
 <body class="h-full bg-slate-50">
@@ -35,136 +48,210 @@
 <div class="min-h-screen flex flex-col">
 
   <!-- Top Navbar -->
-  <nav class="text-white shadow-lg flex-shrink-0" style="background: linear-gradient(135deg, #4338ca, #6366f1)">
-    <div class="max-w-7xl mx-auto px-4">
-      <div class="flex items-center justify-between h-14">
+  <nav class="sticky top-0 z-50 text-white shadow-lg" style="background: linear-gradient(135deg, #4338ca, #6366f1)">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+      <div class="flex items-center justify-between h-14 lg:h-16 gap-2">
 
         <!-- Logo -->
-        <div class="flex items-center gap-2.5">
-          <div class="w-7 h-7 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+        <a href="{% url 'portal_dashboard' %}" class="flex items-center gap-2 flex-shrink-0">
+          <div class="w-8 h-8 bg-white/15 rounded-lg flex items-center justify-center ring-1 ring-white/20">
             <i class="fas fa-building text-white text-xs"></i>
           </div>
-          <div>
-            <span class="text-white font-semibold text-sm">DJ HRMS</span>
-            <span class="text-indigo-200 text-xs ml-1.5">Employee Portal</span>
+          <div class="leading-tight hidden xs:block">
+            <div class="text-white font-bold text-sm tracking-tight">DJ HRMS</div>
+            <div class="text-indigo-200 text-[10px] -mt-0.5">Employee Portal</div>
           </div>
-        </div>
+        </a>
 
-        <!-- Nav Links -->
-        <div class="hidden md:flex items-center gap-1">
+        <!-- Desktop Nav Links (lg and up) -->
+        <div class="hidden lg:flex items-center gap-0.5 flex-1 justify-center overflow-x-auto no-scrollbar px-2">
           <a href="{% url 'portal_dashboard' %}"
-            class="nav-item {% if request.resolver_match.url_name == 'portal_dashboard' %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
-            <i class="fas fa-home text-[11px]"></i> Dashboard
+            class="nav-link {% if request.resolver_match.url_name == 'portal_dashboard' %}active{% endif %} flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium whitespace-nowrap">
+            <i class="fas fa-house text-[11px]"></i> Dashboard
           </a>
           <a href="{% url 'portal_attendance' %}"
-            class="nav-item {% if request.resolver_match.url_name == 'portal_attendance' %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
+            class="nav-link {% if request.resolver_match.url_name == 'portal_attendance' %}active{% endif %} flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium whitespace-nowrap">
             <i class="fas fa-clock text-[11px]"></i> Attendance
           </a>
           <a href="{% url 'portal_apply_leave' %}"
-            class="nav-item {% if request.resolver_match.url_name == 'portal_apply_leave' %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
+            class="nav-link {% if request.resolver_match.url_name == 'portal_apply_leave' %}active{% endif %} flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium whitespace-nowrap">
             <i class="fas fa-umbrella-beach text-[11px]"></i> Leave
           </a>
           <a href="{% url 'portal_payslips' %}"
-            class="nav-item {% if request.resolver_match.url_name == 'portal_payslips' %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
+            class="nav-link {% if request.resolver_match.url_name == 'portal_payslips' %}active{% endif %} flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium whitespace-nowrap">
             <i class="fas fa-file-invoice-dollar text-[11px]"></i> Payslips
           </a>
-          <a href="{% url 'portal_profile' %}"
-            class="nav-item {% if request.resolver_match.url_name == 'portal_profile' %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
-            <i class="fas fa-user text-[11px]"></i> Profile
-          </a>
-
-          <!-- Leave link ke baad add karo -->
           <a href="{% url 'portal_wfh' %}"
-            class="nav-item {% if request.resolver_match.url_name == 'portal_wfh' %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
+            class="nav-link {% if request.resolver_match.url_name == 'portal_wfh' %}active{% endif %} flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium whitespace-nowrap">
             <i class="fas fa-house-laptop text-[11px]"></i> WFH
           </a>
           <a href="{% url 'portal_events' %}"
-            class="nav-item {% if request.resolver_match.url_name == 'portal_events' %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
+            class="nav-link {% if request.resolver_match.url_name == 'portal_events' %}active{% endif %} flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium whitespace-nowrap">
             <i class="fas fa-calendar-days text-[11px]"></i> Events
           </a>
-          <a href="{% url 'portal_wellness' %}" class="nav-item flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium">
-            <i class="fas fa-spa text-[10px]"></i> Relax
+          <a href="{% url 'portal_profile' %}"
+            class="nav-link {% if request.resolver_match.url_name == 'portal_profile' %}active{% endif %} flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium whitespace-nowrap">
+            <i class="fas fa-user text-[11px]"></i> Profile
           </a>
-          <a href="{% url 'chat_home' %}"
-            class="nav-item {% if 'chat' in request.resolver_match.url_name %}active{% endif %} relative flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
-            <i class="fas fa-message text-[11px]"></i> Chat
-            {% if unread_messages_count > 0 %}
-            <span class="nav-chat-badge absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center">{{ unread_messages_count }}</span>
-            {% else %}
-            <span class="nav-chat-badge absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-white text-[9px] font-bold items-center justify-center" style="display:none;"></span>
+          {% if is_reporting_manager %}
+          <a href="{% url 'portal_team_requests' %}"
+            class="nav-link {% if request.resolver_match.url_name == 'portal_team_requests' %}active{% endif %} relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium whitespace-nowrap">
+            <i class="fas fa-user-check text-[11px]"></i> Team
+            {% if team_requests_pending_count > 0 %}
+            <span class="badge-dot flex items-center justify-center px-1 bg-amber-400 rounded-full text-indigo-900 font-bold">{{ team_requests_pending_count }}</span>
             {% endif %}
           </a>
-
-          <a href="{% url 'help_home' %}"
-            class="nav-item {% if 'help' in request.resolver_match.url_name or 'polic' in request.resolver_match.url_name %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
-            <i class="fas fa-circle-question text-[11px]"></i> Help
-          </a>
+          {% endif %}
         </div>
 
+        <!-- Right cluster: utility icons + user + hamburger -->
+        <div class="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
 
-        <!-- User -->
-        <div class="flex items-center gap-3">
-          {% if employee %}
-          <div class="flex items-center gap-2">
-            {% if employee.photo %}
-              <img src="{{ employee.photo.url }}" class="w-7 h-7 rounded-full object-cover border-2 border-white border-opacity-30">
-            {% else %}
-              <div class="w-7 h-7 rounded-full bg-white bg-opacity-20 flex items-center justify-center text-white text-[10px] font-bold">
-                {{ employee.first_name|first|upper }}{{ employee.last_name|first|upper }}
-              </div>
-            {% endif %}
-            <span class="text-white text-xs font-medium hidden sm:block">{{ employee.first_name }}</span>
-          </div>
-          {% endif %}
-          <a href="{% url 'employee_logout' %}"
-            class="text-indigo-200 hover:text-white text-xs flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-white hover:bg-opacity-10 transition-colors">
-            <i class="fas fa-arrow-right-from-bracket text-[10px]"></i>
-            <span class="hidden sm:block">Logout</span>
+          <!-- Utility icons (md and up) -->
+          <a href="{% url 'portal_wellness' %}" title="Relax"
+            class="nav-icon-btn hidden md:flex items-center justify-center w-9 h-9 rounded-lg text-white">
+            <i class="fas fa-spa text-sm"></i>
           </a>
+          <a href="{% url 'chat_home' %}" title="Chat"
+            class="nav-icon-btn hidden md:flex relative items-center justify-center w-9 h-9 rounded-lg text-white">
+            <i class="fas fa-message text-sm"></i>
+            {% if unread_messages_count > 0 %}
+            <span class="nav-chat-badge badge-dot absolute top-0.5 right-0.5 px-1 bg-red-500 rounded-full text-white font-bold flex items-center justify-center">{{ unread_messages_count }}</span>
+            {% else %}
+            <span class="nav-chat-badge badge-dot absolute top-0.5 right-0.5 px-1 bg-red-500 rounded-full text-white font-bold items-center justify-center" style="display:none;"></span>
+            {% endif %}
+          </a>
+          <a href="{% url 'help_home' %}" title="Help"
+            class="nav-icon-btn hidden md:flex items-center justify-center w-9 h-9 rounded-lg text-white">
+            <i class="fas fa-circle-question text-sm"></i>
+          </a>
+
+          <div class="hidden lg:block w-px h-6 bg-white/20 mx-1.5"></div>
+
+          <!-- User dropdown (lg and up) -->
+          <div class="hidden lg:block relative">
+            <button type="button" id="user-menu-btn"
+              class="nav-icon-btn flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-lg text-white">
+              {% if employee %}
+                {% if employee.photo %}
+                  <img src="{{ employee.photo.url }}" class="w-7 h-7 rounded-full object-cover border-2 border-white/30">
+                {% else %}
+                  <div class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-white text-[10px] font-bold">
+                    {{ employee.first_name|first|upper }}{{ employee.last_name|first|upper }}
+                  </div>
+                {% endif %}
+                <span class="text-xs font-medium max-w-[90px] truncate">{{ employee.first_name }}</span>
+              {% endif %}
+              <i class="fas fa-chevron-down text-[9px] opacity-80"></i>
+            </button>
+            <div id="user-dropdown"
+              class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl ring-1 ring-black/5 py-1.5 opacity-0 scale-95">
+              <a href="{% url 'portal_profile' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-slate-700 text-xs font-medium hover:bg-slate-50">
+                <i class="fas fa-user text-slate-400 w-3.5"></i> My Profile
+              </a>
+              <a href="{% url 'help_home' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-slate-700 text-xs font-medium hover:bg-slate-50">
+                <i class="fas fa-circle-question text-slate-400 w-3.5"></i> Help &amp; Policies
+              </a>
+              <div class="my-1 border-t border-slate-100"></div>
+              <a href="{% url 'employee_logout' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-red-600 text-xs font-medium hover:bg-red-50">
+                <i class="fas fa-arrow-right-from-bracket text-red-400 w-3.5"></i> Logout
+              </a>
+            </div>
+          </div>
+
+          <!-- Compact logout (md, below lg) -->
+          <a href="{% url 'employee_logout' %}" title="Logout"
+            class="nav-icon-btn hidden md:flex lg:hidden items-center justify-center w-9 h-9 rounded-lg text-white">
+            <i class="fas fa-arrow-right-from-bracket text-sm"></i>
+          </a>
+
+          <!-- Hamburger (below lg) -->
+          <button type="button" id="mobile-menu-btn" aria-label="Open menu" aria-expanded="false"
+            class="nav-icon-btn lg:hidden flex items-center justify-center w-9 h-9 rounded-lg text-white">
+            <i class="fas fa-bars text-base" id="menu-icon-open"></i>
+            <i class="fas fa-xmark text-base hidden" id="menu-icon-close"></i>
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Mobile Nav -->
-    <div class="md:hidden border-t border-white border-opacity-10">
-      <div class="flex overflow-x-auto px-4 py-2 gap-1">
-        <a href="{% url 'portal_dashboard' %}" class="nav-item flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium">
-          <i class="fas fa-home text-[10px]"></i> Home
-        </a>
-        <a href="{% url 'portal_attendance' %}" class="nav-item flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium">
-          <i class="fas fa-clock text-[10px]"></i> Attendance
-        </a>
-        <a href="{% url 'portal_apply_leave' %}" class="nav-item flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium">
-          <i class="fas fa-umbrella-beach text-[10px]"></i> Leave
-        </a>
-        <a href="{% url 'portal_payslips' %}" class="nav-item flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium">
-          <i class="fas fa-file-invoice-dollar text-[10px]"></i> Payslips
-        </a>
+    <!-- Mobile / Tablet Menu (below lg) -->
+    <div id="mobile-menu-backdrop" class="hidden lg:hidden fixed inset-0 bg-black/40 z-40"></div>
+    <div id="mobile-menu-panel"
+      class="lg:hidden fixed top-0 right-0 h-full w-[82%] max-w-xs bg-white z-50 shadow-2xl -translate-x-0 translate-x-full opacity-0 pointer-events-none overflow-y-auto">
 
-        <!-- Leave link ke baad add karo -->
-        <a href="{% url 'portal_wfh' %}"
-          class="nav-item {% if request.resolver_match.url_name == 'portal_wfh' %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
-          <i class="fas fa-house-laptop text-[11px]"></i> WFH
+      <div class="flex items-center justify-between px-4 h-14 border-b border-slate-100" style="background: linear-gradient(135deg, #4338ca, #6366f1)">
+        <div class="flex items-center gap-2">
+          {% if employee %}
+            {% if employee.photo %}
+              <img src="{{ employee.photo.url }}" class="w-8 h-8 rounded-full object-cover border-2 border-white/30">
+            {% else %}
+              <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold">
+                {{ employee.first_name|first|upper }}{{ employee.last_name|first|upper }}
+              </div>
+            {% endif %}
+            <div class="leading-tight">
+              <div class="text-white text-xs font-semibold">{{ employee.first_name }} {{ employee.last_name }}</div>
+              <div class="text-indigo-200 text-[10px]">Employee Portal</div>
+            </div>
+          {% endif %}
+        </div>
+        <button type="button" id="mobile-menu-close" aria-label="Close menu" class="w-8 h-8 flex items-center justify-center rounded-lg text-white hover:bg-white/10">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="py-2">
+        <a href="{% url 'portal_dashboard' %}" class="flex items-center gap-3 px-4 py-3 text-slate-700 text-sm font-medium {% if request.resolver_match.url_name == 'portal_dashboard' %}bg-indigo-50 text-indigo-700{% endif %} hover:bg-slate-50">
+          <i class="fas fa-house w-4 text-slate-400"></i> Dashboard
         </a>
-        <a href="{% url 'portal_events' %}" class="nav-item flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium">
-          <i class="fas fa-calendar-days text-[10px]"></i> Events
+        <a href="{% url 'portal_attendance' %}" class="flex items-center gap-3 px-4 py-3 text-slate-700 text-sm font-medium {% if request.resolver_match.url_name == 'portal_attendance' %}bg-indigo-50 text-indigo-700{% endif %} hover:bg-slate-50">
+          <i class="fas fa-clock w-4 text-slate-400"></i> Attendance
         </a>
-        <a href="{% url 'portal_wellness' %}"
-            class="nav-item {% if request.resolver_match.url_name == 'portal_wellness' %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
-            <i class="fas fa-spa text-[11px]"></i> Relax
-          </a>
-        <a href="{% url 'chat_home' %}" class="nav-item flex-shrink-0 relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium">
-          <i class="fas fa-message text-[10px]"></i> Chat
-          {% if unread_messages_count > 0 %}
-          <span class="nav-chat-badge absolute -top-1 -right-1 min-w-[14px] h-3.5 px-1 bg-red-500 rounded-full text-white text-[8px] font-bold flex items-center justify-center">{{ unread_messages_count }}</span>
-          {% else %}
-          <span class="nav-chat-badge absolute -top-1 -right-1 min-w-[14px] h-3.5 px-1 bg-red-500 rounded-full text-white text-[8px] font-bold items-center justify-center" style="display:none;"></span>
+        <a href="{% url 'portal_apply_leave' %}" class="flex items-center gap-3 px-4 py-3 text-slate-700 text-sm font-medium {% if request.resolver_match.url_name == 'portal_apply_leave' %}bg-indigo-50 text-indigo-700{% endif %} hover:bg-slate-50">
+          <i class="fas fa-umbrella-beach w-4 text-slate-400"></i> Leave
+        </a>
+        <a href="{% url 'portal_payslips' %}" class="flex items-center gap-3 px-4 py-3 text-slate-700 text-sm font-medium {% if request.resolver_match.url_name == 'portal_payslips' %}bg-indigo-50 text-indigo-700{% endif %} hover:bg-slate-50">
+          <i class="fas fa-file-invoice-dollar w-4 text-slate-400"></i> Payslips
+        </a>
+        <a href="{% url 'portal_wfh' %}" class="flex items-center gap-3 px-4 py-3 text-slate-700 text-sm font-medium {% if request.resolver_match.url_name == 'portal_wfh' %}bg-indigo-50 text-indigo-700{% endif %} hover:bg-slate-50">
+          <i class="fas fa-house-laptop w-4 text-slate-400"></i> WFH
+        </a>
+        <a href="{% url 'portal_events' %}" class="flex items-center gap-3 px-4 py-3 text-slate-700 text-sm font-medium {% if request.resolver_match.url_name == 'portal_events' %}bg-indigo-50 text-indigo-700{% endif %} hover:bg-slate-50">
+          <i class="fas fa-calendar-days w-4 text-slate-400"></i> Events
+        </a>
+        <a href="{% url 'portal_profile' %}" class="flex items-center gap-3 px-4 py-3 text-slate-700 text-sm font-medium {% if request.resolver_match.url_name == 'portal_profile' %}bg-indigo-50 text-indigo-700{% endif %} hover:bg-slate-50">
+          <i class="fas fa-user w-4 text-slate-400"></i> Profile
+        </a>
+        {% if is_reporting_manager %}
+        <a href="{% url 'portal_team_requests' %}" class="flex items-center gap-3 px-4 py-3 text-slate-700 text-sm font-medium {% if request.resolver_match.url_name == 'portal_team_requests' %}bg-indigo-50 text-indigo-700{% endif %} hover:bg-slate-50">
+          <i class="fas fa-user-check w-4 text-slate-400"></i> Team Requests
+          {% if team_requests_pending_count > 0 %}
+          <span class="ml-auto badge-dot px-1.5 bg-amber-400 rounded-full text-indigo-900 font-bold flex items-center justify-center">{{ team_requests_pending_count }}</span>
           {% endif %}
         </a>
-        <a href="{% url 'help_home' %}"
-            class="nav-item {% if 'help' in request.resolver_match.url_name or 'polic' in request.resolver_match.url_name %}active{% endif %} flex items-center gap-2 px-3 py-2 rounded-lg text-white text-xs font-medium">
-            <i class="fas fa-circle-question text-[11px]"></i> Help
-          </a>
+        {% endif %}
+
+        <div class="my-2 border-t border-slate-100"></div>
+
+        <a href="{% url 'portal_wellness' %}" class="flex items-center gap-3 px-4 py-3 text-slate-700 text-sm font-medium hover:bg-slate-50">
+          <i class="fas fa-spa w-4 text-slate-400"></i> Relax
+        </a>
+        <a href="{% url 'chat_home' %}" class="flex items-center gap-3 px-4 py-3 text-slate-700 text-sm font-medium hover:bg-slate-50">
+          <i class="fas fa-message w-4 text-slate-400"></i> Chat
+          {% if unread_messages_count > 0 %}
+          <span class="nav-chat-badge ml-auto badge-dot px-1.5 bg-red-500 rounded-full text-white font-bold flex items-center justify-center">{{ unread_messages_count }}</span>
+          {% endif %}
+        </a>
+        <a href="{% url 'help_home' %}" class="flex items-center gap-3 px-4 py-3 text-slate-700 text-sm font-medium hover:bg-slate-50">
+          <i class="fas fa-circle-question w-4 text-slate-400"></i> Help
+        </a>
+
+        <div class="my-2 border-t border-slate-100"></div>
+
+        <a href="{% url 'employee_logout' %}" class="flex items-center gap-3 px-4 py-3 text-red-600 text-sm font-medium hover:bg-red-50">
+          <i class="fas fa-arrow-right-from-bracket w-4 text-red-400"></i> Logout
+        </a>
       </div>
     </div>
   </nav>
@@ -192,6 +279,63 @@
 
 </div>
 
+<script>
+(function () {
+  var menuBtn = document.getElementById('mobile-menu-btn');
+  var closeBtn = document.getElementById('mobile-menu-close');
+  var panel = document.getElementById('mobile-menu-panel');
+  var backdrop = document.getElementById('mobile-menu-backdrop');
+  var iconOpen = document.getElementById('menu-icon-open');
+  var iconClose = document.getElementById('menu-icon-close');
+
+  function openMenu() {
+    backdrop.classList.remove('hidden');
+    panel.classList.remove('translate-x-full', 'opacity-0', 'pointer-events-none');
+    iconOpen.classList.add('hidden');
+    iconClose.classList.remove('hidden');
+    menuBtn.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('overflow-hidden');
+  }
+  function closeMenu() {
+    backdrop.classList.add('hidden');
+    panel.classList.add('translate-x-full', 'opacity-0', 'pointer-events-none');
+    iconOpen.classList.remove('hidden');
+    iconClose.classList.add('hidden');
+    menuBtn.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('overflow-hidden');
+  }
+  if (menuBtn) menuBtn.addEventListener('click', openMenu);
+  if (closeBtn) closeBtn.addEventListener('click', closeMenu);
+  if (backdrop) backdrop.addEventListener('click', closeMenu);
+  window.addEventListener('resize', function () {
+    if (window.innerWidth >= 1024) closeMenu();
+  });
+
+  var userBtn = document.getElementById('user-menu-btn');
+  var userDropdown = document.getElementById('user-dropdown');
+  if (userBtn && userDropdown) {
+    userBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var isOpen = !userDropdown.classList.contains('hidden');
+      if (isOpen) {
+        userDropdown.classList.add('opacity-0', 'scale-95');
+        setTimeout(function () { userDropdown.classList.add('hidden'); }, 120);
+      } else {
+        userDropdown.classList.remove('hidden');
+        requestAnimationFrame(function () {
+          userDropdown.classList.remove('opacity-0', 'scale-95');
+        });
+      }
+    });
+    document.addEventListener('click', function (e) {
+      if (!userDropdown.classList.contains('hidden') && !userDropdown.contains(e.target)) {
+        userDropdown.classList.add('opacity-0', 'scale-95');
+        setTimeout(function () { userDropdown.classList.add('hidden'); }, 120);
+      }
+    });
+  }
+})();
+</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

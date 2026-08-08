@@ -1,3 +1,1096 @@
+{% comment %} <!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}HRMS{% endblock %} — DJ HRMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f4ff', 100: '#e0e9ff', 200: '#c7d7fe',
+              300: '#a5b8fd', 400: '#8293fb', 500: '#6366f1',
+              600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81'
+            }
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #e0e9ff; border-radius: 4px; }
+
+    /* Sidebar items */
+    .sidebar-item { transition: all 0.2s; }
+    .sidebar-item.active {
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: white;
+    }
+    .sidebar-item.active i,
+    .sidebar-item.active span { color: white !important; }
+    .sidebar-item:hover:not(.active) { background: #f0f4ff; }
+    .nav-group-label {
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+
+    /* Sidebar mobile transition */
+    #sidebar { transition: transform 0.3s ease; }
+    #sidebarOverlay { transition: opacity 0.3s ease; }
+
+    @media (max-width: 1023px) {
+      #sidebar {
+        position: fixed;
+        top: 0; left: 0;
+        height: 100vh;
+        z-index: 50;
+        transform: translateX(-100%);
+      }
+      #sidebar.open { transform: translateX(0); }
+    }
+
+    /* ✅ MOBILE FORM FIX — forms inside table/flex */
+    form { display: inline; }
+    .mobile-form { display: block !important; }
+
+    /* ✅ Touch targets bigger on mobile */
+    @media (max-width: 768px) {
+      button[type="submit"],
+      button[type="button"] {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full bg-slate-50">
+
+<!-- Mobile Overlay -->
+<div id="sidebarOverlay"
+  class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"
+  onclick="closeSidebar()">
+</div>
+
+<div class="flex h-screen overflow-hidden">
+
+  <!-- ══════════ SIDEBAR ══════════ -->
+  <aside id="sidebar"
+    class="w-64 bg-white border-r border-slate-100 flex flex-col flex-shrink-0 shadow-sm lg:relative lg:translate-x-0">
+
+    <!-- Logo -->
+    <div class="h-16 flex items-center justify-between px-5 border-b border-slate-100 bg-gradient-to-r from-brand-700 to-brand-500 flex-shrink-0">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+          <i class="fas fa-building text-white text-sm"></i>
+        </div>
+        <div>
+          <span class="text-white font-bold text-base tracking-tight">DJ HRMS</span>
+          <p class="text-indigo-200 text-[10px] font-medium -mt-0.5">Smart HR Management</p>
+        </div>
+      </div>
+      <button onclick="closeSidebar()"
+        class="lg:hidden text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+        <i class="fas fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+
+      <!-- Dashboard -->
+      <a href="{% url 'dashboard' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'dashboard_home' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 font-medium text-sm mb-2">
+        <i class="fas fa-gauge-high w-4 text-center"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <!-- People -->
+      <p class="nav-group-label text-slate-400 px-3 pt-3 pb-1">People</p>
+
+      <a href="{% url 'employee_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'employee_list' or request.resolver_match.url_name == 'employee_detail' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-users w-4 text-center"></i>
+        <span>Employee List</span>
+      </a>
+      <a href="{% url 'add_employee' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'add_employee' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-user-plus w-4 text-center"></i>
+        <span>Add Employee</span>
+      </a>
+      <a href="{% url 'department_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'department_list' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-sitemap w-4 text-center"></i>
+        <span>Departments</span>
+      </a>
+      <a href="{% url 'designation_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'designation_list' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-id-badge w-4 text-center"></i>
+        <span>Designations</span>
+      </a>
+      <a href="{% url 'employee_credentials' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'employee_credentials' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-key w-4 text-center"></i>
+        <span>Login Credentials</span>
+      </a>
+
+      <!-- Time & Leave -->
+      <p class="nav-group-label text-slate-400 px-3 pt-4 pb-1">Time & Leave</p>
+
+      <a href="{% url 'daily_attendance' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'daily_attendance' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-clock w-4 text-center"></i>
+        <span>Daily Attendance</span>
+      </a>
+      <a href="{% url 'monthly_attendance' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'monthly_attendance' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-calendar-days w-4 text-center"></i>
+        <span>Monthly Attendance</span>
+      </a>
+      <a href="{% url 'wfh_requests' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'wfh_requests' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-house-laptop w-4 text-center"></i>
+        <span>WFH Requests</span>
+        {% if wfh_pending_count > 0 %}
+        <span class="ml-auto bg-blue-100 text-blue-700 text-xs font-semibold px-1.5 py-0.5 rounded-md">
+          {{ wfh_pending_count }}
+        </span>
+        {% endif %}
+      </a>
+      <a href="{% url 'leave_requests' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'leave_requests' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-umbrella-beach w-4 text-center"></i>
+        <span>Leave Requests</span>
+        {% if pending_leaves > 0 %}
+        <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-semibold px-1.5 py-0.5 rounded-md">
+          {{ pending_leaves }}
+        </span>
+        {% endif %}
+      </a>
+      <a href="{% url 'leave_types' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'leave_types' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-layer-group w-4 text-center"></i>
+        <span>Leave Types</span>
+      </a>
+
+      <!-- Finance -->
+      <p class="nav-group-label text-slate-400 px-3 pt-4 pb-1">Finance</p>
+
+      <a href="{% url 'salary_structure' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'salary_structure' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-wallet w-4 text-center"></i>
+        <span>Salary Structure</span>
+      </a>
+      <a href="{% url 'payslips' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'payslips' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-file-invoice-dollar w-4 text-center"></i>
+        <span>Payslips</span>
+      </a>
+
+      <!-- Hiring -->
+      <p class="nav-group-label text-slate-400 px-3 pt-4 pb-1">Hiring</p>
+
+      <a href="{% url 'job_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'job_list' or request.resolver_match.url_name == 'job_detail' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-briefcase w-4 text-center"></i>
+        <span>Job Openings</span>
+      </a>
+      <a href="{% url 'candidate_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'candidate_list' or request.resolver_match.url_name == 'candidate_detail' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-user-tie w-4 text-center"></i>
+        <span>Candidates</span>
+      </a>
+      <a href="{% url 'interview_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'interview_list' or request.resolver_match.url_name == 'interview_detail' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-comments w-4 text-center"></i>
+        <span>Interviews</span>
+      </a>
+      <!-- Company -->
+      <p class="nav-group-label text-slate-400 px-3 pt-4 pb-1">Company</p>
+
+      <a href="{% url 'event_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'event_list' or request.resolver_match.url_name == 'add_event' or request.resolver_match.url_name == 'edit_event' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-calendar-days w-4 text-center"></i>
+        <span>Events & Holidays</span>
+      </a>
+
+      <a href="{% url 'wellness_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'wellness_list' or request.resolver_match.url_name == 'add_wellness' or request.resolver_match.url_name == 'edit_wellness' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-spa w-4 text-center"></i>
+        <span>Mind Relaxation</span>
+      </a>
+
+      <!-- System -->
+      <p class="nav-group-label text-slate-400 px-3 pt-4 pb-1">System</p>
+
+      <a href="{% url 'chat_home' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if 'chat' in request.resolver_match.url_name %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-message w-4 text-center"></i>
+        <span>Team Chat</span>
+        {% if unread_messages_count > 0 %}
+        <span class="nav-chat-badge ml-auto bg-red-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-md">
+          {{ unread_messages_count }}
+        </span>
+        {% else %}
+        <span class="nav-chat-badge ml-auto bg-red-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-md" style="display:none;"></span>
+        {% endif %}
+      </a>
+      <a href="{% url 'help_home' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if 'help' in request.resolver_match.url_name or 'polic' in request.resolver_match.url_name %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-circle-question w-4 text-center"></i>
+        <span>Help & Policies</span>
+      </a>
+      <a href="#" onclick="closeSidebar()"
+        class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-gear w-4 text-center"></i>
+        <span>Settings</span>
+      </a>
+    </nav>
+
+    <!-- User Profile -->
+    <div class="px-3 py-3 border-t border-slate-100 flex-shrink-0">
+      <div class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+          {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-slate-800 text-xs font-semibold truncate">
+            {{ request.user.get_full_name|default:request.user.username }}
+          </p>
+          <p class="text-slate-400 text-[11px] flex items-center gap-1">
+            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block"></span>
+            Administrator
+          </p>
+        </div>
+        <a href="{% url 'admin_logout' %}"
+          class="text-slate-400 hover:text-red-500 transition-colors p-1"
+          title="Logout">
+          <i class="fas fa-arrow-right-from-bracket text-xs"></i>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════ MAIN CONTENT ══════════ -->
+  <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+
+    <!-- Top Bar -->
+    <header class="h-16 bg-white border-b border-slate-100 flex items-center px-4 gap-3 flex-shrink-0 shadow-sm">
+
+      <!-- Hamburger — mobile/tablet -->
+      <button onclick="openSidebar()"
+        class="lg:hidden text-slate-500 hover:text-slate-700 p-2 rounded-xl hover:bg-slate-100 transition-colors flex-shrink-0">
+        <i class="fas fa-bars text-lg"></i>
+      </button>
+
+      <!-- Page Title -->
+      <div class="flex-1 min-w-0">
+        <h1 class="text-slate-800 font-semibold text-sm sm:text-base truncate">
+          {% block page_title %}Dashboard{% endblock %}
+        </h1>
+        <p class="text-slate-400 text-xs hidden sm:block truncate">
+          {% block page_subtitle %}{% endblock %}
+        </p>
+      </div>
+
+      <!-- Right Actions -->
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <!-- Search Desktop -->
+        <form method="get" action="{% url 'employee_list' %}" class="relative hidden md:block">
+          <input type="text" name="search" value="{{ request.GET.search }}" placeholder="Search employee name or ID..."
+            class="bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-1.5 w-40 lg:w-48 focus:outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 pl-8 transition-all">
+          <button type="submit" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-600">
+            <i class="fas fa-search text-xs"></i>
+          </button>
+        </form>
+
+        <!-- Search Mobile -->
+        <button type="button" onclick="toggleMobileSearch(event)" id="mobileSearchToggle"
+          class="md:hidden text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-50 rounded-xl transition-colors">
+          <i class="fas fa-search text-sm"></i>
+        </button>
+
+        <!-- Notifications -->
+        <div class="relative" id="notifWrapper">
+          <button onclick="toggleNotifDropdown(event)"
+            class="relative text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-50 rounded-xl transition-colors">
+            <i class="fas fa-bell text-sm"></i>
+            {% if total_notifications > 0 %}
+            <span class="absolute top-0.5 right-0.5 min-w-[16px] h-[16px] px-1 bg-red-500 rounded-full border-2 border-white text-white text-[9px] font-bold flex items-center justify-center leading-none">
+              {{ total_notifications }}
+            </span>
+            {% endif %}
+          </button>
+
+          <div id="notifDropdown"
+            class="hidden absolute right-0 mt-2 w-80 max-w-[90vw] bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              <span class="text-sm font-semibold text-slate-800">Notifications</span>
+              {% if total_notifications > 0 %}
+              <span class="text-xs text-slate-400">{{ total_notifications }} pending</span>
+              {% endif %}
+            </div>
+
+            <div class="max-h-80 overflow-y-auto divide-y divide-slate-50">
+              {% for n in notification_list %}
+              <a href="{% url n.url_name %}"
+                class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                  {% if n.color == 'amber' %}bg-amber-100 text-amber-600{% else %}bg-blue-100 text-blue-600{% endif %}">
+                  <i class="fas {{ n.icon }} text-xs"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="text-xs font-medium text-slate-700 truncate">{{ n.title }}</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">{{ n.subtitle }}</p>
+                  <p class="text-[10px] text-slate-300 mt-0.5">{{ n.created_at|timesince }} ago</p>
+                </div>
+              </a>
+              {% empty %}
+              <div class="px-4 py-8 text-center">
+                <i class="fas fa-bell-slash text-slate-300 text-lg mb-2"></i>
+                <p class="text-xs text-slate-400">No pending requests</p>
+              </div>
+              {% endfor %}
+            </div>
+
+            {% if total_notifications > 0 %}
+            <div class="px-4 py-2.5 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+              <a href="{% url 'leave_requests' %}" class="text-[11px] font-medium text-brand-600 hover:text-brand-700">
+                Leave Requests {% if pending_leaves > 0 %}({{ pending_leaves }}){% endif %}
+              </a>
+              <a href="{% url 'wfh_requests' %}" class="text-[11px] font-medium text-brand-600 hover:text-brand-700">
+                WFH Requests {% if wfh_pending_count > 0 %}({{ wfh_pending_count }}){% endif %}
+              </a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- User avatar mobile — tap for quick Logout -->
+        <div class="lg:hidden relative" id="mobileUserWrapper">
+          <button onclick="toggleMobileUserDropdown(event)"
+            class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+          </button>
+
+          <div id="mobileUserDropdown"
+            class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+              </div>
+              <div class="min-w-0">
+                <p class="text-slate-800 text-xs font-semibold truncate">
+                  {{ request.user.get_full_name|default:request.user.username }}
+                </p>
+                <p class="text-slate-400 text-[11px] flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block"></span>
+                  Administrator
+                </p>
+              </div>
+            </div>
+            <a href="{% url 'admin_logout' %}"
+              class="flex items-center gap-2 px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors">
+              <i class="fas fa-arrow-right-from-bracket text-xs"></i>
+              Logout
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mobile Search Bar (toggled) -->
+    <form method="get" action="{% url 'employee_list' %}"
+      id="mobileSearchBar"
+      class="hidden md:hidden px-4 py-2.5 bg-white border-b border-slate-100 relative">
+      <input type="text" name="search" value="{{ request.GET.search }}" placeholder="Search employee name or ID..."
+        class="w-full bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-2 pl-9 focus:outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100">
+      <button type="submit" class="absolute left-7 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-600">
+        <i class="fas fa-search text-xs"></i>
+      </button>
+    </form>
+
+    <!-- Page Content -->
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6">
+
+      {% if messages %}
+        {% for msg in messages %}
+        <div class="mb-4 px-4 py-3 rounded-xl text-sm font-medium flex items-start gap-3
+          {% if msg.tags == 'success' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+          {% elif msg.tags == 'error' %}bg-red-50 text-red-700 border border-red-200
+          {% elif msg.tags == 'warning' %}bg-amber-50 text-amber-700 border border-amber-200
+          {% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
+          <i class="fas
+            {% if msg.tags == 'success' %}fa-check-circle
+            {% elif msg.tags == 'error' %}fa-circle-xmark
+            {% elif msg.tags == 'warning' %}fa-triangle-exclamation
+            {% else %}fa-circle-info{% endif %} mt-0.5 flex-shrink-0"></i>
+          <span class="flex-1">{{ msg }}</span>
+          <button onclick="this.parentElement.remove()"
+            class="text-current opacity-50 hover:opacity-100 flex-shrink-0 ml-2">
+            <i class="fas fa-xmark text-xs"></i>
+          </button>
+        </div>
+        {% endfor %}
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<!-- ✅ Sidebar JS -->
+<script>
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeSidebar();
+    closeNotifDropdown();
+    closeMobileUserDropdown();
+  }
+});
+
+// ✅ Notification bell dropdown
+function toggleNotifDropdown(e) {
+  e.stopPropagation();
+  var dd = document.getElementById('notifDropdown');
+  if (!dd) return;
+  dd.classList.toggle('hidden');
+}
+
+function closeNotifDropdown() {
+  var dd = document.getElementById('notifDropdown');
+  if (dd) dd.classList.add('hidden');
+}
+
+document.addEventListener('click', function(e) {
+  var wrapper = document.getElementById('notifWrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    closeNotifDropdown();
+  }
+});
+
+// ✅ Mobile user / logout dropdown
+function toggleMobileUserDropdown(e) {
+  e.stopPropagation();
+  var dd = document.getElementById('mobileUserDropdown');
+  if (!dd) return;
+  dd.classList.toggle('hidden');
+}
+
+function closeMobileUserDropdown() {
+  var dd = document.getElementById('mobileUserDropdown');
+  if (dd) dd.classList.add('hidden');
+}
+
+document.addEventListener('click', function(e) {
+  var wrapper = document.getElementById('mobileUserWrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    closeMobileUserDropdown();
+  }
+});
+
+// ✅ Mobile search bar toggle
+function toggleMobileSearch(e) {
+  e.stopPropagation();
+  var bar = document.getElementById('mobileSearchBar');
+  if (!bar) return;
+  bar.classList.toggle('hidden');
+  if (!bar.classList.contains('hidden')) {
+    var input = bar.querySelector('input[name="search"]');
+    if (input) input.focus();
+  }
+}
+
+window.addEventListener('resize', function() {
+  if (window.innerWidth >= 1024) closeSidebar();
+});
+
+// ✅ MOBILE FORM FIX
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('form[style*="display:inline"]').forEach(function(f) {
+    f.style.display = 'inline-block';
+  });
+});
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html> {% endcomment %}
+
+{% comment %} <!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}HRMS{% endblock %} — DJ HRMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f4ff', 100: '#e0e9ff', 200: '#c7d7fe',
+              300: '#a5b8fd', 400: '#8293fb', 500: '#6366f1',
+              600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81'
+            }
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #e0e9ff; border-radius: 4px; }
+
+    /* Sidebar items */
+    .sidebar-item { transition: all 0.2s; }
+    .sidebar-item.active {
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: white;
+    }
+    .sidebar-item.active i,
+    .sidebar-item.active span { color: white !important; }
+    .sidebar-item:hover:not(.active) { background: #f0f4ff; }
+    .nav-group-label {
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+    }
+
+    /* Sidebar mobile transition */
+    #sidebar { transition: transform 0.3s ease; }
+    #sidebarOverlay { transition: opacity 0.3s ease; }
+
+    @media (max-width: 1023px) {
+      #sidebar {
+        position: fixed;
+        top: 0; left: 0;
+        height: 100vh;
+        z-index: 50;
+        transform: translateX(-100%);
+      }
+      #sidebar.open { transform: translateX(0); }
+    }
+
+    /* ✅ MOBILE FORM FIX — forms inside table/flex */
+    form { display: inline; }
+    .mobile-form { display: block !important; }
+
+    /* ✅ Touch targets bigger on mobile */
+    @media (max-width: 768px) {
+      button[type="submit"],
+      button[type="button"] {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full bg-slate-50">
+
+<!-- Mobile Overlay -->
+<div id="sidebarOverlay"
+  class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"
+  onclick="closeSidebar()">
+</div>
+
+<div class="flex h-screen overflow-hidden">
+
+  <!-- ══════════ SIDEBAR ══════════ -->
+  <aside id="sidebar"
+    class="w-64 bg-white border-r border-slate-100 flex flex-col flex-shrink-0 shadow-sm lg:relative lg:translate-x-0">
+
+    <!-- Logo -->
+    <div class="h-16 flex items-center justify-between px-5 border-b border-slate-100 bg-gradient-to-r from-brand-700 to-brand-500 flex-shrink-0">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+          <i class="fas fa-building text-white text-sm"></i>
+        </div>
+        <div>
+          <span class="text-white font-bold text-base tracking-tight">DJ HRMS</span>
+          <p class="text-indigo-200 text-[10px] font-medium -mt-0.5">Smart HR Management</p>
+        </div>
+      </div>
+      <button onclick="closeSidebar()"
+        class="lg:hidden text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+        <i class="fas fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+
+      <!-- Dashboard -->
+      <a href="{% url 'dashboard' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'dashboard_home' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 font-medium text-sm mb-2">
+        <i class="fas fa-gauge-high w-4 text-center"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <!-- People -->
+      <p class="nav-group-label text-slate-400 px-3 pt-3 pb-1">People</p>
+
+      <a href="{% url 'employee_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'employee_list' or request.resolver_match.url_name == 'employee_detail' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-users w-4 text-center"></i>
+        <span>Employee List</span>
+      </a>
+      <a href="{% url 'add_employee' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'add_employee' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-user-plus w-4 text-center"></i>
+        <span>Add Employee</span>
+      </a>
+      <a href="{% url 'department_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'department_list' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-sitemap w-4 text-center"></i>
+        <span>Departments</span>
+      </a>
+      <a href="{% url 'designation_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'designation_list' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-id-badge w-4 text-center"></i>
+        <span>Designations</span>
+      </a>
+      <a href="{% url 'employee_credentials' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'employee_credentials' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-key w-4 text-center"></i>
+        <span>Login Credentials</span>
+      </a>
+
+      <!-- Time & Leave -->
+      <p class="nav-group-label text-slate-400 px-3 pt-4 pb-1">Time & Leave</p>
+
+      <a href="{% url 'daily_attendance' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'daily_attendance' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-clock w-4 text-center"></i>
+        <span>Daily Attendance</span>
+      </a>
+      <a href="{% url 'monthly_attendance' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'monthly_attendance' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-calendar-days w-4 text-center"></i>
+        <span>Monthly Attendance</span>
+      </a>
+      <a href="{% url 'employee_attendance_history' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'employee_attendance_history' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-magnifying-glass w-4 text-center"></i>
+        <span>Employee History</span>
+      </a>
+      <a href="{% url 'wfh_requests' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'wfh_requests' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-house-laptop w-4 text-center"></i>
+        <span>WFH Requests</span>
+        {% if wfh_pending_count > 0 %}
+        <span class="ml-auto bg-blue-100 text-blue-700 text-xs font-semibold px-1.5 py-0.5 rounded-md">
+          {{ wfh_pending_count }}
+        </span>
+        {% endif %}
+      </a>
+      <a href="{% url 'leave_requests' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'leave_requests' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-umbrella-beach w-4 text-center"></i>
+        <span>Leave Requests</span>
+        {% if pending_leaves > 0 %}
+        <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-semibold px-1.5 py-0.5 rounded-md">
+          {{ pending_leaves }}
+        </span>
+        {% endif %}
+      </a>
+      <a href="{% url 'leave_types' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'leave_types' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-layer-group w-4 text-center"></i>
+        <span>Leave Types</span>
+      </a>
+
+      <!-- Finance -->
+      <p class="nav-group-label text-slate-400 px-3 pt-4 pb-1">Finance</p>
+
+      <a href="{% url 'salary_structure' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'salary_structure' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-wallet w-4 text-center"></i>
+        <span>Salary Structure</span>
+      </a>
+      <a href="{% url 'payslips' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'payslips' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-file-invoice-dollar w-4 text-center"></i>
+        <span>Payslips</span>
+      </a>
+
+      <!-- Hiring -->
+      <p class="nav-group-label text-slate-400 px-3 pt-4 pb-1">Hiring</p>
+
+      <a href="{% url 'job_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'job_list' or request.resolver_match.url_name == 'job_detail' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-briefcase w-4 text-center"></i>
+        <span>Job Openings</span>
+      </a>
+      <a href="{% url 'candidate_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'candidate_list' or request.resolver_match.url_name == 'candidate_detail' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-user-tie w-4 text-center"></i>
+        <span>Candidates</span>
+      </a>
+      <a href="{% url 'interview_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'interview_list' or request.resolver_match.url_name == 'interview_detail' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-comments w-4 text-center"></i>
+        <span>Interviews</span>
+      </a>
+      <!-- Company -->
+      <p class="nav-group-label text-slate-400 px-3 pt-4 pb-1">Company</p>
+
+      <a href="{% url 'event_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'event_list' or request.resolver_match.url_name == 'add_event' or request.resolver_match.url_name == 'edit_event' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-calendar-days w-4 text-center"></i>
+        <span>Events & Holidays</span>
+      </a>
+
+      <a href="{% url 'wellness_list' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'wellness_list' or request.resolver_match.url_name == 'add_wellness' or request.resolver_match.url_name == 'edit_wellness' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-spa w-4 text-center"></i>
+        <span>Mind Relaxation</span>
+      </a>
+
+      <!-- System -->
+      <p class="nav-group-label text-slate-400 px-3 pt-4 pb-1">System</p>
+
+      <a href="{% url 'chat_home' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if 'chat' in request.resolver_match.url_name %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-message w-4 text-center"></i>
+        <span>Team Chat</span>
+        {% if unread_messages_count > 0 %}
+        <span class="nav-chat-badge ml-auto bg-red-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-md">
+          {{ unread_messages_count }}
+        </span>
+        {% else %}
+        <span class="nav-chat-badge ml-auto bg-red-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-md" style="display:none;"></span>
+        {% endif %}
+      </a>
+      <a href="{% url 'help_home' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if 'help' in request.resolver_match.url_name or 'polic' in request.resolver_match.url_name %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-circle-question w-4 text-center"></i>
+        <span>Help & Policies</span>
+      </a>
+      <a href="#" onclick="closeSidebar()"
+        class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-gear w-4 text-center"></i>
+        <span>Settings</span>
+      </a>
+    </nav>
+
+    <!-- User Profile -->
+    <div class="px-3 py-3 border-t border-slate-100 flex-shrink-0">
+      <div class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+          {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-slate-800 text-xs font-semibold truncate">
+            {{ request.user.get_full_name|default:request.user.username }}
+          </p>
+          <p class="text-slate-400 text-[11px] flex items-center gap-1">
+            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block"></span>
+            Administrator
+          </p>
+        </div>
+        <a href="{% url 'admin_logout' %}"
+          class="text-slate-400 hover:text-red-500 transition-colors p-1"
+          title="Logout">
+          <i class="fas fa-arrow-right-from-bracket text-xs"></i>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════ MAIN CONTENT ══════════ -->
+  <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+
+    <!-- Top Bar -->
+    <header class="h-16 bg-white border-b border-slate-100 flex items-center px-4 gap-3 flex-shrink-0 shadow-sm">
+
+      <!-- Hamburger — mobile/tablet -->
+      <button onclick="openSidebar()"
+        class="lg:hidden text-slate-500 hover:text-slate-700 p-2 rounded-xl hover:bg-slate-100 transition-colors flex-shrink-0">
+        <i class="fas fa-bars text-lg"></i>
+      </button>
+
+      <!-- Page Title -->
+      <div class="flex-1 min-w-0">
+        <h1 class="text-slate-800 font-semibold text-sm sm:text-base truncate">
+          {% block page_title %}Dashboard{% endblock %}
+        </h1>
+        <p class="text-slate-400 text-xs hidden sm:block truncate">
+          {% block page_subtitle %}{% endblock %}
+        </p>
+      </div>
+
+      <!-- Right Actions -->
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <!-- Search Desktop -->
+        <form method="get" action="{% url 'employee_list' %}" class="relative hidden md:block">
+          <input type="text" name="search" value="{{ request.GET.search }}" placeholder="Search employee name or ID..."
+            class="bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-1.5 w-40 lg:w-48 focus:outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 pl-8 transition-all">
+          <button type="submit" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-600">
+            <i class="fas fa-search text-xs"></i>
+          </button>
+        </form>
+
+        <!-- Search Mobile -->
+        <button type="button" onclick="toggleMobileSearch(event)" id="mobileSearchToggle"
+          class="md:hidden text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-50 rounded-xl transition-colors">
+          <i class="fas fa-search text-sm"></i>
+        </button>
+
+        <!-- Notifications -->
+        <div class="relative" id="notifWrapper">
+          <button onclick="toggleNotifDropdown(event)"
+            class="relative text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-50 rounded-xl transition-colors">
+            <i class="fas fa-bell text-sm"></i>
+            {% if total_notifications > 0 %}
+            <span class="absolute top-0.5 right-0.5 min-w-[16px] h-[16px] px-1 bg-red-500 rounded-full border-2 border-white text-white text-[9px] font-bold flex items-center justify-center leading-none">
+              {{ total_notifications }}
+            </span>
+            {% endif %}
+          </button>
+
+          <div id="notifDropdown"
+            class="hidden absolute right-0 mt-2 w-80 max-w-[90vw] bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              <span class="text-sm font-semibold text-slate-800">Notifications</span>
+              {% if total_notifications > 0 %}
+              <span class="text-xs text-slate-400">{{ total_notifications }} pending</span>
+              {% endif %}
+            </div>
+
+            <div class="max-h-80 overflow-y-auto divide-y divide-slate-50">
+              {% for n in notification_list %}
+              <a href="{% url n.url_name %}"
+                class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                  {% if n.color == 'amber' %}bg-amber-100 text-amber-600{% else %}bg-blue-100 text-blue-600{% endif %}">
+                  <i class="fas {{ n.icon }} text-xs"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="text-xs font-medium text-slate-700 truncate">{{ n.title }}</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">{{ n.subtitle }}</p>
+                  <p class="text-[10px] text-slate-300 mt-0.5">{{ n.created_at|timesince }} ago</p>
+                </div>
+              </a>
+              {% empty %}
+              <div class="px-4 py-8 text-center">
+                <i class="fas fa-bell-slash text-slate-300 text-lg mb-2"></i>
+                <p class="text-xs text-slate-400">No pending requests</p>
+              </div>
+              {% endfor %}
+            </div>
+
+            {% if total_notifications > 0 %}
+            <div class="px-4 py-2.5 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+              <a href="{% url 'leave_requests' %}" class="text-[11px] font-medium text-brand-600 hover:text-brand-700">
+                Leave Requests {% if pending_leaves > 0 %}({{ pending_leaves }}){% endif %}
+              </a>
+              <a href="{% url 'wfh_requests' %}" class="text-[11px] font-medium text-brand-600 hover:text-brand-700">
+                WFH Requests {% if wfh_pending_count > 0 %}({{ wfh_pending_count }}){% endif %}
+              </a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- User avatar mobile — tap for quick Logout -->
+        <div class="lg:hidden relative" id="mobileUserWrapper">
+          <button onclick="toggleMobileUserDropdown(event)"
+            class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+          </button>
+
+          <div id="mobileUserDropdown"
+            class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+              </div>
+              <div class="min-w-0">
+                <p class="text-slate-800 text-xs font-semibold truncate">
+                  {{ request.user.get_full_name|default:request.user.username }}
+                </p>
+                <p class="text-slate-400 text-[11px] flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block"></span>
+                  Administrator
+                </p>
+              </div>
+            </div>
+            <a href="{% url 'admin_logout' %}"
+              class="flex items-center gap-2 px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors">
+              <i class="fas fa-arrow-right-from-bracket text-xs"></i>
+              Logout
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mobile Search Bar (toggled) -->
+    <form method="get" action="{% url 'employee_list' %}"
+      id="mobileSearchBar"
+      class="hidden md:hidden px-4 py-2.5 bg-white border-b border-slate-100 relative">
+      <input type="text" name="search" value="{{ request.GET.search }}" placeholder="Search employee name or ID..."
+        class="w-full bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-xl px-3 py-2 pl-9 focus:outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100">
+      <button type="submit" class="absolute left-7 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-600">
+        <i class="fas fa-search text-xs"></i>
+      </button>
+    </form>
+
+    <!-- Page Content -->
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6">
+
+      {% if messages %}
+        {% for msg in messages %}
+        <div class="mb-4 px-4 py-3 rounded-xl text-sm font-medium flex items-start gap-3
+          {% if msg.tags == 'success' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+          {% elif msg.tags == 'error' %}bg-red-50 text-red-700 border border-red-200
+          {% elif msg.tags == 'warning' %}bg-amber-50 text-amber-700 border border-amber-200
+          {% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
+          <i class="fas
+            {% if msg.tags == 'success' %}fa-check-circle
+            {% elif msg.tags == 'error' %}fa-circle-xmark
+            {% elif msg.tags == 'warning' %}fa-triangle-exclamation
+            {% else %}fa-circle-info{% endif %} mt-0.5 flex-shrink-0"></i>
+          <span class="flex-1">{{ msg }}</span>
+          <button onclick="this.parentElement.remove()"
+            class="text-current opacity-50 hover:opacity-100 flex-shrink-0 ml-2">
+            <i class="fas fa-xmark text-xs"></i>
+          </button>
+        </div>
+        {% endfor %}
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<!-- ✅ Sidebar JS -->
+<script>
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeSidebar();
+    closeNotifDropdown();
+    closeMobileUserDropdown();
+  }
+});
+
+// ✅ Notification bell dropdown
+function toggleNotifDropdown(e) {
+  e.stopPropagation();
+  var dd = document.getElementById('notifDropdown');
+  if (!dd) return;
+  dd.classList.toggle('hidden');
+}
+
+function closeNotifDropdown() {
+  var dd = document.getElementById('notifDropdown');
+  if (dd) dd.classList.add('hidden');
+}
+
+document.addEventListener('click', function(e) {
+  var wrapper = document.getElementById('notifWrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    closeNotifDropdown();
+  }
+});
+
+// ✅ Mobile user / logout dropdown
+function toggleMobileUserDropdown(e) {
+  e.stopPropagation();
+  var dd = document.getElementById('mobileUserDropdown');
+  if (!dd) return;
+  dd.classList.toggle('hidden');
+}
+
+function closeMobileUserDropdown() {
+  var dd = document.getElementById('mobileUserDropdown');
+  if (dd) dd.classList.add('hidden');
+}
+
+document.addEventListener('click', function(e) {
+  var wrapper = document.getElementById('mobileUserWrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    closeMobileUserDropdown();
+  }
+});
+
+// ✅ Mobile search bar toggle
+function toggleMobileSearch(e) {
+  e.stopPropagation();
+  var bar = document.getElementById('mobileSearchBar');
+  if (!bar) return;
+  bar.classList.toggle('hidden');
+  if (!bar.classList.contains('hidden')) {
+    var input = bar.querySelector('input[name="search"]');
+    if (input) input.focus();
+  }
+}
+
+window.addEventListener('resize', function() {
+  if (window.innerWidth >= 1024) closeSidebar();
+});
+
+// ✅ MOBILE FORM FIX
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('form[style*="display:inline"]').forEach(function(f) {
+    f.style.display = 'inline-block';
+  });
+});
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html> {% endcomment %}
+
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
@@ -159,6 +1252,16 @@
         class="sidebar-item {% if request.resolver_match.url_name == 'monthly_attendance' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
         <i class="fas fa-calendar-days w-4 text-center"></i>
         <span>Monthly Attendance</span>
+      </a>
+      <a href="{% url 'employee_attendance_history' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'employee_attendance_history' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-magnifying-glass w-4 text-center"></i>
+        <span>Employee History</span>
+      </a>
+      <a href="{% url 'biometric_devices' %}" onclick="closeSidebar()"
+        class="sidebar-item {% if request.resolver_match.url_name == 'biometric_devices' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">
+        <i class="fas fa-fingerprint w-4 text-center"></i>
+        <span>Biometric Devices</span>
       </a>
       <a href="{% url 'wfh_requests' %}" onclick="closeSidebar()"
         class="sidebar-item {% if request.resolver_match.url_name == 'wfh_requests' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 text-sm">

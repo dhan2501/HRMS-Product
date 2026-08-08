@@ -744,7 +744,7 @@ from .models import (
     Employee, Department, Designation, EmployeeStatusLog,
     PerformanceReview, PerformanceGoal,
 )
-from attendance.models import AttendanceRecord
+from attendance.models import AttendanceRecord, ShiftTiming
 from leaves.models import LeaveRequest
 from datetime import date
 from django.utils import timezone
@@ -774,6 +774,7 @@ class EmployeeForm(forms.ModelForm):
             'date_of_birth', 'gender', 'photo',
             'department', 'designation', 'reporting_manager', 'date_joined',
             'employment_type', 'status',
+            'shift', 'standard_working_hours', 'biometric_id',
             'address', 'emergency_contact_name', 'emergency_contact_phone',
         ]
         widgets = {
@@ -795,6 +796,9 @@ class EmployeeForm(forms.ModelForm):
         self.fields['gender'].required                 = False
         self.fields['photo'].required                  = False
         self.fields['designation'].required            = False
+        self.fields['shift'].required                  = False
+        self.fields['standard_working_hours'].required = False
+        self.fields['biometric_id'].required            = False
         self.fields['address'].required                = False
         self.fields['emergency_contact_name'].required = False
         self.fields['emergency_contact_phone'].required= False
@@ -805,6 +809,12 @@ class EmployeeForm(forms.ModelForm):
             # An employee can't report to themselves
             managers_qs = managers_qs.exclude(pk=self.instance.pk)
         self.fields['reporting_manager'].queryset = managers_qs
+
+    def clean_biometric_id(self):
+        # Store blank as None so multiple employees can have "no device ID"
+        # without violating the unique constraint.
+        value = (self.cleaned_data.get('biometric_id') or '').strip()
+        return value or None
 
 
 # ── Dashboard ────────────────────────────────────────────────────────────────
@@ -846,8 +856,9 @@ def dashboard(request):
 # ── Employee List ─────────────────────────────────────────────────────────────
 @login_required
 def employee_list(request):
-    employees   = Employee.objects.select_related('department', 'designation').all()
+    employees   = Employee.objects.select_related('department', 'designation', 'reporting_manager').all()
     departments = Department.objects.all()
+    manager_options = Employee.objects.filter(status='active').order_by('first_name', 'last_name')
 
     dept_filter   = request.GET.get('department')
     status_filter = request.GET.get('status')
@@ -865,8 +876,9 @@ def employee_list(request):
         )
 
     return render(request, 'employees/list.html', {
-        'employees':   employees,
-        'departments': departments,
+        'employees':       employees,
+        'departments':     departments,
+        'manager_options': manager_options,
     })
 
 
@@ -875,6 +887,7 @@ def employee_list(request):
 def add_employee(request):
     departments  = Department.objects.all()
     designations = Designation.objects.select_related('department').all()
+    shifts       = ShiftTiming.objects.all()
 
     if request.method == 'POST':
         form = EmployeeForm(request.POST, request.FILES)
@@ -904,6 +917,7 @@ def add_employee(request):
         'form':         form,
         'departments':  departments,
         'designations': designations,
+        'shifts':       shifts,
     })
 
 # ── Edit Employee ─────────────────────────────────────────────────────────────
@@ -912,6 +926,7 @@ def edit_employee(request, pk):
     employee     = get_object_or_404(Employee, pk=pk)
     departments  = Department.objects.all()
     designations = Designation.objects.select_related('department').all()
+    shifts       = ShiftTiming.objects.all()
 
     if request.method == 'POST':
         form = EmployeeForm(request.POST, request.FILES, instance=employee)
@@ -929,6 +944,7 @@ def edit_employee(request, pk):
         'employee':     employee,
         'departments':  departments,
         'designations': designations,
+        'shifts':       shifts,
         'is_edit':      True,
     })
 
@@ -951,6 +967,38 @@ def employee_detail(request, pk):
         'team_members': team_members,
         'performance_reviews': performance_reviews,
     })
+
+
+# ── Set Reporting Manager (inline, from Employee List) ──────────────────────────
+@login_required
+def set_reporting_manager(request, pk):
+    """
+    Quick-set an employee's Reporting Manager directly from the Employee List
+    table (inline dropdown, auto-submits). Admin/HR only.
+    """
+    if not (request.user.is_staff or request.user.is_superuser):
+        messages.error(request, 'You do not have permission to set reporting managers.')
+        return redirect('employee_list')
+
+    employee = get_object_or_404(Employee, pk=pk)
+
+    if request.method == 'POST':
+        manager_id = request.POST.get('reporting_manager', '').strip()
+
+        if not manager_id:
+            employee.reporting_manager = None
+            employee.save(update_fields=['reporting_manager'])
+            messages.success(request, f'Reporting manager cleared for {employee.full_name}.')
+        elif str(manager_id) == str(employee.pk):
+            messages.error(request, 'An employee cannot report to themselves.')
+        else:
+            manager = get_object_or_404(Employee, pk=manager_id)
+            employee.reporting_manager = manager
+            employee.save(update_fields=['reporting_manager'])
+            messages.success(request, f'{manager.full_name} set as Reporting Manager for {employee.full_name}.')
+
+    referer = request.META.get('HTTP_REFERER')
+    return redirect(referer) if referer else redirect('employee_list')
 
 
 # ── Deactivate / Hold / Reactivate Employee ─────────────────────────────────────

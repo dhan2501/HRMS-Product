@@ -42,6 +42,172 @@
           <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">ID</th>
           <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Department</th>
           <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Designation</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Reporting Manager</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Type</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Status</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Joined</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Login</th>
+          <th class="px-4 py-3.5"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for emp in employees %}
+        <tr class="hover:bg-slate-50/60 transition-colors">
+          <td class="px-5 py-3.5">
+            <div class="flex items-center gap-3">
+              {% if emp.photo %}
+              <img src="{{ emp.photo.url }}" alt="{{ emp.full_name }}"
+                class="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-slate-200">
+              {% else %}
+              <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
+                {% cycle 'bg-brand-100 text-brand-700' 'bg-emerald-100 text-emerald-700' 'bg-amber-100 text-amber-700' 'bg-purple-100 text-purple-700' 'bg-pink-100 text-pink-700' %}">
+                {{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}
+              </div>
+              {% endif %}
+              <div>
+                <p class="text-slate-700 text-sm font-medium">{{ emp.full_name }}</p>
+                <p class="text-slate-400 text-xs">{{ emp.email }}</p>
+              </div>
+            </div>
+          </td>
+
+          <td class="px-4 py-3.5 text-slate-500 text-sm font-mono">{{ emp.employee_id }}</td>
+          <td class="px-4 py-3.5 text-slate-600 text-sm">{{ emp.department.name|default:"—" }}</td>
+          <td class="px-4 py-3.5 text-slate-600 text-sm">{{ emp.designation.title|default:"—" }}</td>
+
+          <!-- Reporting Manager — inline auto-submit select -->
+          <td class="px-4 py-3.5">
+            <form method="post" action="{% url 'set_reporting_manager' emp.pk %}"
+              onchange="this.submit()" class="min-w-[160px]">
+              {% csrf_token %}
+              <select name="reporting_manager"
+                class="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-600 bg-white focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-100">
+                <option value="">— None —</option>
+                {% for mgr in manager_options %}
+                {% if mgr.pk != emp.pk %}
+                <option value="{{ mgr.pk }}" {% if emp.reporting_manager_id == mgr.pk %}selected{% endif %}>
+                  {{ mgr.full_name }}{% if mgr.designation %} ({{ mgr.designation.title }}){% endif %}
+                </option>
+                {% endif %}
+                {% endfor %}
+              </select>
+            </form>
+          </td>
+
+          <td class="px-4 py-3.5">
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600">{{ emp.get_employment_type_display }}</span>
+          </td>
+
+          <!-- Status — full solid colors per state -->
+          <td class="px-4 py-3.5">
+            <span class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-semibold
+              {% if emp.status == 'active' %}bg-emerald-500 text-white
+              {% elif emp.status == 'on_leave' %}bg-amber-500 text-white
+              {% elif emp.status == 'terminated' %}bg-red-500 text-white
+              {% else %}bg-slate-400 text-white{% endif %}">
+              <i class="fas
+                {% if emp.status == 'active' %}fa-circle-check
+                {% elif emp.status == 'on_leave' %}fa-clock
+                {% elif emp.status == 'terminated' %}fa-circle-xmark
+                {% else %}fa-circle-minus{% endif %} text-[10px]"></i>
+              {{ emp.get_status_display }}
+            </span>
+            {% if emp.hold_until %}
+            <p class="text-amber-600 text-[10px] mt-1 font-medium"><i class="fas fa-calendar-check mr-0.5"></i>back {{ emp.hold_until|date:"d M Y" }}</p>
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-3.5 text-slate-500 text-sm">{{ emp.date_joined|date:"d M Y" }}</td>
+
+          <td class="px-4 py-3.5">
+            {% if emp.user %}
+              <p class="text-slate-600 text-xs font-mono">{{ emp.user.username }}</p>
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full {% if emp.user.is_active %}bg-emerald-100 text-emerald-700{% else %}bg-slate-200 text-slate-500{% endif %} font-medium">
+                <i class="fas fa-circle-check text-[8px] mr-0.5"></i>{% if emp.user.is_active %}Active{% else %}Locked{% endif %}
+              </span>
+            {% else %}
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-500 font-medium">No Login</span>
+              <a href="#" onclick="createLogin({{ emp.pk }})" class="text-brand-600 text-[10px] hover:underline block mt-0.5">Create Login</a>
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-3.5">
+            <div class="flex items-center gap-1.5">
+              <a href="{% url 'employee_detail' emp.pk %}" class="w-7 h-7 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 transition-colors flex items-center justify-center text-xs" title="View">
+                <i class="fas fa-eye"></i>
+              </a>
+              <a href="{% url 'edit_employee' emp.pk %}" class="w-7 h-7 rounded-lg bg-slate-50 text-slate-500 hover:bg-slate-100 transition-colors flex items-center justify-center text-xs" title="Edit">
+                <i class="fas fa-pencil"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" class="px-5 py-12 text-center">
+            <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <i class="fas fa-users text-slate-300 text-xl"></i>
+            </div>
+            <p class="text-slate-500 font-medium">No employees found</p>
+            <p class="text-slate-400 text-sm mt-1">Try adjusting your search or filters</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if employees %}
+  <div class="px-5 py-3 border-t border-slate-100 flex items-center justify-between">
+    <p class="text-slate-500 text-xs">Showing {{ employees.count }} employee(s)</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% comment %} {% comment %} {% extends 'base.html' %}
+{% block title %}Employees{% endblock %}
+{% block page_title %}Employees{% endblock %}
+{% block page_subtitle %}Manage your workforce{% endblock %}
+
+{% block content %}
+<!-- Filters & Actions -->
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+  <form method="get" class="flex flex-wrap items-center gap-2">
+    <input type="text" name="search" value="{{ request.GET.search }}" placeholder="Search name or ID…"
+      class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none focus:border-brand-300 focus:ring-1 focus:ring-brand-100 w-56 bg-white">
+    <select name="department" class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none bg-white">
+      <option value="">All Departments</option>
+      {% for dept in departments %}
+      <option value="{{ dept.id }}" {% if request.GET.department == dept.id|stringformat:'s' %}selected{% endif %}>{{ dept.name }}</option>
+      {% endfor %}
+    </select>
+    <select name="status" class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none bg-white">
+      <option value="">All Status</option>
+      <option value="active"     {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+      <option value="on_leave"   {% if request.GET.status == 'on_leave' %}selected{% endif %}>On Leave / Hold</option>
+      <option value="inactive"   {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
+      <option value="terminated" {% if request.GET.status == 'terminated' %}selected{% endif %}>Terminated</option>
+    </select>
+    <button type="submit" class="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors">
+      <i class="fas fa-magnifying-glass mr-1.5"></i>Search
+    </button>
+  </form>
+  <a href="{% url 'add_employee' %}" class="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors inline-flex items-center gap-2">
+    <i class="fas fa-plus"></i> Add Employee
+  </a>
+  
+</div>
+
+<!-- Table -->
+<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead>
+        <tr class="bg-slate-50 border-b border-slate-100">
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-5 py-3.5">Employee</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">ID</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Department</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Designation</th>
           <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Type</th>
           <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Status</th>
           <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Joined</th>
@@ -142,4 +308,5 @@
   </div>
   {% endif %}
 </div>
-{% endblock %}
+{% endblock %} {% endcomment %}
+
