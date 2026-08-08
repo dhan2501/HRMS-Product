@@ -45,7 +45,7 @@ def get_employee(request):
     """Logged-in user ka employee object return karo."""
     try:
         return Employee.objects.select_related(
-            'department', 'designation'
+            'department', 'designation', 'shift'
         ).get(user=request.user)
     except Employee.DoesNotExist:
         return None
@@ -65,6 +65,8 @@ def portal_dashboard(request):
 
     # Punch In/Out live state (today)
     punch_state = attendance_services.get_punch_state(employee, today)
+    # Target working hours for today's progress ring (employee override -> shift -> default 8)
+    target_working_hours = float(employee.effective_working_hours or 8)
 
     #Show Current date punch in/out
     today_punch_logs = PunchLog.objects.filter(
@@ -122,6 +124,23 @@ def portal_dashboard(request):
     ).order_by('date')[:3]
 
     return render(request, 'portal/dashboard.html', {
+        # 'employee':        employee,
+        # 'today':           today,
+        # 'today_att':       today_att,
+        # 'present_days':    present_days,
+        # 'absent_days':     absent_days,
+        # 'late_days':       late_days,
+        # 'attendance_pct':  attendance_pct,
+        # 'leave_balances':  leave_balances,
+        # 'recent_leaves':   recent_leaves,
+        # 'latest_payslip':  latest_payslip,
+        # 'salary':          salary,
+        # 'week_records':    week_records,
+        # 'month_name':      calendar.month_name[month],
+        # 'upcoming_events': upcoming_events,
+        # 'punch_state':     punch_state,
+        # 'today_punch_ins':  today_punch_ins,
+        # 'today_punch_outs': today_punch_outs,
         'employee':        employee,
         'today':           today,
         'today_att':       today_att,
@@ -139,6 +158,7 @@ def portal_dashboard(request):
         'punch_state':     punch_state,
         'today_punch_ins':  today_punch_ins,
         'today_punch_outs': today_punch_outs,
+        'target_working_hours': target_working_hours,
         
     })
 
