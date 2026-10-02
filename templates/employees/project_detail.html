@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}{{ project.name }}{% endblock %}
+{% block page_title %}{{ project.name }}{% endblock %}
+{% block page_subtitle %}{{ project.code }} · {{ project.get_status_display }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center gap-2 text-xs text-slate-400 mb-5">
+  <a href="{% url 'dashboard' %}" class="hover:text-brand-600 transition-colors">Dashboard</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <a href="{% url 'project_list' %}" class="hover:text-brand-600 transition-colors">Projects</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <span class="text-slate-600 font-medium">{{ project.name }}</span>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+  <!-- Overview -->
+  <div class="xl:col-span-2 bg-white rounded-2xl border border-slate-100 p-6">
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <span class="text-[10px] px-2 py-0.5 rounded-full font-medium
+          {% if project.status == 'active' %}bg-emerald-100 text-emerald-700
+          {% elif project.status == 'planning' %}bg-blue-100 text-blue-700
+          {% elif project.status == 'on_hold' %}bg-amber-100 text-amber-700
+          {% else %}bg-slate-100 text-slate-500{% endif %}">
+          {{ project.get_status_display }}
+        </span>
+        <h2 class="text-slate-800 font-semibold text-lg mt-2">{{ project.name }}</h2>
+        <p class="text-slate-400 text-xs font-mono">{{ project.code }}</p>
+      </div>
+      {% if can_manage_projects %}
+      <div class="flex items-center gap-2">
+        <a href="{% url 'edit_project' project.pk %}" class="text-brand-600 text-xs font-medium hover:underline px-3 py-1.5 rounded-lg border border-brand-100">
+          <i class="fas fa-pen mr-1"></i>Edit
+        </a>
+        <form method="post" action="{% url 'delete_project' project.pk %}" onsubmit="return confirm('Delete this project? This cannot be undone.');">
+          {% csrf_token %}
+          <button type="submit" class="text-rose-600 text-xs font-medium hover:underline px-3 py-1.5 rounded-lg border border-rose-100">
+            <i class="fas fa-trash mr-1"></i>Delete
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+
+    <p class="text-slate-600 text-sm mb-5">{{ project.description|default:"No description provided." }}</p>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-50">
+      <div>
+        <p class="text-slate-400 text-[11px] uppercase tracking-wide">Start Date</p>
+        <p class="text-slate-700 text-sm font-medium mt-0.5">{{ project.start_date|date:"d M Y" }}</p>
+      </div>
+      <div>
+        <p class="text-slate-400 text-[11px] uppercase tracking-wide">Due Date</p>
+        <p class="text-slate-700 text-sm font-medium mt-0.5">{{ project.end_date|date:"d M Y"|default:"—" }}</p>
+      </div>
+      <div>
+        <p class="text-slate-400 text-[11px] uppercase tracking-wide">Department</p>
+        <p class="text-slate-700 text-sm font-medium mt-0.5">{{ project.department.name|default:"—" }}</p>
+      </div>
+      <div>
+        <p class="text-slate-400 text-[11px] uppercase tracking-wide">Manager</p>
+        <p class="text-slate-700 text-sm font-medium mt-0.5">{{ project.manager.full_name|default:"—" }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team members -->
+  <div class="bg-white rounded-2xl border border-slate-100 p-6">
+    <h3 class="text-slate-700 font-semibold text-sm mb-4">
+      <i class="fas fa-users text-brand-500 mr-1.5"></i>Team ({{ team_members.count }})
+    </h3>
+    <div class="space-y-2.5 max-h-96 overflow-y-auto pr-1">
+      {% for emp in team_members %}
+      <div class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50">
+        <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
+          {% cycle 'bg-brand-100 text-brand-700' 'bg-emerald-100 text-emerald-700' 'bg-amber-100 text-amber-700' 'bg-purple-100 text-purple-700' 'bg-pink-100 text-pink-700' %}">
+          {{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-slate-700 text-sm font-medium truncate">
+            {{ emp.full_name }}
+            {% if emp.id == project.manager_id %}
+            <span class="text-[9px] bg-brand-50 text-brand-600 px-1.5 py-0.5 rounded ml-1">Manager</span>
+            {% endif %}
+          </p>
+          <p class="text-slate-400 text-xs truncate">{{ emp.designation.title|default:"—" }}</p>
+        </div>
+        <span class="w-2 h-2 rounded-full flex-shrink-0 {% if emp.is_online %}bg-emerald-500{% else %}bg-slate-300{% endif %}"
+          title="{% if emp.is_online %}Online{% else %}Offline{% endif %}"></span>
+      </div>
+      {% empty %}
+      <p class="text-slate-400 text-sm text-center py-4">No members assigned yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

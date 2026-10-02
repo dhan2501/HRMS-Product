@@ -1,0 +1,37 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+
+  <div class="flex items-center justify-between mb-5">
+    <div>
+      <h1 class="text-slate-800 font-bold text-lg">Notifications</h1>
+      <p class="text-slate-500 text-xs mt-0.5">Updates about your team and projects</p>
+    </div>
+  </div>
+
+
+  <div class="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-50">
+    {% for n in notifications %}
+    <div class="flex items-start gap-3 p-4 {% if n.announcement_id %}cursor-pointer hover:bg-slate-50{% endif %}"
+      {% if n.announcement_id %}onclick="openAnnouncementPopup('{% url 'portal_announcement_json' n.announcement_id %}')"{% endif %}>
+      <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0
+        {% if n.announcement_id %}bg-brand-50 text-brand-600{% else %}bg-amber-50 text-amber-600{% endif %}">
+        <i class="fas {% if n.announcement_id %}fa-bullhorn{% else %}fa-bell{% endif %} text-sm"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-slate-700 text-sm font-medium">{{ n.title }}</p>
+        <p class="text-slate-500 text-xs mt-0.5">{{ n.message }}</p>
+        <p class="text-slate-400 text-[11px] mt-1">{{ n.created_at|timesince }} ago{% if n.announcement_id %} · tap to view{% endif %}</p>
+      </div>
+    </div>
+    {% empty %}
+    <div class="p-10 text-center">
+      <i class="fas fa-bell-slash text-slate-300 text-3xl mb-3"></i>
+      <p class="text-slate-400 text-sm">No notifications yet.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

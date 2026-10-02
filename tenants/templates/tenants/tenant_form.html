@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Tenant — Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f1c; --surface:#111a2e; --surface-2:#17233d; --border:#243050;
+    --text:#e7ecf7; --text-muted:#8a95b3; --accent:#6366f1; --accent-soft:rgba(99,102,241,.14);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background:radial-gradient(1000px 500px at 12% -10%, rgba(99,102,241,.16), transparent 60%), var(--bg);
+    color:var(--text); font-family:'Inter', -apple-system, sans-serif;
+    display:flex; justify-content:center; padding:48px 20px;
+  }
+  .card{width:100%; max-width:600px;}
+  .back{display:inline-flex; align-items:center; gap:6px; color:var(--text-muted); text-decoration:none; font-size:13px; margin-bottom:22px;}
+  .eyebrow{font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin-bottom:8px;}
+  h1{font-family:'Space Grotesk', sans-serif; font-size:26px; font-weight:700; margin:0 0 4px;}
+  .sub{color:var(--text-muted); font-size:13.5px; margin:0 0 28px;}
+
+  .panel{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:30px;}
+
+  label{display:block; font-size:12.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin:20px 0 7px;}
+  label:first-of-type{margin-top:0;}
+  .helptext{font-size:12px; color:var(--text-muted); margin-top:6px;}
+
+  input[type=text], input[type=number], input[type=email], select{
+    width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    padding:11px 13px; border-radius:8px; font-size:14px; font-family:'JetBrains Mono', monospace;
+    outline:none; transition:border-color .15s;
+  }
+  input:focus, select:focus{border-color:var(--accent);}
+  select{font-family:'Inter', sans-serif; cursor:pointer;}
+
+  .modules-grid{display:grid; grid-template-columns:1fr 1fr; gap:9px;}
+  .modules-grid ul{list-style:none; margin:0; padding:0; display:contents;}
+  .modules-grid li{list-style:none;}
+  .modules-grid label{
+    display:flex; align-items:center; gap:9px; margin:0; padding:10px 12px;
+    background:var(--surface-2); border:1px solid var(--border); border-radius:8px;
+    font-size:13px; font-weight:500; text-transform:none; letter-spacing:0; color:var(--text);
+    cursor:pointer; transition:border-color .15s;
+  }
+  .modules-grid input[type=checkbox]{width:auto; accent-color:var(--accent);}
+  .modules-grid label:has(input:checked){border-color:var(--accent); background:var(--accent-soft);}
+
+  .btn{
+    margin-top:26px; width:100%; background:var(--accent); color:#fff; border:none;
+    padding:13px 20px; border-radius:9px; font-weight:600; font-size:14.5px; cursor:pointer;
+    box-shadow:0 6px 20px -6px rgba(99,102,241,.55); transition:transform .12s;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .provision-note{display:flex; gap:8px; align-items:flex-start; font-size:12px; color:var(--text-muted); margin-top:12px; line-height:1.5;}
+
+  .errorlist{color:#fb7185; font-size:12px; margin:4px 0 0; padding:0; list-style:none;}
+</style>
+</head>
+<body>
+<div class="card">
+  <a href="{% url 'tenants:list' %}" class="back">&larr; Tenants</a>
+  {% if is_edit %}
+    <div class="eyebrow">Edit Tenant</div>
+    <h1>{{ tenant.name }}</h1>
+    <p class="sub">Uncheck a module to deactivate it for this customer, then save</p>
+  {% else %}
+    <div class="eyebrow">New Provision</div>
+    <h1>Create a New Tenant</h1>
+    <p class="sub">A dedicated, isolated database will be provisioned automatically on submit</p>
+  {% endif %}
+
+  <div class="panel">
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+        {% if field.name == 'enabled_modules' %}
+          <label>{{ field.label }}</label>
+          <div class="modules-grid">{{ field }}</div>
+          {% if field.help_text %}<div class="helptext">{{ field.help_text }}</div>{% endif %}
+        {% else %}
+          <label>{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="helptext">{{ field.help_text }}</div>{% endif %}
+        {% endif %}
+        {{ field.errors }}
+      {% endfor %}
+
+      {% if is_edit %}
+        <button type="submit" class="btn">Save Changes</button>
+      {% else %}
+        <button type="submit" class="btn">Create Tenant</button>
+        <div class="provision-note">
+          ⚙ A new isolated database will be provisioned for this subdomain and all migrations will run automatically.
+        </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+</body>
+</html>

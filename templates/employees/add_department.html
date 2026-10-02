@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}{% if dept %}Edit Department{% else %}Add Department{% endif %}{% endblock %}
+{% block page_title %}{% if dept %}Edit Department{% else %}Add Department{% endif %}{% endblock %}
+{% block page_subtitle %}{% if dept %}Update "{{ dept.name }}"{% else %}Create a new department{% endif %}{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-xs text-slate-400 mb-6">
+  <a href="{% url 'dashboard' %}" class="hover:text-brand-600">Dashboard</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <a href="{% url 'department_list' %}" class="hover:text-brand-600">Departments</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <span class="text-slate-600 font-medium">{% if dept %}Edit{% else %}Add{% endif %}</span>
+</div>
+
+<div class="max-w-xl">
+  <div class="bg-white rounded-2xl border border-slate-100 p-6">
+
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center">
+        <i class="fas fa-sitemap text-brand-600"></i>
+      </div>
+      <div>
+        <h2 class="text-slate-800 font-semibold text-sm">
+          {% if dept %}Edit Department{% else %}New Department{% endif %}
+        </h2>
+        <p class="text-slate-400 text-xs">
+          {% if dept %}Update department details{% else %}Fill details to create a department{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="space-y-4">
+
+        <!-- Name -->
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">
+            Department Name <span class="text-red-500">*</span>
+          </label>
+          <input type="text" name="name"
+            value="{{ dept.name|default:'' }}"
+            placeholder="e.g. Engineering"
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+            required>
+        </div>
+
+        <!-- Code -->
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">
+            Department Code <span class="text-red-500">*</span>
+          </label>
+          <input type="text" name="code"
+            value="{{ dept.code|default:'' }}"
+            placeholder="e.g. ENG"
+            maxlength="10"
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 font-mono uppercase"
+            oninput="this.value = this.value.toUpperCase()"
+            required>
+          <p class="text-slate-400 text-[11px] mt-1">Short unique code, max 10 characters</p>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">
+            Description <span class="text-slate-400 font-normal">(optional)</span>
+          </label>
+          <textarea name="description" rows="3"
+            placeholder="Brief description of this department…"
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 resize-none">{{ dept.description|default:'' }}</textarea>
+        </div>
+
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex items-center justify-between mt-6 pt-5 border-t border-slate-100">
+        <a href="{% url 'department_list' %}"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors">
+          <i class="fas fa-arrow-left text-xs"></i> Cancel
+        </a>
+        <button type="submit"
+          class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all shadow-sm"
+          style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+          <i class="fas {% if dept %}fa-floppy-disk{% else %}fa-plus{% endif %} text-xs"></i>
+          {% if dept %}Save Changes{% else %}Add Department{% endif %}
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{% endblock %}

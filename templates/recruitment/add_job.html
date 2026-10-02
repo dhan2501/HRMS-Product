@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% block title %}{% if is_edit %}Edit Job{% else %}Post Job{% endif %}{% endblock %}
+{% block page_title %}{% if is_edit %}Edit Job Opening{% else %}Post New Job{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+  <div class="bg-white rounded-2xl border border-slate-100 p-6">
+
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center">
+        <i class="fas fa-briefcase text-brand-600"></i>
+      </div>
+      <div>
+        <h2 class="text-slate-800 font-semibold text-sm">{% if is_edit %}Edit Job Opening{% else %}New Job Opening{% endif %}</h2>
+        <p class="text-slate-400 text-xs">Fill in job details</p>
+      </div>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="space-y-4">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Job Title <span class="text-red-500">*</span></label>
+            <input type="text" name="title" value="{% if is_edit %}{{ job.title }}{% endif %}"
+              placeholder="e.g. Senior Software Engineer"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100" required>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Department <span class="text-red-500">*</span></label>
+            <select name="department" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 bg-white" required>
+              <option value="">-- Select --</option>
+              {% for dept in departments %}
+                <option value="{{ dept.id }}" {% if is_edit and job.department_id == dept.id %}selected{% endif %}>{{ dept.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Designation</label>
+            <select name="designation" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 bg-white">
+              <option value="">-- Select --</option>
+              {% for desig in designations %}
+                <option value="{{ desig.id }}" {% if is_edit and job.designation_id == desig.id %}selected{% endif %}>{{ desig.title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Experience Level <span class="text-red-500">*</span></label>
+            <select name="experience_level" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 bg-white" required>
+              <option value="">-- Select --</option>
+              <option value="fresher" {% if is_edit and job.experience_level == 'fresher' %}selected{% endif %}>Fresher</option>
+              <option value="junior" {% if is_edit and job.experience_level == 'junior' %}selected{% endif %}>1-3 Years</option>
+              <option value="mid" {% if is_edit and job.experience_level == 'mid' %}selected{% endif %}>3-5 Years</option>
+              <option value="senior" {% if is_edit and job.experience_level == 'senior' %}selected{% endif %}>5+ Years</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Employment Type</label>
+            <select name="employment_type" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 bg-white">
+              <option value="full_time" {% if is_edit and job.employment_type == 'full_time' %}selected{% endif %}>Full Time</option>
+              <option value="part_time" {% if is_edit and job.employment_type == 'part_time' %}selected{% endif %}>Part Time</option>
+              <option value="contract" {% if is_edit and job.employment_type == 'contract' %}selected{% endif %}>Contract</option>
+              <option value="intern" {% if is_edit and job.employment_type == 'intern' %}selected{% endif %}>Internship</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Vacancies</label>
+            <input type="number" name="vacancies" value="{% if is_edit %}{{ job.vacancies }}{% else %}1{% endif %}" min="1"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Status</label>
+            <select name="status" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 bg-white">
+              <option value="open" {% if is_edit and job.status == 'open' %}selected{% endif %}>Open</option>
+              <option value="on_hold" {% if is_edit and job.status == 'on_hold' %}selected{% endif %}>On Hold</option>
+              <option value="filled" {% if is_edit and job.status == 'filled' %}selected{% endif %}>Filled</option>
+              <option value="closed" {% if is_edit and job.status == 'closed' %}selected{% endif %}>Closed</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Salary Min (₹/month)</label>
+            <input type="number" name="salary_min" value="{% if is_edit %}{{ job.salary_min|default:'' }}{% endif %}"
+              placeholder="25000"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Salary Max (₹/month)</label>
+            <input type="number" name="salary_max" value="{% if is_edit %}{{ job.salary_max|default:'' }}{% endif %}"
+              placeholder="50000"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Application Deadline</label>
+            <input type="date" name="deadline" value="{% if is_edit %}{{ job.deadline|date:'Y-m-d'|default:'' }}{% endif %}"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Job Description <span class="text-red-500">*</span></label>
+            <textarea name="description" rows="4" required
+              placeholder="Describe the role, responsibilities..."
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 resize-none">{% if is_edit %}{{ job.description }}{% endif %}</textarea>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Requirements</label>
+            <textarea name="requirements" rows="3"
+              placeholder="Skills, qualifications, certifications..."
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 resize-none">{% if is_edit %}{{ job.requirements }}{% endif %}</textarea>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+          <a href="{% url 'job_list' %}"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+            <i class="fas fa-arrow-left text-xs"></i> Cancel
+          </a>
+          <button type="submit"
+            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90"
+            style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+            <i class="fas {% if is_edit %}fa-floppy-disk{% else %}fa-plus{% endif %} text-xs"></i>
+            {% if is_edit %}Save Changes{% else %}Post Job{% endif %}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

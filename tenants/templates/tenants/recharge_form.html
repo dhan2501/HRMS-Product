@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recharge — {{ tenant.name }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f1c; --surface:#111a2e; --surface-2:#17233d; --border:#243050;
+    --text:#e7ecf7; --text-muted:#8a95b3; --ok:#22c55e; --ok-soft:rgba(34,197,94,.12);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background:radial-gradient(1000px 500px at 12% -10%, rgba(34,197,94,.14), transparent 60%), var(--bg);
+    color:var(--text); font-family:'Inter', -apple-system, sans-serif;
+    display:flex; justify-content:center; padding:48px 20px;
+  }
+  .card{width:100%; max-width:460px;}
+  .back{display:inline-flex; align-items:center; gap:6px; color:var(--text-muted); text-decoration:none; font-size:13px; margin-bottom:22px;}
+  .eyebrow{font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ok); margin-bottom:8px;}
+  h1{font-family:'Space Grotesk', sans-serif; font-size:24px; font-weight:700; margin:0 0 18px;}
+
+  .status-strip{
+    display:flex; justify-content:space-between; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:14px 18px; margin-bottom:22px; font-size:13px;
+  }
+  .status-strip .k{color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px;}
+  .status-strip .v{font-family:'JetBrains Mono', monospace; font-weight:500;}
+
+  .panel{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:28px;}
+  label{display:block; font-size:12.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin:18px 0 7px;}
+  label:first-of-type{margin-top:0;}
+  input{
+    width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    padding:11px 13px; border-radius:8px; font-size:14px; font-family:'JetBrains Mono', monospace;
+    outline:none; transition:border-color .15s;
+  }
+  input:focus{border-color:var(--ok);}
+
+  .btn{
+    margin-top:24px; width:100%; background:var(--ok); color:#06280f; border:none;
+    padding:13px 20px; border-radius:9px; font-weight:700; font-size:14.5px; cursor:pointer;
+    box-shadow:0 6px 20px -6px rgba(34,197,94,.5); transition:transform .12s;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .errorlist{color:#fb7185; font-size:12px; margin:4px 0 0; padding:0; list-style:none;}
+</style>
+</head>
+<body>
+<div class="card">
+  <a href="{% url 'tenants:list' %}" class="back">&larr; Tenants</a>
+  <div class="eyebrow">Billing Action</div>
+  <h1>Recharge — {{ tenant.name }}</h1>
+
+  <div class="status-strip">
+    <div>
+      <div class="k">Current Status</div>
+      <div class="v">{{ tenant.get_status_display }}</div>
+    </div>
+    <div>
+      <div class="k">Expiry</div>
+      <div class="v">{{ tenant.expiry_date|default:"—" }}</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}
+        <label>{{ field.label }}</label>
+        {{ field }}
+        {{ field.errors }}
+      {% endfor %}
+      <button type="submit" class="btn">Recharge &amp; Activate</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

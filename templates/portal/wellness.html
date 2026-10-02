@@ -1,0 +1,137 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}Mind Relaxation{% endblock %}
+
+{% block content %}
+
+<div class="max-w-4xl mx-auto">
+
+  <div class="mb-5">
+    <h1 class="text-slate-800 font-bold text-lg flex items-center gap-2">
+      <i class="fas fa-spa text-teal-500"></i> Relax Zone
+    </h1>
+    <p class="text-slate-500 text-xs mt-0.5">Take a short break — breathe, unwind, and recharge</p>
+  </div>
+
+  <!-- Breathing Exercise Widget -->
+  <div class="rounded-2xl p-6 mb-6 text-center text-white" style="background: linear-gradient(135deg, #0d9488, #14b8a6)">
+    <p class="text-teal-50 text-xs font-medium mb-4">Guided Breathing — follow the circle</p>
+    <div class="flex items-center justify-center mb-4" style="height: 160px;">
+      <div id="breathCircle"
+        class="rounded-full bg-white bg-opacity-25 border-2 border-white border-opacity-50 flex items-center justify-center"
+        style="width: 100px; height: 100px; transition: transform 4s ease-in-out;">
+        <span id="breathText" class="text-white text-xs font-semibold">Start</span>
+      </div>
+    </div>
+    <button onclick="toggleBreathing()" id="breathBtn"
+      class="inline-flex items-center gap-2 bg-white text-teal-700 px-5 py-2 rounded-xl text-sm font-semibold hover:bg-teal-50 transition-colors">
+      <i class="fas fa-play text-xs"></i> Start Breathing Exercise
+    </button>
+  </div>
+
+  <!-- Filter -->
+  <form method="get" class="flex items-center gap-2 mb-4">
+    <select name="category" onchange="this.form.submit()"
+      class="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600 focus:outline-none bg-white">
+      <option value="" {% if not selected_category %}selected{% endif %}>All Categories</option>
+      {% for value, label in category_choices %}
+        <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+
+  <!-- Resources -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    {% for r in resources %}
+    <div class="bg-white rounded-2xl border border-slate-100 p-5 hover:border-teal-200 hover:shadow-sm transition-all">
+      <div class="flex items-start justify-between mb-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-teal-50">
+          <i class="fas
+            {% if r.category == 'breathing' %}fa-wind
+            {% elif r.category == 'music' %}fa-music
+            {% elif r.category == 'video' %}fa-video
+            {% elif r.category == 'quote' %}fa-quote-left
+            {% elif r.category == 'game' %}fa-puzzle-piece
+            {% else %}fa-lightbulb{% endif %} text-teal-600 text-sm"></i>
+        </div>
+        <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-teal-100 text-teal-700">
+          {{ r.get_category_display|upper }}
+        </span>
+      </div>
+
+      <h3 class="text-slate-800 font-semibold text-sm mb-1">{{ r.title }}</h3>
+      {% if r.description %}
+        <p class="text-slate-500 text-xs mb-3">{{ r.description }}</p>
+      {% endif %}
+
+      <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+        {% if r.duration_minutes %}
+          <span class="text-slate-400 text-xs">
+            <i class="fas fa-clock text-[10px] mr-1"></i>{{ r.duration_minutes }} min
+          </span>
+        {% else %}
+          <span></span>
+        {% endif %}
+        {% if r.resource_url %}
+        <a href="{{ r.resource_url }}" target="_blank" rel="noopener"
+          class="text-xs font-semibold text-teal-600 hover:underline">
+          Open <i class="fas fa-arrow-up-right-from-square text-[9px] ml-0.5"></i>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-span-2 bg-white rounded-2xl border border-slate-100 py-16 text-center">
+      <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+        <i class="fas fa-spa text-slate-300 text-xl"></i>
+      </div>
+      <p class="text-slate-500 font-medium text-sm">No relaxation content yet</p>
+      <p class="text-slate-400 text-xs mt-1">Check back later — HR will add resources here</p>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let breathing = false;
+let breathInterval;
+
+function toggleBreathing() {
+  const circle = document.getElementById('breathCircle');
+  const text   = document.getElementById('breathText');
+  const btn    = document.getElementById('breathBtn');
+
+  if (breathing) {
+    breathing = false;
+    clearInterval(breathInterval);
+    circle.style.transform = 'scale(1)';
+    text.textContent = 'Start';
+    btn.innerHTML = '<i class="fas fa-play text-xs"></i> Start Breathing Exercise';
+    return;
+  }
+
+  breathing = true;
+  btn.innerHTML = '<i class="fas fa-pause text-xs"></i> Stop';
+
+  let phase = 0; // 0 = inhale, 1 = hold, 2 = exhale
+  const cycle = () => {
+    if (phase === 0) {
+      circle.style.transform = 'scale(1.6)';
+      text.textContent = 'Breathe In';
+    } else if (phase === 1) {
+      text.textContent = 'Hold';
+    } else {
+      circle.style.transform = 'scale(1)';
+      text.textContent = 'Breathe Out';
+    }
+    phase = (phase + 1) % 3;
+  };
+
+  cycle();
+  breathInterval = setInterval(cycle, 4000);
+}
+</script>
+{% endblock %}

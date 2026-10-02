@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tenants — Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f1c; --surface:#111a2e; --surface-2:#17233d; --border:#243050;
+    --text:#e7ecf7; --text-muted:#8a95b3; --accent:#6366f1; --accent-soft:rgba(99,102,241,.14);
+    --ok:#22c55e; --ok-soft:rgba(34,197,94,.12);
+    --warn:#f5a524; --warn-soft:rgba(245,165,36,.12);
+    --bad:#f43f5e; --bad-soft:rgba(244,63,94,.12);
+    --mute-soft:rgba(138,149,179,.12);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 500px at 12% -10%, rgba(99,102,241,.16), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(34,197,94,.06), transparent 55%),
+      var(--bg);
+    color:var(--text); font-family:'Inter', -apple-system, sans-serif; min-height:100vh;
+  }
+
+  /* Session bar */
+  .session-bar{
+    display:flex; justify-content:flex-end; align-items:center; gap:14px;
+    padding:14px 28px; border-bottom:1px solid var(--border); font-size:13px;
+  }
+  .session-user{display:flex; align-items:center; gap:8px; color:var(--text-muted);}
+  .avatar{
+    width:26px; height:26px; border-radius:50%; background:var(--accent-soft); color:#a5b4fc;
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;
+    font-family:'Space Grotesk', sans-serif;
+  }
+  .logout-link{
+    color:var(--text-muted); text-decoration:none; border:1px solid var(--border);
+    padding:6px 12px; border-radius:7px; transition:border-color .15s, color .15s;
+  }
+  .logout-link:hover{border-color:var(--bad); color:#fb7185;}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:36px 28px 80px;}
+
+  .top{display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:32px; flex-wrap:wrap; gap:16px;}
+  .eyebrow{font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin-bottom:8px;}
+  h1{font-family:'Space Grotesk', sans-serif; font-size:30px; font-weight:700; margin:0 0 4px; letter-spacing:-.01em;}
+  .top p{color:var(--text-muted); margin:0; font-size:14px;}
+
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--accent); color:#fff; border:none;
+    padding:11px 20px; border-radius:9px; font-weight:600; font-size:14px;
+    text-decoration:none; cursor:pointer; transition:transform .12s ease;
+    box-shadow:0 6px 20px -6px rgba(99,102,241,.55);
+  }
+  .btn:hover{transform:translateY(-1px);}
+
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:36px;}
+  .stat{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; position:relative; overflow:hidden;}
+  .stat::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px;}
+  .stat.total::before{background:var(--accent);}
+  .stat.active::before{background:var(--ok);}
+  .stat.expiring::before{background:var(--warn);}
+  .stat.suspended::before{background:var(--text-muted);}
+  .stat .label{font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px;}
+  .stat .value{font-family:'Space Grotesk', sans-serif; font-size:30px; font-weight:700;}
+
+  .msg{background:var(--ok-soft); border:1px solid rgba(34,197,94,.35); color:#8ee6ab; padding:12px 16px; border-radius:9px; font-size:13.5px; margin-bottom:20px;}
+
+  .section-label{font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--text-muted); letter-spacing:.06em; margin:0 0 14px; text-transform:uppercase;}
+  .grid{display:grid; gap:12px;}
+
+  .tenant{
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:20px 22px; display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr auto; gap:18px; align-items:center;
+    transition:border-color .15s ease;
+  }
+  .tenant:hover{border-color:#38466e;}
+  .tenant .name{font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:16px; margin-bottom:4px;}
+  .tenant .sub{font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--text-muted); text-decoration:none; display:inline-block;}
+.tenant a.sub:hover{color:var(--accent); text-decoration:underline;}
+
+  .pulse{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600; padding:5px 10px; border-radius:20px;}
+  .pulse::before{content:""; width:7px; height:7px; border-radius:50%;}
+  .pulse.active{background:var(--ok-soft); color:var(--ok);} .pulse.active::before{background:var(--ok); box-shadow:0 0 0 3px var(--ok-soft);}
+  .pulse.expired{background:var(--bad-soft); color:#fb7185;} .pulse.expired::before{background:var(--bad);}
+  .pulse.suspended{background:var(--mute-soft); color:var(--text-muted);} .pulse.suspended::before{background:var(--text-muted);}
+
+  .meta-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); margin-bottom:3px;}
+  .meta-value{font-size:13.5px; font-weight:500;}
+  .meta-value.mono{font-family:'JetBrains Mono', monospace; font-size:12.5px;}
+
+  .plan-tag{display:inline-block; font-size:11px; font-weight:600; padding:3px 9px; border-radius:6px; background:var(--accent-soft); color:#a5b4fc; text-transform:uppercase; letter-spacing:.04em;}
+
+  .modules{display:flex; flex-wrap:wrap; gap:5px; max-width:180px;}
+  .mod-chip{font-size:10.5px; background:var(--surface-2); border:1px solid var(--border); color:var(--text-muted); padding:3px 8px; border-radius:5px; font-family:'JetBrains Mono', monospace;}
+
+  .actions{display:flex; gap:8px;}
+  .btn-sm{padding:8px 14px; font-size:12.5px; border-radius:7px;}
+  .btn-danger{background:var(--bad-soft); color:#fb7185; border:1px solid rgba(244,63,94,.3);}
+
+  .empty{text-align:center; padding:60px 20px; color:var(--text-muted); border:1px dashed var(--border); border-radius:12px;}
+  .empty .glyph{font-size:32px; margin-bottom:10px;}
+
+  @media (max-width:900px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .tenant{grid-template-columns:1fr; text-align:left;}
+    .actions{justify-content:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<div class="session-bar">
+  <div class="session-user">
+    <div class="avatar">{{ request.user.username|slice:":2"|upper }}</div>
+    Signed in as <strong style="color:var(--text);">{{ request.user.username }}</strong>
+  </div>
+  <a href="{% url 'tenants:logout' %}" class="logout-link">Log out</a>
+</div>
+
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <div class="eyebrow">Platform Console</div>
+      <h1>Tenants</h1>
+      <p>Every customer's license, plan, and billing status in one place</p>
+    </div>
+    <a href="{% url 'tenants:create' %}" class="btn">+ New Tenant</a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}<div class="msg">{{ message }}</div>{% endfor %}
+  {% endif %}
+
+  <div class="stats">
+    <div class="stat total">
+      <div class="label">Total Tenants</div>
+      <div class="value">{{ stats.total }}</div>
+    </div>
+    <div class="stat active">
+      <div class="label">Active</div>
+      <div class="value">{{ stats.active }}</div>
+    </div>
+    <div class="stat expiring">
+      <div class="label">Expiring &le; 7 days</div>
+      <div class="value">{{ stats.expiring_soon }}</div>
+    </div>
+    <div class="stat suspended">
+      <div class="label">Suspended</div>
+      <div class="value">{{ stats.suspended }}</div>
+    </div>
+  </div>
+
+  <div class="section-label">// all_tenants</div>
+
+  {% if tenants %}
+  <div class="grid">
+    {% for tenant in tenants %}
+    <div class="tenant">
+
+      {% comment %} <div>
+        <div class="name">{{ tenant.name }}</div>
+        <div class="sub">{{ tenant.subdomain }}.yourhrms.com</div>
+      </div> {% endcomment %}
+      <div>
+        <div class="name">{{ tenant.name }}</div>
+        <a class="sub" href="{{ request.scheme }}://{{ request.get_host }}/?tenant={{ tenant.subdomain }}"
+          target="_blank" rel="noopener" title="Opens via ?tenant= — real {{ tenant.subdomain }}.yourhrms.com subdomain needs DNS + Railway domain setup">
+          {{ tenant.subdomain }}.yourhrms.com
+        </a>
+      </div>
+
+      <div>
+        <div class="meta-label">Status</div>
+        {% if tenant.is_active %}
+          <span class="pulse active">Active</span>
+        {% elif tenant.status == 'suspended' %}
+          <span class="pulse suspended">Suspended</span>
+        {% else %}
+          <span class="pulse expired">Expired</span>
+        {% endif %}
+      </div>
+
+      <div>
+        <div class="meta-label">Plan &middot; Expiry</div>
+        <span class="plan-tag">{{ tenant.get_plan_display }}</span>
+        <div class="meta-value mono" style="margin-top:6px;">
+          {% if tenant.expiry_date %}
+            {{ tenant.expiry_date }}
+            {% if tenant.is_active %}<span style="color:var(--text-muted);">({{ tenant.days_remaining }}d)</span>{% endif %}
+          {% else %}—{% endif %}
+        </div>
+      </div>
+
+      <div>
+        <div class="meta-label">Modules</div>
+        <div class="modules">
+          {% for m in tenant.enabled_modules %}<span class="mod-chip">{{ m }}</span>{% empty %}<span class="meta-value mono">—</span>{% endfor %}
+        </div>
+      </div>
+
+      <div class="actions">
+        <a href="{% url 'tenants:recharge' tenant.pk %}" class="btn btn-sm">Recharge</a>
+        <form method="post" action="{% url 'tenants:suspend' tenant.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-danger">Suspend</button>
+        </form>
+      </div>
+
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="glyph">◇</div>
+    No tenants yet.<br>
+    <a href="{% url 'tenants:create' %}" style="color:var(--accent); text-decoration:none; font-weight:600;">Create your first tenant →</a>
+  </div>
+  {% endif %}
+
+</div>
+</body>
+</html>

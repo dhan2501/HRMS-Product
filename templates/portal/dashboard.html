@@ -1,0 +1,1272 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}My Dashboard{% endblock %}
+
+{% block content %}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ink:#1e1b4b;
+    --paper:#f6f7fb;
+    --primary-700:#4338ca;
+    --primary-600:#4f46e5;
+    --primary-500:#6366f1;
+    --primary-400:#818cf8;
+    --violet-500:#7c3aed;
+    --amber-500:#f59e0b;
+    --rose-500:#f43f5e;
+    --pink-500:#ec4899;
+    --emerald-500:#10b981;
+    --sky-500:#0ea5e9;
+  }
+  #dash-root{ font-family:'Inter',sans-serif; color:var(--ink); }
+  #dash-root h1, #dash-root h2, #dash-root .font-display{ font-family:'Manrope',sans-serif; letter-spacing:-0.01em; }
+
+  @keyframes dashFadeUp{ from{ opacity:0; transform:translateY(10px);} to{ opacity:1; transform:translateY(0);} }
+  .dash-fade{ animation: dashFadeUp .5s cubic-bezier(.16,1,.3,1) both; }
+  .dash-fade-1{ animation-delay:.02s } .dash-fade-2{ animation-delay:.07s }
+  .dash-fade-3{ animation-delay:.12s } .dash-fade-4{ animation-delay:.17s }
+  .dash-fade-5{ animation-delay:.22s }
+
+  @keyframes dashPulseDot{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,255,255,.55);} 70%{ box-shadow:0 0 0 7px rgba(255,255,255,0);} }
+  .dash-live-dot{ animation: dashPulseDot 2s infinite; }
+
+  @keyframes dashSpinSlow{ to{ transform:rotate(360deg);} }
+  .dash-ring-spin{ animation: dashSpinSlow 7s linear infinite; }
+
+  .dash-card{ transition: box-shadow .25s ease, transform .25s ease, border-color .25s ease; }
+  .dash-card:hover{ box-shadow: 0 10px 30px -12px rgba(67,56,202,0.18); transform: translateY(-2px); border-color:#e0e3fb; }
+
+  .dash-chip{ transition: all .2s ease; }
+  .dash-chip:hover{ transform: translateY(-1px); box-shadow: 0 6px 16px -6px rgba(67,56,202,.25); }
+
+  .dash-dotgrid{
+    background-image: radial-gradient(rgba(255,255,255,.35) 1px, transparent 1.4px);
+    background-size: 15px 15px;
+  }
+
+  .dash-scroll::-webkit-scrollbar{ width:5px; }
+  .dash-scroll::-webkit-scrollbar-track{ background:transparent; }
+  .dash-scroll::-webkit-scrollbar-thumb{ background:#c7cbf5; border-radius:99px; }
+
+  .dash-btn-primary{ background: linear-gradient(135deg, var(--emerald-500), #059669); transition: filter .2s ease, transform .15s ease; }
+  .dash-btn-primary:hover{ filter:brightness(1.08); transform: translateY(-1px); }
+  .dash-btn-danger{ background: linear-gradient(135deg, #f87171, #ef4444); transition: filter .2s ease, transform .15s ease; }
+  .dash-btn-danger:hover{ filter:brightness(1.08); transform: translateY(-1px); }
+
+  .dash-underline{ position:relative; }
+  .dash-underline::after{
+    content:''; position:absolute; left:0; bottom:-2px; height:2px; width:0;
+    background: currentColor; transition: width .2s ease;
+  }
+  .dash-underline:hover::after{ width:100%; }
+
+  .dash-clock{ font-variant-numeric: tabular-nums; }
+
+  .dash-date-badge{
+    width:44px; height:44px; border-radius:12px; flex-shrink:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    line-height:1;
+  }
+</style>
+
+<style>
+  @keyframes bday-pop {
+    0%   { transform: scale(0.85); opacity: 0; }
+    100% { transform: scale(1);    opacity: 1; }
+  }
+  @keyframes bday-confetti-fall {
+    0%   { transform: translateY(-10vh) rotate(0deg);   opacity: 1; }
+    100% { transform: translateY(110vh) rotate(360deg); opacity: 0.9; }
+  }
+  .bday-confetti-piece {
+    position: absolute;
+    top: -10px;
+    width: 8px;
+    height: 14px;
+    opacity: 0.9;
+    animation-name: bday-confetti-fall;
+    animation-timing-function: linear;
+    animation-iteration-count: 1;
+    border-radius: 2px;
+  }
+</style>
+
+<div id="dash-root">
+
+{% if other_birthday_people %}
+<!-- ── 🎂 Colleague Birthday Popup (shown to other employees, max 2x/day) ── -->
+<div id="colleague-birthday-overlay"
+     class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
+  <div id="colleague-confetti-layer" class="pointer-events-none fixed inset-0 overflow-hidden z-[101]"></div>
+
+  <div class="relative z-[102] w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl animate-[bday-pop_0.45s_ease-out]"
+       style="background: linear-gradient(160deg,#ec4899 0%,#f97316 100%);">
+
+    <button type="button" onclick="closeColleagueBirthdayCard()"
+      class="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-colors">
+      <i class="fas fa-times"></i>
+    </button>
+
+    <div class="absolute inset-0 opacity-[0.10] pointer-events-none"
+         style="background-image: radial-gradient(circle, #fff 1.5px, transparent 1.5px); background-size: 20px 20px;"></div>
+
+    <div class="relative px-7 pt-8 pb-7 text-center">
+      <p class="text-3xl mb-3">🎉🎂🎈</p>
+
+      {% for celeb in other_birthday_people %}
+      <div class="flex items-center gap-3 bg-white/10 rounded-2xl p-3 mb-3 text-left">
+        <div class="w-14 h-14 rounded-full ring-2 ring-white/40 shadow overflow-hidden bg-white/15 flex items-center justify-center flex-shrink-0">
+          {% if celeb.photo %}
+            <img src="{{ celeb.photo.url }}" alt="{{ celeb.full_name }}" class="w-full h-full object-cover">
+          {% else %}
+            <span class="text-lg font-bold text-white">{{ celeb.first_name|first|upper }}{{ celeb.last_name|first|upper }}</span>
+          {% endif %}
+        </div>
+        <div class="min-w-0">
+          <p class="text-white font-bold text-sm">🎉 {{ celeb.full_name }}</p>
+          <p class="text-white/85 text-xs mt-0.5">It's their birthday today — wish them well!</p>
+        </div>
+      </div>
+      {% endfor %}
+
+      <p class="text-white/90 text-sm leading-relaxed mt-1">
+        Take a moment to send warm wishes their way — a small message can make their day extra special! 🥳
+      </p>
+
+      <button type="button" onclick="closeColleagueBirthdayCard()"
+        class="mt-6 px-6 py-2.5 bg-white text-pink-600 text-sm font-bold rounded-xl hover:bg-pink-50 transition-colors shadow-md">
+        🎈 Got it!
+      </button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Welcome Header ───────────────────────────────────────────────────── -->
+<div class="dash-fade dash-fade-1 rounded-[28px] p-5 sm:p-7 mb-5 text-white relative z-0 overflow-hidden shadow-lg shadow-indigo-900/10"
+  style="background: radial-gradient(circle at 12% 15%, rgba(255,255,255,.16), transparent 42%), radial-gradient(circle at 88% -5%, rgba(129,140,248,.45), transparent 48%), linear-gradient(135deg, #312e81 0%, #4338ca 45%, #6d28d9 100%);">
+  <div class="absolute inset-0 dash-dotgrid opacity-30 pointer-events-none"></div>
+  <div class="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-white opacity-[0.06] pointer-events-none"></div>
+  <div class="absolute right-20 -bottom-14 w-32 h-32 rounded-full bg-white opacity-[0.06] pointer-events-none"></div>
+
+  <div class="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <div class="relative w-16 h-16 flex-shrink-0">
+        <div class="absolute inset-0 rounded-2xl dash-ring-spin" style="background: conic-gradient(from 0deg, rgba(255,255,255,.75), rgba(255,255,255,0) 40%, rgba(255,255,255,.75) 100%); padding:2px;"></div>
+        {% if employee.photo %}
+          <img src="{{ employee.photo.url }}" class="absolute inset-[2px] rounded-[14px] object-cover w-[calc(100%-4px)] h-[calc(100%-4px)]">
+        {% else %}
+          <div class="absolute inset-[2px] rounded-[14px] bg-white/15 backdrop-blur flex items-center justify-center text-white text-xl font-bold font-display">
+            {{ employee.first_name|first|upper }}{{ employee.last_name|first|upper }}
+          </div>
+        {% endif %}
+      </div>
+      <div class="min-w-0">
+        <p class="text-indigo-200 text-xs font-medium tracking-wide">Welcome back,</p>
+        <h1 class="text-white font-extrabold text-2xl truncate font-display leading-tight">{{ employee.full_name }}</h1>
+        <p class="text-indigo-200/90 text-xs mt-1 truncate">
+          {{ employee.designation.title|default:"—" }} <span class="opacity-50">&bull;</span> {{ employee.department.name|default:"—" }} <span class="opacity-50">&bull;</span> {{ employee.employee_id }}
+        </p>
+      </div>
+    </div>
+    <div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 sm:gap-0 sm:text-right pt-3 sm:pt-0 border-t sm:border-t-0 border-white/10">
+      <div>
+        <p class="text-indigo-200 text-xs">Today</p>
+        <p class="text-white font-semibold text-sm font-display">{{ today|date:"D, d M Y" }}</p>
+      </div>
+      {% if today_att %}
+        <span class="text-xs px-3 py-1.5 rounded-full font-semibold sm:mt-2 inline-flex items-center gap-1.5
+          {% if today_att.status == 'present' %}bg-emerald-400 text-white
+          {% elif today_att.status == 'work_from_home' %}bg-blue-400 text-white
+          {% elif today_att.status == 'late' %}bg-amber-300 text-amber-900
+          {% else %}bg-red-400 text-white{% endif %}">
+          <span class="w-1.5 h-1.5 rounded-full bg-white dash-live-dot"></span>
+          {{ today_att.get_status_display }}
+        </span>
+      {% else %}
+        <span class="text-xs px-3 py-1.5 rounded-full font-semibold sm:mt-2 inline-block bg-white/15 text-white backdrop-blur">
+          Not Marked
+        </span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ── Quick Access Bar: Leave / Holidays / Birthdays dropdowns ───────────── -->
+<div class="dash-fade dash-fade-2 relative z-30 flex flex-wrap items-center gap-2.5 mb-5">
+
+  <!-- Leave dropdown -->
+  <div class="relative quick-dd-wrap">
+    <button type="button" onclick="toggleQuickDropdown('qd-leave')"
+      class="dash-chip flex items-center gap-2.5 h-10 pl-2 pr-3.5 rounded-2xl bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:border-indigo-200 shadow-sm">
+      <span class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+        <i class="fas fa-plane-departure text-[11px]"></i>
+      </span>
+      Leave
+      <i class="fas fa-chevron-down text-[9px] text-slate-400"></i>
+    </button>
+    <div id="qd-leave" class="quick-dropdown hidden absolute left-0 mt-2 w-80 max-w-[90vw] bg-white rounded-2xl shadow-xl shadow-indigo-900/10 border border-slate-100 p-4 z-[60]">
+      <div class="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-indigo-500 to-violet-500"></div>
+      <div class="flex items-center justify-between mb-3 mt-1">
+        <p class="text-sm font-bold text-slate-800 font-display">Leave Balance</p>
+        <a href="{% url 'portal_apply_leave' %}" class="text-xs font-semibold text-indigo-600 hover:underline">Apply Leave</a>
+      </div>
+      <div class="space-y-3 max-h-64 overflow-y-auto pr-1 dash-scroll">
+        {% for bal in leave_balances %}
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-slate-500 text-xs font-medium">{{ bal.leave_type.name }}</span>
+            <span class="text-slate-500 text-xs">
+              <span class="font-bold text-slate-700">{{ bal.available_days }}</span> / {{ bal.total_days }} left
+            </span>
+          </div>
+          <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-400"
+              style="width: {% if bal.total_days > 0 %}{% widthratio bal.available_days bal.total_days 100 %}{% else %}0{% endif %}%">
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-slate-400 text-xs text-center py-3">No leave balance assigned yet</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Holidays dropdown -->
+  <div class="relative quick-dd-wrap">
+    <button type="button" onclick="toggleQuickDropdown('qd-holiday')"
+      class="dash-chip flex items-center gap-2.5 h-10 pl-2 pr-3.5 rounded-2xl bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:border-rose-200 shadow-sm">
+      <span class="w-6 h-6 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center">
+        <i class="fas fa-umbrella-beach text-[11px]"></i>
+      </span>
+      Holidays
+      {% if upcoming_events.0 %}
+      <span class="text-[9px] font-bold text-rose-500 bg-rose-50 rounded-full px-1.5 py-0.5">{{ upcoming_events.0.date|date:"d M" }}</span>
+      {% endif %}
+      <i class="fas fa-chevron-down text-[9px] text-slate-400"></i>
+    </button>
+    <div id="qd-holiday" class="quick-dropdown hidden absolute left-0 mt-2 w-80 max-w-[90vw] bg-white rounded-2xl shadow-xl shadow-rose-900/10 border border-slate-100 p-4 z-[60]">
+      <div class="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-rose-500 to-amber-400"></div>
+      <div class="flex items-center justify-between mb-3 mt-1">
+        <p class="text-sm font-bold text-slate-800 font-display">Upcoming Events &amp; Holidays</p>
+        <a href="{% url 'portal_events' %}" class="text-xs font-semibold text-rose-500 hover:underline">View All</a>
+      </div>
+      <div class="space-y-2 max-h-64 overflow-y-auto pr-1 dash-scroll">
+        {% for ev in upcoming_events %}
+        <div class="flex items-center gap-3 rounded-xl px-1 py-1.5 hover:bg-slate-50">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+            {% if ev.event_type == 'holiday' %}bg-rose-100{% else %}bg-indigo-100{% endif %}">
+            <i class="fas {% if ev.event_type == 'holiday' %}fa-umbrella-beach text-rose-500{% else %}fa-calendar-days text-indigo-600{% endif %} text-xs"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-slate-700 text-xs font-medium truncate">{{ ev.title }}</p>
+            <p class="text-slate-400 text-[10px]">
+              {{ ev.date|date:"d M Y" }}{% if ev.is_multi_day %} - {{ ev.end_date|date:"d M Y" }}{% endif %}
+            </p>
+          </div>
+          <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0
+            {% if ev.event_type == 'holiday' %}bg-rose-100 text-rose-600{% else %}bg-indigo-100 text-indigo-700{% endif %}">
+            {{ ev.get_event_type_display }}
+          </span>
+        </div>
+        {% empty %}
+        <p class="text-slate-400 text-xs text-center py-3">No upcoming events or holidays</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Birthdays dropdown -->
+  <div class="relative quick-dd-wrap">
+    <button type="button" onclick="toggleQuickDropdown('qd-birthday')"
+      class="dash-chip flex items-center gap-2.5 h-10 pl-2 pr-3.5 rounded-2xl bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:border-pink-200 shadow-sm">
+      <span class="w-6 h-6 rounded-lg bg-pink-50 text-pink-500 flex items-center justify-center">
+        <i class="fas fa-cake-candles text-[11px]"></i>
+      </span>
+      Birthdays
+      {% if todays_birthday_people %}
+      <span class="w-4 h-4 flex items-center justify-center text-[9px] font-bold text-white bg-pink-500 rounded-full dash-live-dot">{{ todays_birthday_people|length }}</span>
+      {% endif %}
+      <i class="fas fa-chevron-down text-[9px] text-slate-400"></i>
+    </button>
+    <div id="qd-birthday" class="quick-dropdown hidden absolute left-0 mt-2 w-80 max-w-[90vw] bg-white rounded-2xl shadow-xl shadow-pink-900/10 border border-slate-100 p-4 z-[60]">
+      <div class="absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r from-pink-500 to-orange-400"></div>
+      <div class="flex items-center justify-between mb-3 mt-1">
+        <p class="text-sm font-bold text-slate-800 font-display">🎂 Birthdays This Month</p>
+        <a href="{% url 'portal_birthday_calendar' %}" class="text-xs font-semibold text-pink-500 hover:underline">View Calendar</a>
+      </div>
+      <div class="space-y-2 max-h-64 overflow-y-auto pr-1 dash-scroll">
+        {% for person in birthdays_this_month %}
+        <div class="flex items-center gap-3 rounded-xl px-1 py-1.5 {% if person.is_today %}bg-pink-50{% else %}hover:bg-slate-50{% endif %}">
+          {% if person.photo %}
+            <img src="{{ person.photo.url }}" class="w-8 h-8 rounded-lg object-cover flex-shrink-0">
+          {% else %}
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 {% if person.is_today %}bg-pink-100 text-pink-600{% else %}bg-indigo-100 text-indigo-600{% endif %} text-[11px] font-bold">
+              {{ person.first_name|first|upper }}{{ person.last_name|first|upper }}
+            </div>
+          {% endif %}
+          <div class="flex-1 min-w-0">
+            <p class="text-slate-700 text-xs font-medium truncate">{{ person.full_name }}</p>
+            <p class="text-slate-400 text-[10px] truncate">{{ person.department.name|default:"—" }}</p>
+          </div>
+          <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0
+            {% if person.is_today %}bg-pink-100 text-pink-600{% else %}bg-slate-100 text-slate-500{% endif %}">
+            {% if person.is_today %}Today 🎉{% else %}{{ person.date_of_birth|date:"d M" }}{% endif %}
+          </span>
+        </div>
+        {% empty %}
+        <p class="text-slate-400 text-xs text-center py-3">No birthdays this month</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function toggleQuickDropdown(id) {
+    document.querySelectorAll('.quick-dropdown').forEach(function (panel) {
+      if (panel.id !== id) panel.classList.add('hidden');
+    });
+    document.getElementById(id).classList.toggle('hidden');
+  }
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.quick-dd-wrap')) {
+      document.querySelectorAll('.quick-dropdown').forEach(function (panel) {
+        panel.classList.add('hidden');
+      });
+    }
+  });
+</script>
+
+{% if todays_birthday_people %}
+<!-- ── Today's Birthday Banner ──────────────────────────────────────────────── -->
+<div class="dash-fade dash-fade-2 mb-5 space-y-2.5">
+  {% for celeb in todays_birthday_people %}
+  <div class="rounded-2xl p-4 flex items-center gap-3 text-white relative overflow-hidden shadow-md shadow-pink-900/10"
+    style="background: linear-gradient(135deg, #ec4899, #f97316)">
+    <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white opacity-10"></div>
+    <div class="absolute inset-0 dash-dotgrid opacity-20 pointer-events-none"></div>
+    <div class="w-11 h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-xl flex-shrink-0 relative">
+      🎂
+    </div>
+    <div class="flex-1 min-w-0 relative">
+      <p class="font-semibold text-sm font-display">
+        {% if celeb.id == employee.id %}It's your birthday today, {{ celeb.first_name }}! 🎉{% else %}🎉 Happy Birthday, {{ celeb.full_name }}!{% endif %}
+      </p>
+      <p class="text-white/80 text-xs mt-0.5">
+        {% if celeb.id == employee.id %}Wishing you a fantastic day — enjoy the celebrations!{% else %}Wish {{ celeb.first_name }} well — they're celebrating today.{% endif %}
+      </p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if active_announcements %}
+<!-- ── Announcements (Super Admin broadcasts — High priority first) ────────── -->
+<div class="dash-fade dash-fade-2 mb-5 space-y-2.5">
+  {% for a in active_announcements %}
+  <div onclick="openAnnouncementPopup('{% url 'portal_announcement_json' a.pk %}')"
+    class="dash-card cursor-pointer rounded-2xl p-4 flex items-start gap-3 bg-white border-l-4 border border-slate-100 shadow-sm
+    {% if a.priority == 'high' %}border-l-rose-500
+    {% elif a.priority == 'medium' %}border-l-amber-500
+    {% else %}border-l-emerald-500{% endif %}">
+    <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0
+      {% if a.priority == 'high' %}bg-rose-50 text-rose-600
+      {% elif a.priority == 'medium' %}bg-amber-50 text-amber-600
+      {% else %}bg-emerald-50 text-emerald-600{% endif %}">
+      <i class="fas fa-bullhorn text-sm"></i>
+    </div>
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide
+          {% if a.priority == 'high' %}bg-rose-100 text-rose-700
+          {% elif a.priority == 'medium' %}bg-amber-100 text-amber-700
+          {% else %}bg-emerald-100 text-emerald-700{% endif %}">
+          {{ a.get_priority_display }}
+        </span>
+        <p class="text-slate-800 text-sm font-semibold truncate font-display">{{ a.title }}</p>
+      </div>
+      <p class="text-slate-500 text-xs line-clamp-1">{{ a.message }}</p>
+    </div>
+    <i class="fas fa-chevron-right text-slate-300 text-xs mt-2 flex-shrink-0"></i>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ── Punch In / Out ───────────────────────────────────────────────────── -->
+<div class="dash-fade dash-fade-3 bg-white rounded-[24px] border border-slate-100 p-5 sm:p-6 mb-5 shadow-sm relative overflow-hidden">
+  <div class="absolute left-0 top-0 bottom-0 w-1.5
+    {% if punch_state.is_punched_in %}bg-gradient-to-b from-emerald-400 to-emerald-600
+    {% elif punch_state.has_punched_today %}bg-gradient-to-b from-amber-400 to-amber-600
+    {% else %}bg-slate-200{% endif %}"></div>
+
+  <div class="flex items-center justify-between mb-4 pl-2">
+    <h2 class="text-slate-800 font-bold text-sm font-display">Attendance</h2>
+    <div class="flex items-center gap-1.5 text-slate-400 text-xs font-medium bg-slate-50 rounded-full px-3 py-1">
+      <i class="fas fa-clock text-[10px]"></i>
+      <span id="dash-live-clock" class="dash-clock text-slate-600 font-semibold">--:--:--</span>
+    </div>
+  </div>
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pl-2">
+    <div class="flex items-center gap-4 min-w-0">
+      <div class="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 relative
+        {% if punch_state.is_punched_in %}bg-emerald-50{% elif punch_state.has_punched_today %}bg-amber-50{% else %}bg-slate-100{% endif %}">
+        {% if punch_state.is_punched_in %}<span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dash-live-dot"></span>{% endif %}
+        <i class="fas fa-fingerprint text-lg
+          {% if punch_state.is_punched_in %}text-emerald-500{% elif punch_state.has_punched_today %}text-amber-500{% else %}text-slate-400{% endif %}"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-slate-800 font-bold text-sm font-display">
+          {% if punch_state.is_punched_in %}
+            You're Punched In
+          {% elif punch_state.has_punched_today %}
+            On Break
+          {% else %}
+            Not Punched In Yet
+          {% endif %}
+        </p>
+        <p class="text-slate-400 text-xs mt-0.5 flex flex-wrap gap-x-1.5">
+          {% if punch_state.first_in %}<span>In: {{ punch_state.first_in|time:"h:i A" }}</span>{% endif %}
+          {% if punch_state.last_out %}<span>&bull; Last Out: {{ punch_state.last_out|time:"h:i A" }}</span>{% endif %}
+          {% if punch_state.break_count %}<span>&bull; Breaks: {{ punch_state.break_count }} ({{ punch_state.break_minutes }} min)</span>{% endif %}
+          {% if not punch_state.has_punched_today %}<span>Tap "Punch In" to start tracking today's hours</span>{% endif %}
+        </p>
+        {% if today_att.working_hours %}
+        <p class="text-slate-400 text-xs mt-0.5">Worked today: <span class="font-semibold text-slate-600">{{ today_att.working_hours }}h</span></p>
+        <p class="text-xs mt-1.5 flex items-center gap-1.5">
+          <i class="fas fa-clock text-indigo-400"></i>
+          {% if employee.shift %}
+            <span class="text-slate-500">Shift: <span class="font-semibold text-slate-600">{{ employee.shift.name }}</span>
+              ({{ employee.shift.start_time|time:"h:i A" }} &ndash; {{ employee.shift.end_time|time:"h:i A" }})</span>
+          {% else %}
+            <span class="text-slate-400">No shift assigned &bull; Default {{ target_working_hours|floatformat:0 }}h/day</span>
+          {% endif %}
+        </p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="flex flex-col items-stretch sm:items-end gap-1.5 flex-shrink-0">
+      <div class="flex flex-col sm:flex-row items-stretch gap-2">
+        <form method="post" action="{% url 'portal_punch' %}" id="punchForm">
+          {% csrf_token %}
+          <input type="hidden" name="latitude" id="punchLat">
+          <input type="hidden" name="longitude" id="punchLng">
+          <input type="hidden" name="location_name" id="punchLocationName">
+          <button type="submit" id="punchBtn"
+            class="w-full sm:w-auto px-6 py-3 rounded-2xl font-semibold text-sm text-white transition-colors shadow-md
+              {% if punch_state.is_punched_in %}dash-btn-danger{% else %}dash-btn-primary{% endif %}">
+            <i class="fas {% if punch_state.is_punched_in %}fa-right-from-bracket{% else %}fa-right-to-bracket{% endif %} mr-2"></i>
+            <span id="punchBtnLabel">{% if punch_state.is_punched_in %}Punch Out{% else %}Punch In{% endif %}</span>
+          </button>
+        </form>
+
+        {% if employee.face_encoding %}
+          <a href="{% url 'portal_face_punch' %}"
+            class="w-full sm:w-auto px-6 py-3 rounded-2xl font-semibold text-sm text-white transition-all shadow-md text-center bg-gradient-to-r from-indigo-600 to-violet-600 hover:brightness-110">
+            <i class="fas fa-camera mr-2"></i>Face Punch
+          </a>
+        {% else %}
+          <a href="{% url 'portal_face_enroll' %}"
+            class="w-full sm:w-auto px-6 py-3 rounded-2xl font-semibold text-sm text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors shadow-sm text-center">
+            <i class="fas fa-face-smile mr-2"></i>Enroll Face
+          </a>
+        {% endif %}
+      </div>
+      <p id="punchLocHint" class="text-slate-400 text-[11px] flex items-center gap-1 sm:justify-end text-center sm:text-right">
+        <i class="fas fa-location-dot"></i> Location capture ho rahi hai&hellip;
+      </p>
+    </div>
+  </div>
+
+  {% if today_punch_ins or today_punch_outs %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5 pt-5 border-t border-slate-100 pl-2">
+    <!-- Punch In times -->
+    <div>
+      <p class="text-slate-500 text-xs font-semibold mb-2 flex items-center gap-1.5">
+        <i class="fas fa-right-to-bracket text-emerald-500"></i>
+        Punch In ({{ today_punch_ins|length }})
+      </p>
+      <div class="flex flex-col gap-1.5">
+        {% for log in today_punch_ins %}
+        <div class="flex items-start gap-2 bg-emerald-50 rounded-xl px-2.5 py-1.5">
+          <span class="w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{{ forloop.counter }}</span>
+          <div class="min-w-0 flex-1">
+            <span class="text-emerald-700 text-xs font-medium">{{ log.timestamp|time:"h:i A" }}</span>
+            {% if log.location_name %}
+            <p class="text-emerald-600/80 text-[11px] leading-snug mt-0.5 flex items-start gap-1">
+              <i class="fas fa-location-dot text-[9px] mt-0.5 flex-shrink-0"></i>
+              <a href="{{ log.maps_url }}" target="_blank" rel="noopener" class="hover:underline">{{ log.location_name }}</a>
+            </p>
+            {% elif log.has_location %}
+            <p class="text-emerald-600/80 text-[11px] leading-snug mt-0.5 flex items-start gap-1">
+              <i class="fas fa-location-dot text-[9px] mt-0.5 flex-shrink-0"></i>
+              <a href="{{ log.maps_url }}" target="_blank" rel="noopener" class="hover:underline">{{ log.latitude|floatformat:5 }}, {{ log.longitude|floatformat:5 }}</a>
+            </p>
+            {% else %}
+            <p class="text-slate-400 text-[11px] leading-snug mt-0.5 flex items-center gap-1">
+              <i class="fas fa-location-dot-slash text-[9px]"></i> Location not captured
+            </p>
+            {% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-slate-300 text-xs">—</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Punch Out times -->
+    <div>
+      <p class="text-slate-500 text-xs font-semibold mb-2 flex items-center gap-1.5">
+        <i class="fas fa-right-from-bracket text-red-500"></i>
+        Punch Out ({{ today_punch_outs|length }})
+      </p>
+      <div class="flex flex-col gap-1.5">
+        {% for log in today_punch_outs %}
+        <div class="flex items-start gap-2 bg-red-50 rounded-xl px-2.5 py-1.5">
+          <span class="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{{ forloop.counter }}</span>
+          <div class="min-w-0 flex-1">
+            <span class="text-red-700 text-xs font-medium">{{ log.timestamp|time:"h:i A" }}</span>
+            {% if log.location_name %}
+            <p class="text-red-600/80 text-[11px] leading-snug mt-0.5 flex items-start gap-1">
+              <i class="fas fa-location-dot text-[9px] mt-0.5 flex-shrink-0"></i>
+              <a href="{{ log.maps_url }}" target="_blank" rel="noopener" class="hover:underline">{{ log.location_name }}</a>
+            </p>
+            {% elif log.has_location %}
+            <p class="text-red-600/80 text-[11px] leading-snug mt-0.5 flex items-start gap-1">
+              <i class="fas fa-location-dot text-[9px] mt-0.5 flex-shrink-0"></i>
+              <a href="{{ log.maps_url }}" target="_blank" rel="noopener" class="hover:underline">{{ log.latitude|floatformat:5 }}, {{ log.longitude|floatformat:5 }}</a>
+            </p>
+            {% else %}
+            <p class="text-slate-400 text-[11px] leading-snug mt-0.5 flex items-center gap-1">
+              <i class="fas fa-location-dot-slash text-[9px]"></i> Location not captured
+            </p>
+            {% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-slate-300 text-xs">—</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Today's Working Hours progress ring ──────────────────────────────── -->
+<div class="dash-fade dash-fade-3 bg-white rounded-[24px] border border-slate-100 p-5 sm:p-6 mb-5 shadow-sm">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-slate-800 font-bold text-sm font-display">Today's Working Hours</h2>
+    <div class="flex items-center gap-2">
+      <span id="whr-overtime-badge" class="hidden text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600">
+        <i class="fas fa-fire text-[9px] mr-1"></i>Overtime
+      </span>
+      <span id="whr-elapsed" class="text-slate-800 font-bold text-sm font-display">00:00:00</span>
+    </div>
+  </div>
+
+  <div class="flex flex-col sm:flex-row items-center gap-6">
+    <!-- Ring -->
+    <div class="relative w-40 h-40 flex-shrink-0">
+      <svg viewBox="0 0 160 160" class="w-40 h-40 -rotate-90">
+        <circle cx="80" cy="80" r="70" fill="none" stroke="#eef1fd" stroke-width="14"></circle>
+        <circle id="whr-ring" cx="80" cy="80" r="70" fill="none" stroke="#22c55e" stroke-width="14"
+          stroke-linecap="round" stroke-dasharray="439.8" stroke-dashoffset="439.8"
+          style="transition: stroke-dashoffset 0.6s ease, stroke 0.6s ease;"></circle>
+      </svg>
+      <div class="absolute inset-0 flex flex-col items-center justify-center">
+        <span id="whr-pct" class="text-slate-800 font-extrabold text-2xl font-display">0%</span>
+        <span class="text-slate-400 text-[11px]">of {{ target_working_hours|floatformat:0 }}h shift</span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 gap-3 w-full sm:w-auto">
+      <div class="flex items-center gap-2.5 bg-slate-50 rounded-xl px-3 py-2.5">
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#22c55e"></span>
+        <div>
+          <p id="whr-worked" class="text-slate-800 font-bold text-sm font-display">00:00:00</p>
+          <p class="text-slate-400 text-[11px]">Working Hours</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5 bg-slate-50 rounded-xl px-3 py-2.5">
+        <span id="whr-remaining-dot" class="w-2.5 h-2.5 rounded-full bg-orange-400 flex-shrink-0"></span>
+        <div>
+          <p id="whr-remaining" class="text-slate-800 font-bold text-sm font-display">{{ target_working_hours|floatformat:0 }}:00:00</p>
+          <p id="whr-remaining-label" class="text-slate-400 text-[11px]">Remaining Hours</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5 bg-slate-50 rounded-xl px-3 py-2.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-slate-400 flex-shrink-0"></span>
+        <div>
+          <p id="whr-break" class="text-slate-800 font-bold text-sm font-display">00:00:00</p>
+          <p class="text-slate-400 text-[11px]">Break Time</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5 bg-slate-50 rounded-xl px-3 py-2.5">
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#ef4444"></span>
+        <div>
+          <p id="whr-status" class="text-slate-800 font-bold text-sm font-display">
+            {% if punch_state.is_punched_in %}Working{% elif punch_state.has_punched_today %}On Break{% else %}Not Started{% endif %}
+          </p>
+          <p class="text-slate-400 text-[11px]">Status</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Live clock for the "This Week" empty state ─────────────────────────────
+(function () {
+  const timeEl = document.getElementById('dash-week-clock');
+  const dateEl = document.getElementById('dash-week-date');
+  if (!timeEl) return;
+  function tick() {
+    const now = new Date();
+    timeEl.textContent = now.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short' });
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+
+// ── Live clock in the punch card header ────────────────────────────────────
+(function () {
+  const el = document.getElementById('dash-live-clock');
+  if (!el) return;
+  function tick() {
+    el.textContent = new Date().toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+
+// ── Punch In/Out: capture browser location before submitting ──────────────
+(function () {
+  const form   = document.getElementById('punchForm');
+  const btn    = document.getElementById('punchBtn');
+  const label  = document.getElementById('punchBtnLabel');
+  const hint   = document.getElementById('punchLocHint');
+  const latEl  = document.getElementById('punchLat');
+  const lngEl  = document.getElementById('punchLng');
+  const nameEl = document.getElementById('punchLocationName');
+  if (!form) return;
+
+  if (!('geolocation' in navigator)) {
+    hint.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Location not supported by this browser';
+    return;
+  }
+
+  // Geolocation API only works on secure origins (https:// or localhost).
+  // On plain http:// it fails silently with a generic error — flag that
+  // clearly instead of misreporting it as "permission denied".
+  if (!window.isSecureContext) {
+    hint.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Location needs HTTPS (or localhost) — punching without location';
+  }
+
+  let locationReady = false;
+
+  function setHint(text, ok) {
+    hint.innerHTML = '<i class="fas fa-location-dot"></i> ' + text;
+    hint.className = 'text-[11px] mt-1.5 flex items-center gap-1 ' + (ok ? 'text-emerald-500' : 'text-slate-400');
+  }
+
+  // Reverse-geocode lat/lng into a human readable address (best-effort;
+  // punch still works even if this fails / is slow).
+  function reverseGeocode(lat, lng) {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`, {
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && data.display_name) {
+          nameEl.value = data.display_name;
+          setHint(data.display_name, true);
+        }
+      })
+      .catch(() => {});
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    function (pos) {
+      latEl.value = pos.coords.latitude;
+      lngEl.value = pos.coords.longitude;
+      locationReady = true;
+      setHint('Location captured', true);
+      reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+    },
+    function (err) {
+      locationReady = true; // don't block punching if location fails
+      let msg;
+      switch (err.code) {
+        case err.PERMISSION_DENIED:
+          msg = 'Location permission denied — punching without location';
+          break;
+        case err.POSITION_UNAVAILABLE:
+          msg = 'Location unavailable (GPS/WiFi signal not found) — punching without location';
+          break;
+        case err.TIMEOUT:
+          msg = 'Location request timed out — punching without location';
+          break;
+        default:
+          msg = 'Could not get location — punching without location';
+      }
+      setHint(msg, false);
+    },
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+  );
+
+  form.addEventListener('submit', function (e) {
+    if (locationReady) return; // location already set (or gave up), let it submit
+    // Still waiting on geolocation: hold the submit briefly instead of
+    // punching with no location, but never block for more than ~8s.
+    e.preventDefault();
+    btn.disabled = true;
+    label.textContent = 'Locating…';
+    const check = setInterval(function () {
+      if (locationReady) {
+        clearInterval(check);
+        btn.disabled = false;
+        label.textContent = '{% if punch_state.is_punched_in %}Punch Out{% else %}Punch In{% endif %}';
+        form.submit();
+      }
+    }, 200);
+  });
+})();
+
+(function () {
+  const RING = document.getElementById('whr-ring');
+  const CIRCUMFERENCE = 2 * Math.PI * 70; // r=70
+
+  const targetSeconds   = {{ target_working_hours|default:8 }} * 3600;
+  const isPunchedIn     = {{ punch_state.is_punched_in|yesno:"true,false" }};
+  const hasPunchedToday = {{ punch_state.has_punched_today|yesno:"true,false" }};
+  const firstIn         = {% if punch_state.first_in %}new Date("{{ punch_state.first_in|date:'c' }}"){% else %}null{% endif %};
+  const lastOut          = {% if punch_state.last_out %}new Date("{{ punch_state.last_out|date:'c' }}"){% else %}null{% endif %};
+  const breakSecondsBase = {{ punch_state.break_minutes|default:0 }} * 60;
+
+  function fmt(totalSeconds) {
+    totalSeconds = Math.max(0, Math.round(totalSeconds));
+    const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+    const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+    const s = String(totalSeconds % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+
+  // Green -> Amber -> Red as pct goes 0 -> 100 (capped at 100 for color+ring, timer keeps counting past it)
+  function colorForPct(pct) {
+    const p = Math.max(0, Math.min(100, pct));
+    const stops = [
+      { p: 0,   c: [34, 197, 94]  }, // green  #22c55e
+      { p: 50,  c: [245, 158, 11] }, // amber  #f59e0b
+      { p: 100, c: [239, 68, 68]  }, // red    #ef4444
+    ];
+    let a = stops[0], b = stops[1];
+    if (p >= 50) { a = stops[1]; b = stops[2]; }
+    const range = b.p - a.p || 1;
+    const t = (p - a.p) / range;
+    const r = Math.round(a.c[0] + (b.c[0] - a.c[0]) * t);
+    const g = Math.round(a.c[1] + (b.c[1] - a.c[1]) * t);
+    const bl = Math.round(a.c[2] + (b.c[2] - a.c[2]) * t);
+    return `rgb(${r}, ${g}, ${bl})`;
+  }
+
+  function render() {
+    let workedSeconds = 0;
+    let breakSeconds = breakSecondsBase;
+    const isOnBreak = hasPunchedToday && !isPunchedIn && lastOut;
+    const now = new Date();
+
+    if (isPunchedIn && firstIn) {
+      workedSeconds = ((now - firstIn) / 1000) - breakSecondsBase;
+    } else if (isOnBreak && firstIn) {
+      // Punched out / on break right now: freeze worked time, but keep
+      // ticking the break timer live since the break is still running.
+      workedSeconds = ((lastOut - firstIn) / 1000) - breakSecondsBase;
+      breakSeconds = breakSecondsBase + ((now - lastOut) / 1000);
+    }
+    workedSeconds = Math.max(0, workedSeconds);
+    breakSeconds = Math.max(0, breakSeconds);
+
+    const rawPct = (workedSeconds / targetSeconds) * 100;
+    const pct = Math.min(100, rawPct);
+    const isOvertime = workedSeconds > targetSeconds;
+    const overtimeSeconds = Math.max(0, workedSeconds - targetSeconds);
+    const remainingSeconds = Math.max(0, targetSeconds - workedSeconds);
+    const color = isOvertime ? '#ef4444' : colorForPct(pct);
+
+    RING.style.stroke = color;
+    RING.style.strokeDashoffset = CIRCUMFERENCE - (pct / 100) * CIRCUMFERENCE;
+
+    document.getElementById('whr-pct').textContent = Math.round(rawPct) + '%';
+    document.getElementById('whr-pct').style.color = color;
+    document.getElementById('whr-elapsed').textContent = fmt(workedSeconds);
+    document.getElementById('whr-worked').textContent = fmt(workedSeconds);
+    document.getElementById('whr-break').textContent = fmt(breakSeconds);
+
+    const remainingEl      = document.getElementById('whr-remaining');
+    const remainingLabelEl = document.getElementById('whr-remaining-label');
+    const remainingDotEl   = document.getElementById('whr-remaining-dot');
+    const overtimeBadgeEl  = document.getElementById('whr-overtime-badge');
+
+    if (isOvertime) {
+      remainingEl.textContent = '+' + fmt(overtimeSeconds);
+      remainingEl.className = 'text-red-600 font-bold text-sm font-display';
+      remainingLabelEl.textContent = 'Overtime';
+      remainingDotEl.style.background = '#ef4444';
+      overtimeBadgeEl.classList.remove('hidden');
+    } else {
+      remainingEl.textContent = fmt(remainingSeconds);
+      remainingEl.className = 'text-slate-800 font-bold text-sm font-display';
+      remainingLabelEl.textContent = 'Remaining Hours';
+      remainingDotEl.style.background = '';
+      remainingDotEl.className = 'w-2.5 h-2.5 rounded-full bg-orange-400 flex-shrink-0';
+      overtimeBadgeEl.classList.add('hidden');
+    }
+  }
+
+  render();
+  if (isPunchedIn || (hasPunchedToday && !isPunchedIn && lastOut)) {
+    setInterval(render, 1000);
+  }
+})();
+</script>
+
+<!-- ── Month snapshot: attendance ring + quick stats ───────────────────── -->
+<div class="dash-fade dash-fade-4 grid grid-cols-1 lg:grid-cols-4 gap-4 mb-5">
+
+  <!-- Attendance-rate ring (signature stat) -->
+  <div class="dash-card bg-white rounded-2xl border border-slate-100 p-4 shadow-sm flex items-center gap-4">
+    <div class="relative w-14 h-14 flex-shrink-0 rounded-full"
+      style="background: conic-gradient(#4f46e5 0% {{ attendance_pct }}%, #eef1fd {{ attendance_pct }}% 100%);">
+      <div class="absolute inset-1.5 bg-white rounded-full flex items-center justify-center">
+        <span class="text-slate-800 font-bold text-xs font-display">{{ attendance_pct }}%</span>
+      </div>
+    </div>
+    <div class="min-w-0">
+      <p class="text-slate-700 font-semibold text-sm">Attendance</p>
+      <p class="text-slate-400 text-xs mt-0.5">{{ month_name }}</p>
+    </div>
+  </div>
+
+  <div class="dash-card bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-circle-check text-emerald-500"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-2xl font-extrabold text-slate-800 leading-none font-display">{{ present_days }}</p>
+        <p class="text-slate-500 text-xs mt-1">Present ({{ month_name }})</p>
+      </div>
+    </div>
+  </div>
+  <div class="dash-card bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-circle-xmark text-red-400"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-2xl font-extrabold text-slate-800 leading-none font-display">{{ absent_days }}</p>
+        <p class="text-slate-500 text-xs mt-1">Absent ({{ month_name }})</p>
+      </div>
+    </div>
+  </div>
+  <div class="dash-card bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-clock text-amber-500"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-2xl font-extrabold text-slate-800 leading-none font-display">{{ late_days }}</p>
+        <p class="text-slate-500 text-xs mt-1">Late Days</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Net Salary — separate highlighted strip -->
+<div class="dash-fade dash-fade-4 rounded-2xl p-4 mb-5 shadow-md text-white flex items-center justify-between flex-wrap gap-3"
+  style="background: linear-gradient(135deg, #4338ca, #7c3aed);">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 bg-white/15 backdrop-blur rounded-xl flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-wallet"></i>
+    </div>
+    <div>
+      <p class="text-xl font-extrabold leading-none font-display">
+        {% if salary %}Rs.{{ salary.net_salary|floatformat:0 }}{% else %}—{% endif %}
+      </p>
+      <p class="text-indigo-100 text-xs mt-1">Net Salary / month</p>
+    </div>
+  </div>
+  <a href="{% url 'portal_payslips' %}" class="text-xs bg-white/15 hover:bg-white/25 backdrop-blur px-3 py-1.5 rounded-full font-medium transition-colors flex-shrink-0">View Payslips</a>
+</div>
+
+{% if live_salary %}
+<!-- Live Estimated Salary — recomputed from real attendance every page load -->
+<div class="dash-fade dash-fade-4 rounded-2xl p-4 mb-5 bg-white border border-slate-100 shadow-sm">
+  <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-chart-line text-xs"></i>
+      </div>
+      <div>
+        <p class="text-slate-700 text-sm font-bold">Live Estimated Salary</p>
+        <p class="text-slate-400 text-[11px]">
+          Based on Day 1–{{ live_salary.days_elapsed }} of {{ live_salary.days_in_month }} this month · updates automatically
+        </p>
+      </div>
+    </div>
+    <p class="text-xl font-extrabold text-emerald-600 font-display">
+      Rs.{{ live_salary.projected_net_salary|floatformat:0 }}
+    </p>
+  </div>
+
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+    <div class="bg-slate-50 rounded-xl px-3 py-2 text-center">
+      <p class="text-slate-800 text-sm font-bold">{{ live_salary.present_days_so_far }}</p>
+      <p class="text-slate-400 text-[10px] mt-0.5">Present so far</p>
+    </div>
+    <div class="bg-slate-50 rounded-xl px-3 py-2 text-center">
+      <p class="text-rose-600 text-sm font-bold">{{ live_salary.absent_days_so_far }}</p>
+      <p class="text-slate-400 text-[10px] mt-0.5">Absent so far</p>
+    </div>
+    <div class="bg-slate-50 rounded-xl px-3 py-2 text-center">
+      <p class="text-amber-600 text-sm font-bold">{{ live_salary.short_leaves_so_far }}</p>
+      <p class="text-slate-400 text-[10px] mt-0.5">Short Leaves</p>
+    </div>
+    <div class="bg-slate-50 rounded-xl px-3 py-2 text-center">
+      <p class="text-rose-500 text-sm font-bold">Rs.{{ live_salary.lop_amount_so_far|floatformat:0 }}</p>
+      <p class="text-slate-400 text-[10px] mt-0.5">Deducted so far</p>
+    </div>
+  </div>
+  <p class="text-slate-400 text-[10px] mt-2.5">
+    Estimate assumes remaining days this month go as fully-present — actual payslip may differ.
+  </p>
+</div>
+{% endif %}
+
+<!-- ── Main Grid ────────────────────────────────────────────────────────── -->
+<div class="dash-fade dash-fade-5 grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+  <!-- Leave Balances -->
+  <div class="dash-card bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-slate-800 font-bold text-sm font-display flex items-center gap-2">
+        <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center"><i class="fas fa-plane-departure text-[11px]"></i></span>
+        Leave Balance
+      </h2>
+      <a href="{% url 'portal_apply_leave' %}"
+        class="text-xs text-indigo-600 font-medium hover:underline">Apply Leave</a>
+    </div>
+    <div class="space-y-3">
+      {% for bal in leave_balances %}
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-slate-600 text-xs font-medium">{{ bal.leave_type.name }}</span>
+          <span class="text-slate-500 text-xs">
+            <span class="font-bold text-slate-700">{{ bal.available_days }}</span> / {{ bal.total_days }} left
+          </span>
+        </div>
+        <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-400"
+            style="width: {% if bal.total_days > 0 %}{% widthratio bal.available_days bal.total_days 100 %}{% else %}0{% endif %}%">
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-slate-400 text-xs text-center py-4">No leave balance assigned yet</p>
+      {% endfor %}
+    </div>
+    <a href="{% url 'portal_apply_leave' %}"
+      class="mt-4 w-full inline-flex items-center justify-center gap-2 py-2 rounded-xl border border-indigo-200 text-indigo-600 text-xs font-medium hover:bg-indigo-50 transition-colors">
+      <i class="fas fa-plus text-[10px]"></i> Apply for Leave
+    </a>
+  </div>
+
+  <!-- This Week Attendance -->
+  <div class="dash-card bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2 relative quick-dd-wrap">
+        <span class="w-7 h-7 rounded-lg bg-sky-50 text-sky-500 flex items-center justify-center flex-shrink-0"><i class="fas fa-calendar-week text-[11px]"></i></span>
+        <button type="button" onclick="toggleQuickDropdown('qd-week')"
+          class="flex items-center gap-1.5 text-slate-800 font-bold text-sm font-display hover:text-indigo-600 transition-colors">
+          This Week <i class="fas fa-chevron-down text-[9px] text-slate-400"></i>
+        </button>
+        <div id="qd-week" class="quick-dropdown hidden absolute left-0 top-8 w-44 bg-white rounded-xl shadow-xl shadow-indigo-900/10 border border-slate-100 py-1.5 z-[60]">
+          <div class="mx-1.5 px-3 py-2 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg flex items-center justify-between">
+            This Week <i class="fas fa-check text-[10px]"></i>
+          </div>
+          <div class="mx-1.5 mt-1 px-3 py-2 text-xs text-slate-300 rounded-lg flex items-center justify-between cursor-not-allowed">
+            Last Week <span class="text-[9px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full font-medium">Soon</span>
+          </div>
+          <div class="mx-1.5 mt-1 px-3 py-2 text-xs text-slate-300 rounded-lg flex items-center justify-between cursor-not-allowed">
+            Next Week <span class="text-[9px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full font-medium">Soon</span>
+          </div>
+        </div>
+      </div>
+      <a href="{% url 'portal_attendance' %}" class="text-xs text-indigo-600 font-medium hover:underline flex-shrink-0">Full View</a>
+    </div>
+    <div class="space-y-2">
+      {% for rec in week_records %}
+      <div class="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0
+            {% if rec.status == 'present' %}bg-emerald-100 text-emerald-700
+            {% elif rec.status == 'absent' %}bg-red-100 text-red-600
+            {% elif rec.status == 'late' %}bg-amber-100 text-amber-700
+            {% elif rec.status == 'work_from_home' %}bg-blue-100 text-blue-700
+            {% elif rec.status == 'half_day' %}bg-purple-100 text-purple-700
+            {% else %}bg-slate-100 text-slate-500{% endif %}">
+            {{ rec.date|date:"d" }}
+          </div>
+          <div class="min-w-0">
+            <p class="text-slate-700 text-xs font-medium">{{ rec.date|date:"l" }}</p>
+            <p class="text-slate-400 text-[10px]">{{ rec.date|date:"d M" }}</p>
+          </div>
+        </div>
+        <div class="text-right flex-shrink-0">
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium
+            {% if rec.status == 'present' %}bg-emerald-100 text-emerald-700
+            {% elif rec.status == 'absent' %}bg-red-100 text-red-600
+            {% elif rec.status == 'late' %}bg-amber-100 text-amber-700
+            {% elif rec.status == 'work_from_home' %}bg-blue-100 text-blue-700
+            {% elif rec.status == 'half_day' %}bg-purple-100 text-purple-700
+            {% else %}bg-slate-100 text-slate-500{% endif %}">
+            {{ rec.get_status_display }}
+          </span>
+          {% if rec.check_in %}
+          <p class="text-slate-400 text-[10px] mt-0.5">{{ rec.check_in|time:"H:i" }} - {{ rec.check_out|time:"H:i"|default:"--" }}</p>
+          {% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <div class="flex flex-col items-center justify-center py-8 px-2 text-center">
+        <div class="relative w-32 h-32 mb-4 flex items-center justify-center rounded-full"
+          style="background: radial-gradient(circle at 30% 25%, #eef2ff, #f5f7ff 60%);">
+          <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="#e0e3fb" stroke-width="2"></circle>
+            <circle cx="50" cy="8" r="1.6" fill="#c7cbf5"></circle>
+            <circle cx="50" cy="92" r="1.6" fill="#c7cbf5"></circle>
+            <circle cx="8" cy="50" r="1.6" fill="#c7cbf5"></circle>
+            <circle cx="92" cy="50" r="1.6" fill="#c7cbf5"></circle>
+          </svg>
+          <div class="relative">
+            <p id="dash-week-clock" class="dash-clock text-xl font-extrabold text-indigo-600 font-display leading-none">--:--:--</p>
+            <p id="dash-week-date" class="text-slate-400 text-[10px] mt-1.5 font-semibold tracking-wide">&nbsp;</p>
+          </div>
+        </div>
+        <p class="text-slate-600 text-xs font-semibold">No attendance marked this week yet</p>
+        <p class="text-slate-400 text-[11px] mt-1 max-w-[220px]">Punch in from the card above and it'll show up here in real time.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Recent Leave Requests + Latest Payslip -->
+  <div class="space-y-5">
+
+    <!-- Latest Payslip -->
+    {% if latest_payslip %}
+    <div class="dash-card rounded-2xl text-white shadow-md relative overflow-hidden" style="background: linear-gradient(160deg, #065f46 0%, #059669 55%, #10b981 100%)">
+      <div class="absolute inset-0 dash-dotgrid opacity-20 pointer-events-none"></div>
+      <div class="absolute -right-8 -top-10 w-32 h-32 rounded-full bg-white opacity-[0.07] pointer-events-none"></div>
+
+      <div class="relative p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="w-8 h-8 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+              <i class="fas fa-file-invoice-dollar text-sm"></i>
+            </span>
+            <div>
+              <h2 class="font-bold text-sm font-display leading-tight">Latest Payslip</h2>
+              <p class="text-emerald-100/80 text-[10px]">{{ latest_payslip.month }}/{{ latest_payslip.year }}</p>
+            </div>
+          </div>
+          <span class="text-[10px] px-2.5 py-1 rounded-full font-semibold flex-shrink-0
+            {% if latest_payslip.status == 'paid' %}bg-white text-emerald-700{% else %}bg-white/15 text-white{% endif %}">
+            {{ latest_payslip.get_status_display }}
+          </span>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur rounded-2xl px-4 py-3.5 mb-4">
+          <p class="text-emerald-100/80 text-[11px] tracking-wide uppercase font-medium">Net Take Home</p>
+          <p class="text-3xl font-extrabold font-display mt-0.5 tracking-tight">Rs.{{ latest_payslip.net_salary|floatformat:0 }}</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <a href="{% url 'portal_payslip_detail' latest_payslip.pk %}"
+            class="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white text-emerald-700 text-xs font-bold hover:bg-emerald-50 transition-colors shadow-sm">
+            <i class="fas fa-eye text-[10px]"></i> View Payslip
+          </a>
+          <a href="{% url 'portal_payslips' %}"
+            class="inline-flex items-center justify-center gap-1.5 py-2.5 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-colors">
+            All <i class="fas fa-arrow-right text-[10px]"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Leaves -->
+    <div class="dash-card bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-slate-800 font-bold text-sm font-display">Recent Leaves</h2>
+        <a href="{% url 'portal_apply_leave' %}" class="text-xs text-indigo-600 font-medium hover:underline">View All</a>
+      </div>
+      <div class="space-y-2">
+        {% for leave in recent_leaves %}
+        <div class="dash-card group flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border-l-[3px]
+          {% if leave.status == 'approved' %}border-l-emerald-400
+          {% elif leave.status == 'rejected' %}border-l-red-400
+          {% else %}border-l-amber-400{% endif %}">
+          <div class="dash-date-badge
+            {% if leave.status == 'approved' %}bg-emerald-100 text-emerald-700
+            {% elif leave.status == 'rejected' %}bg-red-100 text-red-600
+            {% else %}bg-amber-100 text-amber-700{% endif %}">
+            <span class="text-sm font-extrabold font-display leading-none">{{ leave.start_date|date:"d" }}</span>
+            <span class="text-[9px] font-semibold uppercase tracking-wide">{{ leave.start_date|date:"M" }}</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-slate-700 text-xs font-semibold truncate">{{ leave.leave_type.name }}</p>
+            <p class="text-slate-400 text-[10px] mt-0.5">{{ leave.start_date|date:"d M" }} &rarr; {{ leave.end_date|date:"d M Y" }} <span class="text-slate-300">&bull;</span> {{ leave.days }} day{{ leave.days|pluralize }}</p>
+          </div>
+          <span class="text-[10px] px-2 py-1 rounded-full font-semibold flex-shrink-0
+            {% if leave.status == 'approved' %}bg-emerald-100 text-emerald-700
+            {% elif leave.status == 'rejected' %}bg-red-100 text-red-600
+            {% elif leave.status == 'pending' %}bg-amber-100 text-amber-700
+            {% else %}bg-slate-100 text-slate-500{% endif %}">
+            {{ leave.get_status_display }}
+          </span>
+        </div>
+        {% empty %}
+        <div class="text-center py-6">
+          <i class="fas fa-umbrella-beach text-slate-200 text-2xl mb-2"></i>
+          <p class="text-slate-400 text-xs">No leave requests yet</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Upcoming Events & Holidays -->
+    <div class="dash-card bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-slate-800 font-bold text-sm font-display">Upcoming Events & Holidays</h2>
+        <a href="{% url 'portal_events' %}" class="text-xs text-indigo-600 font-medium hover:underline">View All</a>
+      </div>
+      <div class="space-y-2">
+        {% for ev in upcoming_events %}
+        <div class="dash-card flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border-l-[3px]
+          {% if ev.event_type == 'holiday' %}border-l-rose-400{% else %}border-l-indigo-400{% endif %}">
+          <div class="dash-date-badge
+            {% if ev.event_type == 'holiday' %}bg-rose-100 text-rose-600{% else %}bg-indigo-100 text-indigo-700{% endif %}">
+            <span class="text-sm font-extrabold font-display leading-none">{{ ev.date|date:"d" }}</span>
+            <span class="text-[9px] font-semibold uppercase tracking-wide">{{ ev.date|date:"M" }}</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-slate-700 text-xs font-semibold truncate">{{ ev.title }}</p>
+            <p class="text-slate-400 text-[10px] mt-0.5">
+              {{ ev.date|date:"D, d M Y" }}{% if ev.is_multi_day %} &rarr; {{ ev.end_date|date:"d M Y" }}{% endif %}
+            </p>
+          </div>
+          <span class="text-[10px] px-2 py-1 rounded-full font-semibold flex-shrink-0
+            {% if ev.event_type == 'holiday' %}bg-rose-100 text-rose-600{% else %}bg-indigo-100 text-indigo-700{% endif %}">
+            {{ ev.get_event_type_display }}
+          </span>
+        </div>
+        {% empty %}
+        <div class="text-center py-6">
+          <i class="fas fa-calendar-days text-slate-200 text-2xl mb-2"></i>
+          <p class="text-slate-400 text-xs">No upcoming events or holidays</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Birthdays This Month -->
+    <div class="dash-card bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-slate-800 font-bold text-sm font-display">🎂 Birthdays This Month</h2>
+        <a href="{% url 'portal_birthday_calendar' %}" class="text-xs text-indigo-600 font-medium hover:underline">View Calendar</a>
+      </div>
+      <div class="space-y-2.5">
+        {% for person in birthdays_this_month %}
+        <div class="flex items-center gap-3 p-2.5 rounded-xl {% if person.is_today %}bg-pink-50{% else %}bg-slate-50{% endif %}">
+          {% if person.photo %}
+            <img src="{{ person.photo.url }}" class="w-8 h-8 rounded-lg object-cover flex-shrink-0">
+          {% else %}
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 {% if person.is_today %}bg-pink-100 text-pink-600{% else %}bg-indigo-100 text-indigo-600{% endif %} text-[11px] font-bold">
+              {{ person.first_name|first|upper }}{{ person.last_name|first|upper }}
+            </div>
+          {% endif %}
+          <div class="flex-1 min-w-0">
+            <p class="text-slate-700 text-xs font-medium truncate">{{ person.full_name }}</p>
+            <p class="text-slate-400 text-[10px]">{{ person.department.name|default:"—" }}</p>
+          </div>
+          <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0
+            {% if person.is_today %}bg-pink-100 text-pink-600{% else %}bg-slate-100 text-slate-500{% endif %}">
+            {% if person.is_today %}Today 🎉{% else %}{{ person.date_of_birth|date:"d M" }}{% endif %}
+          </span>
+        </div>
+        {% empty %}
+        <p class="text-slate-400 text-xs text-center py-4">No birthdays this month</p>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div>
+
+<script>
+function closeColleagueBirthdayCard() {
+  const overlay = document.getElementById('colleague-birthday-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.classList.remove('flex');
+  }
+}
+
+function spawnColleagueConfetti() {
+  const layer = document.getElementById('colleague-confetti-layer');
+  if (!layer) return;
+  const colors = ['#facc15', '#fb7185', '#34d399', '#60a5fa', '#c084fc', '#f97316'];
+  for (let i = 0; i < 60; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'bday-confetti-piece';
+    piece.style.left = Math.random() * 100 + 'vw';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDuration = (2.5 + Math.random() * 2) + 's';
+    piece.style.animationDelay = (Math.random() * 1.2) + 's';
+    layer.appendChild(piece);
+  }
+  setTimeout(() => { layer.innerHTML = ''; }, 5000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const overlay = document.getElementById('colleague-birthday-overlay');
+  if (!overlay) return;
+
+  // Other employees see this popup at most 2 times per day (counts each page load, not each close).
+  const countKey = 'birthdayPopupViews_' + new Date().toISOString().slice(0, 10);
+  const viewsSoFar = parseInt(localStorage.getItem(countKey) || '0', 10);
+
+  if (viewsSoFar < 2) {
+    overlay.classList.remove('hidden');
+    overlay.classList.add('flex');
+    spawnColleagueConfetti();
+    localStorage.setItem(countKey, String(viewsSoFar + 1));
+  }
+});
+</script>
+{% endblock %}

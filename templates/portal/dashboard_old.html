@@ -1,0 +1,507 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}My Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ── Welcome Header ───────────────────────────────────────────────────── -->
+<div class="rounded-2xl p-5 sm:p-6 mb-5 text-white relative overflow-hidden" style="background: linear-gradient(135deg, #4338ca, #6366f1)">
+  <div class="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white opacity-5"></div>
+  <div class="absolute right-16 -bottom-10 w-28 h-28 rounded-full bg-white opacity-5"></div>
+  <div class="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-4">
+      {% if employee.photo %}
+        <img src="{{ employee.photo.url }}" class="w-14 h-14 rounded-xl object-cover border-2 border-white border-opacity-30 flex-shrink-0">
+      {% else %}
+        <div class="w-14 h-14 rounded-xl bg-white bg-opacity-20 flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
+          {{ employee.first_name|first|upper }}{{ employee.last_name|first|upper }}
+        </div>
+      {% endif %}
+      <div class="min-w-0">
+        <p class="text-indigo-200 text-xs">Welcome back,</p>
+        <h1 class="text-white font-bold text-xl truncate">{{ employee.full_name }}</h1>
+        <p class="text-indigo-200 text-xs mt-0.5 truncate">
+          {{ employee.designation.title|default:"—" }} &bull; {{ employee.department.name|default:"—" }} &bull; {{ employee.employee_id }}
+        </p>
+      </div>
+    </div>
+    <div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 sm:gap-0 sm:text-right pt-3 sm:pt-0 border-t sm:border-t-0 border-white border-opacity-10">
+      <div>
+        <p class="text-indigo-200 text-xs">Today</p>
+        <p class="text-white font-semibold text-sm">{{ today|date:"D, d M Y" }}</p>
+      </div>
+      {% if today_att %}
+        <span class="text-xs px-2.5 py-1 rounded-full font-medium sm:mt-1.5 inline-block
+          {% if today_att.status == 'present' %}bg-emerald-400 text-white
+          {% elif today_att.status == 'work_from_home' %}bg-blue-400 text-white
+          {% elif today_att.status == 'late' %}bg-amber-300 text-amber-900
+          {% else %}bg-red-400 text-white{% endif %}">
+          {{ today_att.get_status_display }}
+        </span>
+      {% else %}
+        <span class="text-xs px-2.5 py-1 rounded-full font-medium sm:mt-1.5 inline-block bg-white bg-opacity-20 text-white">
+          Not Marked
+        </span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ── Punch In / Out ───────────────────────────────────────────────────── -->
+<div class="bg-white rounded-2xl border border-slate-100 p-5 mb-5 shadow-sm">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-4 min-w-0">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0
+        {% if punch_state.is_punched_in %}bg-emerald-50{% elif punch_state.has_punched_today %}bg-amber-50{% else %}bg-slate-100{% endif %}">
+        <i class="fas fa-fingerprint text-lg
+          {% if punch_state.is_punched_in %}text-emerald-500{% elif punch_state.has_punched_today %}text-amber-500{% else %}text-slate-400{% endif %}"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-slate-700 font-semibold text-sm">
+          {% if punch_state.is_punched_in %}
+            You're Punched In
+          {% elif punch_state.has_punched_today %}
+            On Break
+          {% else %}
+            Not Punched In Yet
+          {% endif %}
+        </p>
+        <p class="text-slate-400 text-xs mt-0.5 flex flex-wrap gap-x-1.5">
+          {% if punch_state.first_in %}<span>In: {{ punch_state.first_in|time:"h:i A" }}</span>{% endif %}
+          {% if punch_state.last_out %}<span>&bull; Last Out: {{ punch_state.last_out|time:"h:i A" }}</span>{% endif %}
+          {% if punch_state.break_count %}<span>&bull; Breaks: {{ punch_state.break_count }} ({{ punch_state.break_minutes }} min)</span>{% endif %}
+        </p>
+        {% if today_att.working_hours %}
+        <p class="text-slate-400 text-xs mt-0.5">Worked today: <span class="font-semibold text-slate-600">{{ today_att.working_hours }}h</span></p>
+        <p class="text-xs mt-1.5 flex items-center gap-1.5">
+          <i class="fas fa-clock text-indigo-400"></i>
+          {% if employee.shift %}
+            <span class="text-slate-500">Shift: <span class="font-semibold text-slate-600">{{ employee.shift.name }}</span>
+              ({{ employee.shift.start_time|time:"h:i A" }} &ndash; {{ employee.shift.end_time|time:"h:i A" }})</span>
+          {% else %}
+            <span class="text-slate-400">No shift assigned &bull; Default {{ target_working_hours|floatformat:0 }}h/day</span>
+          {% endif %}
+        </p>
+        {% endif %}
+      </div>
+    </div>
+    <form method="post" action="{% url 'portal_punch' %}" class="flex-shrink-0">
+      {% csrf_token %}
+      <button type="submit"
+        class="w-full sm:w-auto px-6 py-3 rounded-xl font-semibold text-sm text-white transition-colors shadow-sm
+          {% if punch_state.is_punched_in %}bg-red-500 hover:bg-red-600{% else %}bg-emerald-500 hover:bg-emerald-600{% endif %}">
+        <i class="fas {% if punch_state.is_punched_in %}fa-right-from-bracket{% else %}fa-right-to-bracket{% endif %} mr-2"></i>
+        {% if punch_state.is_punched_in %}Punch Out{% else %}Punch In{% endif %}
+      </button>
+    </form>
+  </div>
+
+  {% if today_punch_ins or today_punch_outs %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5 pt-5 border-t border-slate-100">
+    <!-- Punch In times -->
+    <div>
+      <p class="text-slate-500 text-xs font-semibold mb-2 flex items-center gap-1.5">
+        <i class="fas fa-right-to-bracket text-emerald-500"></i>
+        Punch In ({{ today_punch_ins|length }})
+      </p>
+      <div class="flex flex-wrap gap-1.5">
+        {% for log in today_punch_ins %}
+        <span class="inline-flex items-center gap-1.5 bg-emerald-50 rounded-lg pl-1.5 pr-2.5 py-1">
+          <span class="w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0">{{ forloop.counter }}</span>
+          <span class="text-emerald-700 text-xs font-medium">{{ log.timestamp|time:"h:i A" }}</span>
+        </span>
+        {% empty %}
+        <p class="text-slate-300 text-xs">—</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Punch Out times -->
+    <div>
+      <p class="text-slate-500 text-xs font-semibold mb-2 flex items-center gap-1.5">
+        <i class="fas fa-right-from-bracket text-red-500"></i>
+        Punch Out ({{ today_punch_outs|length }})
+      </p>
+      <div class="flex flex-wrap gap-1.5">
+        {% for log in today_punch_outs %}
+        <span class="inline-flex items-center gap-1.5 bg-red-50 rounded-lg pl-1.5 pr-2.5 py-1">
+          <span class="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0">{{ forloop.counter }}</span>
+          <span class="text-red-700 text-xs font-medium">{{ log.timestamp|time:"h:i A" }}</span>
+        </span>
+        {% empty %}
+        <p class="text-slate-300 text-xs">—</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Today's Working Hours progress ring ──────────────────────────────── -->
+<div class="bg-white rounded-2xl border border-slate-100 p-5 mb-5 shadow-sm">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-slate-700 font-semibold text-sm">Today's Working Hours</h2>
+    <span id="whr-elapsed" class="text-slate-800 font-bold text-sm">00:00:00</span>
+  </div>
+
+  <div class="flex flex-col sm:flex-row items-center gap-6">
+    <!-- Ring -->
+    <div class="relative w-40 h-40 flex-shrink-0">
+      <svg viewBox="0 0 160 160" class="w-40 h-40 -rotate-90">
+        <circle cx="80" cy="80" r="70" fill="none" stroke="#eef1fd" stroke-width="14"></circle>
+        <circle id="whr-ring" cx="80" cy="80" r="70" fill="none" stroke="#22c55e" stroke-width="14"
+          stroke-linecap="round" stroke-dasharray="439.8" stroke-dashoffset="439.8"
+          style="transition: stroke-dashoffset 0.6s ease, stroke 0.6s ease;"></circle>
+      </svg>
+      <div class="absolute inset-0 flex flex-col items-center justify-center">
+        <span id="whr-pct" class="text-slate-800 font-bold text-xl">0%</span>
+        <span class="text-slate-400 text-[11px]">of {{ target_working_hours|floatformat:0 }}h shift</span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 gap-x-8 gap-y-4 w-full sm:w-auto">
+      <div class="flex items-center gap-2.5">
+        <span class="w-2.5 h-2.5 rounded-full" style="background:#22c55e"></span>
+        <div>
+          <p id="whr-worked" class="text-slate-800 font-bold text-sm">00:00:00</p>
+          <p class="text-slate-400 text-[11px]">Working Hours</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-orange-400"></span>
+        <div>
+          <p id="whr-remaining" class="text-slate-800 font-bold text-sm">{{ target_working_hours|floatformat:0 }}:00:00</p>
+          <p class="text-slate-400 text-[11px]">Remaining Hours</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+        <div>
+          <p id="whr-break" class="text-slate-800 font-bold text-sm">00:00:00</p>
+          <p class="text-slate-400 text-[11px]">Break Time</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <span class="w-2.5 h-2.5 rounded-full" style="background:#ef4444"></span>
+        <div>
+          <p id="whr-status" class="text-slate-800 font-bold text-sm">
+            {% if punch_state.is_punched_in %}Working{% elif punch_state.has_punched_today %}On Break{% else %}Not Started{% endif %}
+          </p>
+          <p class="text-slate-400 text-[11px]">Status</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const RING = document.getElementById('whr-ring');
+  const CIRCUMFERENCE = 2 * Math.PI * 70; // r=70
+
+  const targetSeconds   = {{ target_working_hours|default:8 }} * 3600;
+  const isPunchedIn     = {{ punch_state.is_punched_in|yesno:"true,false" }};
+  const hasPunchedToday = {{ punch_state.has_punched_today|yesno:"true,false" }};
+  const firstIn         = {% if punch_state.first_in %}new Date("{{ punch_state.first_in|date:'c' }}"){% else %}null{% endif %};
+  const lastOut          = {% if punch_state.last_out %}new Date("{{ punch_state.last_out|date:'c' }}"){% else %}null{% endif %};
+  const breakSecondsBase = {{ punch_state.break_minutes|default:0 }} * 60;
+
+  function fmt(totalSeconds) {
+    totalSeconds = Math.max(0, Math.round(totalSeconds));
+    const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+    const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+    const s = String(totalSeconds % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+
+  // Green -> Amber -> Red as pct goes 0 -> 100 (capped at 100 for color+ring, timer keeps counting past it)
+  function colorForPct(pct) {
+    const p = Math.max(0, Math.min(100, pct));
+    const stops = [
+      { p: 0,   c: [34, 197, 94]  }, // green  #22c55e
+      { p: 50,  c: [245, 158, 11] }, // amber  #f59e0b
+      { p: 100, c: [239, 68, 68]  }, // red    #ef4444
+    ];
+    let a = stops[0], b = stops[1];
+    if (p >= 50) { a = stops[1]; b = stops[2]; }
+    const range = b.p - a.p || 1;
+    const t = (p - a.p) / range;
+    const r = Math.round(a.c[0] + (b.c[0] - a.c[0]) * t);
+    const g = Math.round(a.c[1] + (b.c[1] - a.c[1]) * t);
+    const bl = Math.round(a.c[2] + (b.c[2] - a.c[2]) * t);
+    return `rgb(${r}, ${g}, ${bl})`;
+  }
+
+  function render() {
+    let workedSeconds = 0;
+
+    if (isPunchedIn && firstIn) {
+      const now = new Date();
+      workedSeconds = ((now - firstIn) / 1000) - breakSecondsBase;
+    } else if (hasPunchedToday && firstIn && lastOut) {
+      // Punched out / on break right now: freeze at last known worked time
+      workedSeconds = ((lastOut - firstIn) / 1000) - breakSecondsBase;
+    }
+    workedSeconds = Math.max(0, workedSeconds);
+
+    const pct = Math.min(100, (workedSeconds / targetSeconds) * 100);
+    const remainingSeconds = Math.max(0, targetSeconds - workedSeconds);
+    const color = colorForPct(pct);
+
+    RING.style.stroke = color;
+    RING.style.strokeDashoffset = CIRCUMFERENCE - (pct / 100) * CIRCUMFERENCE;
+
+    document.getElementById('whr-pct').textContent = Math.round(pct) + '%';
+    document.getElementById('whr-pct').style.color = color;
+    document.getElementById('whr-elapsed').textContent = fmt(workedSeconds);
+    document.getElementById('whr-worked').textContent = fmt(workedSeconds);
+    document.getElementById('whr-remaining').textContent = fmt(remainingSeconds);
+    document.getElementById('whr-break').textContent = fmt(breakSecondsBase);
+  }
+
+  render();
+  if (isPunchedIn) {
+    setInterval(render, 1000);
+  }
+})();
+</script>
+
+<!-- ── Month snapshot: attendance ring + quick stats ───────────────────── -->
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-5">
+
+  <!-- Attendance-rate ring (signature stat) -->
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm flex items-center gap-4">
+    <div class="relative w-14 h-14 flex-shrink-0 rounded-full"
+      style="background: conic-gradient(#4f46e5 0% {{ attendance_pct }}%, #eef1fd {{ attendance_pct }}% 100%);">
+      <div class="absolute inset-1.5 bg-white rounded-full flex items-center justify-center">
+        <span class="text-slate-800 font-bold text-xs">{{ attendance_pct }}%</span>
+      </div>
+    </div>
+    <div class="min-w-0">
+      <p class="text-slate-700 font-semibold text-sm">Attendance</p>
+      <p class="text-slate-400 text-xs mt-0.5">{{ month_name }}</p>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-circle-check text-emerald-500"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-2xl font-bold text-slate-800 leading-none">{{ present_days }}</p>
+        <p class="text-slate-500 text-xs mt-1">Present ({{ month_name }})</p>
+      </div>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-circle-xmark text-red-400"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-2xl font-bold text-slate-800 leading-none">{{ absent_days }}</p>
+        <p class="text-slate-500 text-xs mt-1">Absent ({{ month_name }})</p>
+      </div>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-clock text-amber-500"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-2xl font-bold text-slate-800 leading-none">{{ late_days }}</p>
+        <p class="text-slate-500 text-xs mt-1">Late Days</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Net Salary — separate highlighted strip -->
+<div class="bg-white rounded-2xl border border-slate-100 p-4 mb-5 shadow-sm flex items-center justify-between flex-wrap gap-3">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
+      <i class="fas fa-wallet text-brand-600"></i>
+    </div>
+    <div>
+      <p class="text-xl font-bold text-slate-800 leading-none">
+        {% if salary %}Rs.{{ salary.net_salary|floatformat:0 }}{% else %}—{% endif %}
+      </p>
+      <p class="text-slate-500 text-xs mt-1">Net Salary / month</p>
+    </div>
+  </div>
+  <a href="{% url 'portal_payslips' %}" class="text-xs text-brand-600 font-medium hover:underline flex-shrink-0">View Payslips</a>
+</div>
+
+<!-- ── Main Grid ────────────────────────────────────────────────────────── -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+  <!-- Leave Balances -->
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-slate-700 font-semibold text-sm">Leave Balance</h2>
+      <a href="{% url 'portal_apply_leave' %}"
+        class="text-xs text-brand-600 font-medium hover:underline">Apply Leave</a>
+    </div>
+    <div class="space-y-3">
+      {% for bal in leave_balances %}
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-slate-600 text-xs font-medium">{{ bal.leave_type.name }}</span>
+          <span class="text-slate-500 text-xs">
+            <span class="font-bold text-slate-700">{{ bal.available_days }}</span> / {{ bal.total_days }} left
+          </span>
+        </div>
+        <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div class="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400"
+            style="width: {% if bal.total_days > 0 %}{% widthratio bal.available_days bal.total_days 100 %}{% else %}0{% endif %}%">
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-slate-400 text-xs text-center py-4">No leave balance assigned yet</p>
+      {% endfor %}
+    </div>
+    <a href="{% url 'portal_apply_leave' %}"
+      class="mt-4 w-full inline-flex items-center justify-center gap-2 py-2 rounded-xl border border-brand-200 text-brand-600 text-xs font-medium hover:bg-brand-50 transition-colors">
+      <i class="fas fa-plus text-[10px]"></i> Apply for Leave
+    </a>
+  </div>
+
+  <!-- This Week Attendance -->
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-slate-700 font-semibold text-sm">This Week</h2>
+      <a href="{% url 'portal_attendance' %}" class="text-xs text-brand-600 font-medium hover:underline">Full View</a>
+    </div>
+    <div class="space-y-2">
+      {% for rec in week_records %}
+      <div class="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0
+            {% if rec.status == 'present' %}bg-emerald-100 text-emerald-700
+            {% elif rec.status == 'absent' %}bg-red-100 text-red-600
+            {% elif rec.status == 'late' %}bg-amber-100 text-amber-700
+            {% elif rec.status == 'work_from_home' %}bg-blue-100 text-blue-700
+            {% elif rec.status == 'half_day' %}bg-purple-100 text-purple-700
+            {% else %}bg-slate-100 text-slate-500{% endif %}">
+            {{ rec.date|date:"d" }}
+          </div>
+          <div class="min-w-0">
+            <p class="text-slate-700 text-xs font-medium">{{ rec.date|date:"l" }}</p>
+            <p class="text-slate-400 text-[10px]">{{ rec.date|date:"d M" }}</p>
+          </div>
+        </div>
+        <div class="text-right flex-shrink-0">
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium
+            {% if rec.status == 'present' %}bg-emerald-100 text-emerald-700
+            {% elif rec.status == 'absent' %}bg-red-100 text-red-600
+            {% elif rec.status == 'late' %}bg-amber-100 text-amber-700
+            {% elif rec.status == 'work_from_home' %}bg-blue-100 text-blue-700
+            {% elif rec.status == 'half_day' %}bg-purple-100 text-purple-700
+            {% else %}bg-slate-100 text-slate-500{% endif %}">
+            {{ rec.get_status_display }}
+          </span>
+          {% if rec.check_in %}
+          <p class="text-slate-400 text-[10px] mt-0.5">{{ rec.check_in|time:"H:i" }} - {{ rec.check_out|time:"H:i"|default:"--" }}</p>
+          {% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-slate-400 text-xs text-center py-6">No attendance this week</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Recent Leave Requests + Latest Payslip -->
+  <div class="space-y-5">
+
+    <!-- Latest Payslip -->
+    {% if latest_payslip %}
+    <div class="rounded-2xl p-5 text-white shadow-sm" style="background: linear-gradient(135deg, #059669, #10b981)">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold text-sm">Latest Payslip</h2>
+        <a href="{% url 'portal_payslips' %}" class="text-emerald-200 text-xs hover:text-white">View All</a>
+      </div>
+      <p class="text-emerald-100 text-xs mb-1">
+        {{ latest_payslip.month }}/{{ latest_payslip.year }}
+        &bull;
+        <span class="{% if latest_payslip.status == 'paid' %}text-white font-medium{% else %}text-emerald-200{% endif %}">
+          {{ latest_payslip.get_status_display }}
+        </span>
+      </p>
+      <p class="text-2xl font-bold">Rs.{{ latest_payslip.net_salary|floatformat:0 }}</p>
+      <p class="text-emerald-200 text-xs mt-1">Net Take Home</p>
+      <a href="{% url 'portal_payslip_detail' latest_payslip.pk %}"
+        class="mt-3 w-full inline-flex items-center justify-center gap-2 py-2 rounded-xl bg-white bg-opacity-20 text-white text-xs font-medium hover:bg-opacity-30 transition-colors">
+        <i class="fas fa-eye text-[10px]"></i> View Payslip
+      </a>
+    </div>
+    {% endif %}
+
+    <!-- Recent Leaves -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-slate-700 font-semibold text-sm">Recent Leaves</h2>
+        <a href="{% url 'portal_apply_leave' %}" class="text-xs text-brand-600 font-medium hover:underline">View All</a>
+      </div>
+      <div class="space-y-2.5">
+        {% for leave in recent_leaves %}
+        <div class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+            {% if leave.status == 'approved' %}bg-emerald-100{% elif leave.status == 'rejected' %}bg-red-100{% else %}bg-amber-100{% endif %}">
+            <i class="fas fa-umbrella-beach text-xs
+              {% if leave.status == 'approved' %}text-emerald-600{% elif leave.status == 'rejected' %}text-red-500{% else %}text-amber-600{% endif %}"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-slate-700 text-xs font-medium truncate">{{ leave.leave_type.name }}</p>
+            <p class="text-slate-400 text-[10px]">{{ leave.start_date|date:"d M" }} - {{ leave.end_date|date:"d M Y" }} ({{ leave.days }}d)</p>
+          </div>
+          <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0
+            {% if leave.status == 'approved' %}bg-emerald-100 text-emerald-700
+            {% elif leave.status == 'rejected' %}bg-red-100 text-red-600
+            {% elif leave.status == 'pending' %}bg-amber-100 text-amber-700
+            {% else %}bg-slate-100 text-slate-500{% endif %}">
+            {{ leave.get_status_display }}
+          </span>
+        </div>
+        {% empty %}
+        <p class="text-slate-400 text-xs text-center py-4">No leave requests yet</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Upcoming Events & Holidays -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-slate-700 font-semibold text-sm">Upcoming Events & Holidays</h2>
+        <a href="{% url 'portal_events' %}" class="text-xs text-brand-600 font-medium hover:underline">View All</a>
+      </div>
+      <div class="space-y-2.5">
+        {% for ev in upcoming_events %}
+        <div class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+            {% if ev.event_type == 'holiday' %}bg-rose-100{% else %}bg-indigo-100{% endif %}">
+            <i class="fas {% if ev.event_type == 'holiday' %}fa-umbrella-beach text-rose-500{% else %}fa-calendar-days text-indigo-600{% endif %} text-xs"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-slate-700 text-xs font-medium truncate">{{ ev.title }}</p>
+            <p class="text-slate-400 text-[10px]">
+              {{ ev.date|date:"d M Y" }}{% if ev.is_multi_day %} - {{ ev.end_date|date:"d M Y" }}{% endif %}
+            </p>
+          </div>
+          <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0
+            {% if ev.event_type == 'holiday' %}bg-rose-100 text-rose-600{% else %}bg-indigo-100 text-indigo-700{% endif %}">
+            {{ ev.get_event_type_display }}
+          </span>
+        </div>
+        {% empty %}
+        <p class="text-slate-400 text-xs text-center py-4">No upcoming events or holidays</p>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,397 @@
+{% extends 'base.html' %}
+{% block title %}System Settings{% endblock %}
+{% block page_title %}System Settings{% endblock %}
+{% block page_subtitle %}Branding, theme, Super Admin access & audit log{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+<div class="mb-5 space-y-2">
+  {% for message in messages %}
+  <div class="rounded-xl px-4 py-3 text-sm font-medium
+    {% if message.tags == 'error' %}bg-red-50 text-red-600{% else %}bg-emerald-50 text-emerald-700{% endif %}">
+    {{ message }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ── Tabs ─────────────────────────────────────────────────────────────── -->
+<div class="flex gap-1.5 mb-5 bg-slate-100 rounded-xl p-1.5 w-fit">
+  <button type="button" onclick="showTab('theme')" id="tab-btn-theme"
+    class="settings-tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+    <i class="fas fa-palette mr-1.5"></i> Theme & Branding
+  </button>
+  <button type="button" onclick="showTab('superadmins')" id="tab-btn-superadmins"
+    class="settings-tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+    <i class="fas fa-user-shield mr-1.5"></i> Super Admins
+  </button>
+  <button type="button" onclick="showTab('auditlog')" id="tab-btn-auditlog"
+    class="settings-tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+    <i class="fas fa-clock-rotate-left mr-1.5"></i> Audit Log
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     TAB 1 — Theme & Branding
+     ══════════════════════════════════════════════════════════════════════ -->
+<div id="tab-theme" class="settings-tab">
+  <form method="post" enctype="multipart/form-data" class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm max-w-2xl">
+    {% csrf_token %}
+    <input type="hidden" name="form_type" value="theme">
+
+    <h3 class="text-slate-800 font-bold text-base mb-5">Company Branding</h3>
+
+    <div class="mb-5">
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Company Name</label>
+      <input type="text" name="company_name" value="{{ site.company_name }}"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+    </div>
+
+    <div class="mb-5">
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Company Name</label>
+      <input type="text" name="company_name" value="{{ site.company_name }}"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+    </div>
+
+    <div class="mb-5">
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Company Code</label>
+      <input type="text" name="company_code" value="{{ site.company_code }}" placeholder="e.g. ABC001"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+    </div>
+
+    <div class="mb-5">
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Company Logo</label>
+      <div class="flex items-center gap-4">
+        {% if site.logo %}
+          <img src="{{ site.logo.url }}" class="w-14 h-14 rounded-xl object-cover border border-slate-200">
+        {% else %}
+          <div class="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
+            <i class="fas fa-building text-xl"></i>
+          </div>
+        {% endif %}
+        <input type="file" name="logo" accept="image/*"
+          class="text-sm text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-brand-50 file:text-brand-700 file:text-sm file:font-medium hover:file:bg-brand-100">
+      </div>
+      <p class="text-slate-400 text-[11px] mt-1.5">Shows in the sidebar header across the whole HRMS.</p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div>
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Primary Color</label>
+        <div class="flex items-center gap-2">
+          <input type="color" name="primary_color" value="{{ site.primary_color }}"
+            class="w-11 h-11 rounded-lg border border-slate-200 cursor-pointer" id="primaryColorPicker">
+          <input type="text" value="{{ site.primary_color }}"
+            class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm"
+            oninput="document.getElementById('primaryColorPicker').value=this.value"
+            onchange="document.getElementById('primaryColorPicker').value=this.value">
+        </div>
+        <p class="text-slate-400 text-[11px] mt-1.5">Sidebar header, buttons, active states.</p>
+      </div>
+      <div>
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Text Color</label>
+        <div class="flex items-center gap-2">
+          <input type="color" name="text_color" value="{{ site.text_color }}"
+            class="w-11 h-11 rounded-lg border border-slate-200 cursor-pointer" id="textColorPicker">
+          <input type="text" value="{{ site.text_color }}"
+            class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm"
+            oninput="document.getElementById('textColorPicker').value=this.value"
+            onchange="document.getElementById('textColorPicker').value=this.value">
+        </div>
+        <p class="text-slate-400 text-[11px] mt-1.5">Default body text color.</p>
+      </div>
+    </div>
+
+    <button type="submit"
+      class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl transition-colors">
+      <i class="fas fa-check mr-1.5"></i> Save Changes
+    </button>
+  </form>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     TAB 2 — Super Admins
+     ══════════════════════════════════════════════════════════════════════ -->
+<div id="tab-superadmins" class="settings-tab hidden">
+
+  <!-- Grant access -->
+  {% if can_manage_admins %}
+  <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm mb-5">
+    <h3 class="text-slate-800 font-bold text-base mb-4">Grant Super Admin Access</h3>
+    <form method="post" class="space-y-3">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="grant_admin">
+      <div class="flex flex-col sm:flex-row gap-3">
+        <select name="employee_id" required
+          class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 bg-white">
+          <option value="">-- Select an employee to make Super Admin --</option>
+          {% for emp in grantable_employees %}
+          <option value="{{ emp.id }}">{{ emp.full_name }} — {{ emp.department.name|default:"No Dept" }} ({{ emp.employee_id }})</option>
+          {% endfor %}
+        </select>
+        <button type="submit"
+          class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl whitespace-nowrap">
+          <i class="fas fa-user-plus mr-1.5"></i> Grant Access
+        </button>
+      </div>
+      <label class="flex items-center gap-2 text-sm text-slate-600">
+        <input type="checkbox" name="full_access" class="rounded border-slate-300 text-brand-600 focus:ring-brand-400">
+        Give <strong>Full Access</strong> (they'll also be able to grant/revoke Super Admin access for others)
+      </label>
+    </form>
+    <p class="text-slate-400 text-[11px] mt-2.5">Employee must already have a login account (Employees &rarr; Login Credentials) before they can be made Super Admin. By default, new Super Admins get panel access only — not the power to manage other admins.</p>
+  </div>
+  {% else %}
+  <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-5 text-amber-700 text-sm">
+    <i class="fas fa-lock mr-1.5"></i> You're a Super Admin, but only a <strong>Full Access Super Admin</strong> can grant or revoke access for others.
+  </div>
+  {% endif %}
+
+    <!-- Grant Panel Access (HR/staff, not Super Admin) -->
+  {% if can_manage_admins %}
+  <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm mb-5">
+    <h3 class="text-slate-800 font-bold text-base mb-4">Grant Panel Access (HR / Staff)</h3>
+    <p class="text-slate-500 text-xs mb-3">Lets an employee (e.g. HR) log into the admin panel — see the notification bell, employee list, leave/WFH requests — <strong>without</strong> Super Admin rights.</p>
+    <form method="post" class="space-y-3">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="grant_panel_access">
+      <div class="flex flex-col sm:flex-row gap-3">
+        <select name="employee_id" required
+          class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 bg-white">
+          <option value="">-- Select an employee to give panel access --</option>
+          {% for emp in grantable_for_panel %}
+          <option value="{{ emp.id }}">{{ emp.full_name }} — {{ emp.department.name|default:"No Dept" }} ({{ emp.employee_id }})</option>
+          {% endfor %}
+        </select>
+        <button type="submit"
+          class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl whitespace-nowrap">
+          <i class="fas fa-user-shield mr-1.5"></i> Grant Panel Access
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Current panel-access (non-Super-Admin) employees -->
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-5">
+    <div class="px-6 py-4 border-b border-slate-100">
+      <h3 class="text-slate-800 font-bold text-base">Panel Access — HR / Staff ({{ panel_access_employees.count }})</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50 text-slate-500 text-xs uppercase">
+            <th class="px-6 py-3 text-left font-semibold">Employee</th>
+            <th class="px-4 py-3 text-left font-semibold">Department</th>
+            <th class="px-4 py-3 text-left font-semibold">Username</th>
+            <th class="px-4 py-3 text-right font-semibold">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for emp in panel_access_employees %}
+          <tr class="hover:bg-slate-50">
+            <td class="px-6 py-3 font-medium text-slate-700">{{ emp.full_name }}
+              {% if emp.user == request.user %}<span class="text-slate-400 text-xs">(You)</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-slate-500">{{ emp.department.name|default:"—" }}</td>
+            <td class="px-4 py-3 text-slate-500">{{ emp.user.username }}</td>
+            <td class="px-4 py-3 text-right">
+              {% if emp.user != request.user %}
+              <form method="post" onsubmit="return confirm('Revoke panel access for {{ emp.full_name }}?');">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="revoke_panel_access">
+                <input type="hidden" name="employee_id" value="{{ emp.id }}">
+                <button type="submit" class="text-red-500 hover:text-red-700 text-xs font-medium">
+                  <i class="fas fa-user-minus mr-1"></i> Revoke
+                </button>
+              </form>
+              {% else %}
+              <span class="text-slate-300 text-xs">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="px-6 py-6 text-center text-slate-400">No HR/staff panel-access employees yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Current superadmins -->
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100">
+      <h3 class="text-slate-800 font-bold text-base">Current Super Admins ({{ superadmins.count }})</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50 text-slate-500 text-xs uppercase">
+            <th class="px-6 py-3 text-left font-semibold">Employee</th>
+            <th class="px-4 py-3 text-left font-semibold">Department</th>
+            <th class="px-4 py-3 text-left font-semibold">Designation</th>
+            <th class="px-4 py-3 text-left font-semibold">Username</th>
+            <th class="px-4 py-3 text-left font-semibold">Access Level</th>
+            <th class="px-4 py-3 text-right font-semibold">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for emp in superadmins %}
+          <tr class="hover:bg-slate-50">
+            <td class="px-6 py-3 font-medium text-slate-700">{{ emp.full_name }}
+              {% if emp.user == request.user %}<span class="text-slate-400 text-xs">(You)</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-slate-500">{{ emp.department.name|default:"—" }}</td>
+            <td class="px-4 py-3 text-slate-500">{{ emp.designation.title|default:"—" }}</td>
+            <td class="px-4 py-3 text-slate-500">{{ emp.user.username }}</td>
+            <td class="px-4 py-3">
+              {% if emp.is_primary_admin %}
+              <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-50 text-purple-700">
+                <i class="fas fa-crown mr-1"></i> Full Access
+              </span>
+              {% else %}
+              <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-500">
+                Panel Access Only
+              </span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              {% if can_manage_admins and emp.user != request.user %}
+              <div class="flex items-center justify-end gap-3">
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="form_type" value="toggle_full_access">
+                  <input type="hidden" name="employee_id" value="{{ emp.id }}">
+                  <button type="submit" class="text-brand-600 hover:text-brand-800 text-xs font-medium">
+                    {% if emp.is_primary_admin %}<i class="fas fa-arrow-down mr-1"></i> Remove Full Access
+                    {% else %}<i class="fas fa-crown mr-1"></i> Make Full Access{% endif %}
+                  </button>
+                </form>
+                <form method="post" onsubmit="return confirm('Revoke Super Admin access for {{ emp.full_name }}?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="form_type" value="revoke_admin">
+                  <input type="hidden" name="employee_id" value="{{ emp.id }}">
+                  <button type="submit" class="text-red-500 hover:text-red-700 text-xs font-medium">
+                    <i class="fas fa-user-minus mr-1"></i> Revoke
+                  </button>
+                </form>
+              </div>
+              {% elif emp.user == request.user %}
+              <span class="text-slate-300 text-xs">—</span>
+              {% else %}
+              <span class="text-slate-300 text-xs" title="Only a Full Access Super Admin can manage this">
+                <i class="fas fa-lock"></i>
+              </span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="px-6 py-8 text-center text-slate-400">No Super Admins yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     TAB 3 — Audit Log
+     ══════════════════════════════════════════════════════════════════════ -->
+<div id="tab-auditlog" class="settings-tab hidden">
+
+  <!-- Filters -->
+  <form method="get" class="flex flex-col sm:flex-row gap-3 mb-4">
+    <input type="hidden" name="tab" value="auditlog">
+    <select name="module" onchange="this.form.submit()"
+      class="border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm bg-white">
+      <option value="">All Modules</option>
+      {% for m in modules %}
+      <option value="{{ m }}" {% if m == module_filter %}selected{% endif %}>{{ m }}</option>
+      {% endfor %}
+    </select>
+    <select name="employee" onchange="this.form.submit()"
+      class="border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm bg-white">
+      <option value="">All Employees</option>
+      {% for emp in all_employees_for_filter %}
+      <option value="{{ emp.id }}" {% if emp_filter == emp.id|stringformat:'s' %}selected{% endif %}>{{ emp.full_name }}</option>
+      {% endfor %}
+    </select>
+    {% if module_filter or emp_filter %}
+    <a href="{% url 'system_settings' %}" class="text-slate-400 text-xs self-center hover:text-slate-600">
+      <i class="fas fa-xmark mr-1"></i> Clear filters
+    </a>
+    {% endif %}
+  </form>
+
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50 text-slate-500 text-xs uppercase">
+            <th class="px-4 py-3 text-left font-semibold whitespace-nowrap">Date & Time</th>
+            <th class="px-4 py-3 text-left font-semibold whitespace-nowrap">Employee</th>
+            <th class="px-4 py-3 text-left font-semibold whitespace-nowrap">Department</th>
+            <th class="px-4 py-3 text-left font-semibold whitespace-nowrap">Action</th>
+            <th class="px-4 py-3 text-left font-semibold whitespace-nowrap">Module</th>
+            <th class="px-4 py-3 text-left font-semibold whitespace-nowrap">Field</th>
+            <th class="px-4 py-3 text-left font-semibold whitespace-nowrap">Old Value</th>
+            <th class="px-4 py-3 text-left font-semibold whitespace-nowrap">New Value</th>
+            <th class="px-4 py-3 text-left font-semibold whitespace-nowrap">Description</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for log in logs %}
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ log.timestamp|date:"d M Y, h:i A" }}</td>
+            <td class="px-4 py-3 text-slate-700 font-medium whitespace-nowrap">{{ log.employee.full_name|default:"—" }}</td>
+            <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ log.department.name|default:"—" }}</td>
+            <td class="px-4 py-3 whitespace-nowrap">
+              <span class="text-xs px-2 py-0.5 rounded-full font-medium
+                {% if log.action == 'create' %}bg-emerald-50 text-emerald-700
+                {% elif log.action == 'delete' %}bg-red-50 text-red-600
+                {% elif log.action == 'permission' %}bg-purple-50 text-purple-700
+                {% elif log.action == 'settings' %}bg-blue-50 text-blue-700
+                {% else %}bg-amber-50 text-amber-700{% endif %}">
+                {{ log.get_action_display }}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ log.module|default:"—" }}</td>
+            <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ log.field_name|default:"—" }}</td>
+            <td class="px-4 py-3 text-slate-400 max-w-[140px] truncate" title="{{ log.old_value }}">{{ log.old_value|default:"—" }}</td>
+            <td class="px-4 py-3 text-slate-600 max-w-[140px] truncate" title="{{ log.new_value }}">{{ log.new_value|default:"—" }}</td>
+            <td class="px-4 py-3 text-slate-500 max-w-[220px] truncate" title="{{ log.description }}">{{ log.description|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="px-6 py-8 text-center text-slate-400">No activity logged yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p class="text-slate-400 text-[11px] mt-2.5">Showing latest {{ logs|length }} entries.</p>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<style>
+  .settings-tab-btn { color: #64748b; }
+  .settings-tab-btn.active { background: white; color: #4338ca; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+</style>
+<script>
+function showTab(name) {
+  document.querySelectorAll('.settings-tab').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.settings-tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.remove('hidden');
+  document.getElementById('tab-btn-' + name).classList.add('active');
+  localStorage.setItem('settingsActiveTab', name);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const wanted = params.get('tab') || localStorage.getItem('settingsActiveTab') || 'theme';
+  showTab(wanted);
+});
+</script>
+{% endblock %}

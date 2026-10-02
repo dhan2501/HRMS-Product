@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% block title %}Attendance Claims{% endblock %}
+{% block page_title %}Attendance / Leave Claims{% endblock %}
+{% block page_subtitle %}Review employee claims about wrongly marked attendance or leave{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="grid grid-cols-3 gap-4 mb-5">
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+      <i class="fas fa-hourglass-half text-amber-500"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">{{ pending }}</p>
+      <p class="text-slate-500 text-xs">Pending</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
+      <i class="fas fa-circle-check text-emerald-500"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">{{ approved }}</p>
+      <p class="text-slate-500 text-xs">Approved</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
+      <i class="fas fa-circle-xmark text-red-400"></i>
+    </div>
+    <div>
+      <p class="text-2xl font-bold text-slate-800">{{ rejected }}</p>
+      <p class="text-slate-500 text-xs">Rejected</p>
+    </div>
+  </div>
+</div>
+
+<!-- Filter -->
+<div class="flex items-center gap-2 mb-4">
+  <a href="{% url 'attendance_disputes' %}?status=all"
+    class="px-4 py-2 rounded-xl text-xs font-medium transition-colors
+      {% if status_filter == 'all' %}bg-brand-600 text-white{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-50{% endif %}">
+    All
+  </a>
+  <a href="?status=pending"
+    class="px-4 py-2 rounded-xl text-xs font-medium transition-colors
+      {% if status_filter == 'pending' %}bg-amber-500 text-white{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-50{% endif %}">
+    Pending {% if pending %}<span class="ml-1 bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">{{ pending }}</span>{% endif %}
+  </a>
+  <a href="?status=approved"
+    class="px-4 py-2 rounded-xl text-xs font-medium transition-colors
+      {% if status_filter == 'approved' %}bg-emerald-500 text-white{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-50{% endif %}">
+    Approved
+  </a>
+  <a href="?status=rejected"
+    class="px-4 py-2 rounded-xl text-xs font-medium transition-colors
+      {% if status_filter == 'rejected' %}bg-red-500 text-white{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-50{% endif %}">
+    Rejected
+  </a>
+</div>
+
+<!-- Table -->
+<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead>
+        <tr class="bg-slate-50 border-b border-slate-100">
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-5 py-3.5">Employee</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Date</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Current &rarr; Claimed</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Reason</th>
+          <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Status</th>
+          <th class="px-4 py-3.5 text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for d in disputes_list %}
+        <tr class="hover:bg-slate-50/60 transition-colors">
+
+          <td class="px-5 py-3.5">
+            <div class="flex items-center gap-3">
+              {% if d.employee.photo %}
+                <img src="{{ d.employee.photo.url }}" class="w-8 h-8 rounded-full object-cover border border-slate-200 flex-shrink-0">
+              {% else %}
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  {{ d.employee.first_name|first|upper }}{{ d.employee.last_name|first|upper }}
+                </div>
+              {% endif %}
+              <div>
+                <p class="text-slate-700 text-sm font-medium">{{ d.employee.full_name }}</p>
+                <p class="text-slate-400 text-xs">{{ d.employee.department.name|default:"—" }}</p>
+              </div>
+            </div>
+          </td>
+
+          <td class="px-4 py-3.5">
+            <p class="text-slate-700 text-sm font-semibold">{{ d.date|date:"d M Y" }}</p>
+            <p class="text-slate-400 text-xs">{{ d.date|date:"l" }}</p>
+          </td>
+
+          <td class="px-4 py-3.5">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500 font-medium">{{ d.current_status|default:"Not Marked" }}</span>
+            <i class="fas fa-arrow-right text-slate-300 text-[10px] mx-1"></i>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-medium">{{ d.get_claimed_status_display }}</span>
+          </td>
+
+          <td class="px-4 py-3.5">
+            <p class="text-slate-600 text-sm max-w-xs truncate" title="{{ d.reason }}">
+              {{ d.reason|truncatechars:50 }}
+            </p>
+            {% if d.review_note %}
+            <p class="text-slate-400 text-xs mt-0.5">Note: {{ d.review_note|truncatechars:40 }}</p>
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-3.5">
+            <span class="text-xs px-2.5 py-1 rounded-full font-medium
+              {% if d.status == 'pending' %}bg-amber-100 text-amber-700
+              {% elif d.status == 'approved' %}bg-emerald-100 text-emerald-700
+              {% elif d.status == 'rejected' %}bg-red-100 text-red-600
+              {% else %}bg-slate-100 text-slate-500{% endif %}">
+              {{ d.get_status_display }}
+            </span>
+          </td>
+
+          <td class="px-4 py-3.5">
+            {% if d.status == 'pending' %}
+            <div class="flex items-center gap-2">
+              <form method="post" action="{% url 'approve_attendance_dispute' d.pk %}">
+                {% csrf_token %}
+                <button type="submit"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-medium hover:bg-emerald-100 transition-colors">
+                  <i class="fas fa-check text-[10px]"></i> Approve
+                </button>
+              </form>
+              <button onclick="openReject({{ d.pk }}, '{{ d.employee.full_name }}')"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-medium hover:bg-red-100 transition-colors">
+                <i class="fas fa-xmark text-[10px]"></i> Reject
+              </button>
+            </div>
+            {% else %}
+            <span class="text-slate-400 text-xs">
+              {% if d.reviewed_at %}{{ d.reviewed_at|date:"d M" }} by {{ d.reviewed_by.full_name|default:"Admin" }}{% else %}—{% endif %}
+            </span>
+            {% endif %}
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="py-16 text-center">
+            <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <i class="fas fa-flag text-blue-300 text-xl"></i>
+            </div>
+            <p class="text-slate-500 font-medium text-sm">No claims</p>
+            <p class="text-slate-400 text-xs mt-1">Employee attendance/leave claims will appear here</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div id="rejectModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl w-full max-w-md shadow-xl p-6">
+    <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+      <i class="fas fa-flag text-red-500 text-lg"></i>
+    </div>
+    <h3 class="text-slate-800 font-semibold text-center mb-1">Reject Claim</h3>
+    <p class="text-slate-500 text-sm text-center mb-4">
+      For <span id="rejectEmpName" class="font-medium text-slate-700"></span>
+    </p>
+    <form method="post" id="rejectForm">
+      {% csrf_token %}
+      <textarea name="review_note" rows="3"
+        placeholder="Reason for rejecting this claim (optional)..."
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-red-300 resize-none mb-4"></textarea>
+      <div class="flex gap-3">
+        <button type="button"
+          onclick="document.getElementById('rejectModal').classList.add('hidden')"
+          class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+          Cancel
+        </button>
+        <button type="submit"
+          class="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600">
+          Reject
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openReject(pk, name) {
+  document.getElementById('rejectEmpName').textContent = name;
+  document.getElementById('rejectForm').action = '/attendance/disputes/' + pk + '/reject/';
+  document.getElementById('rejectModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}

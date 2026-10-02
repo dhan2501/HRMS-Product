@@ -1,0 +1,146 @@
+{% extends 'portal/base_portal.html' %}
+{% load static %}
+{% block title %}Face Enroll{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-6">
+
+  <div class="mb-5 flex items-center justify-between">
+    <div>
+      <h1 class="text-xl font-semibold text-slate-800">
+        <i class="fas fa-camera text-brand-600 mr-2"></i>Face Enroll
+      </h1>
+      <p class="text-sm text-slate-500 mt-1">{{ employee.full_name }}</p>
+    </div>
+    <span class="px-3 py-1 rounded-full text-xs font-medium
+      {% if already_enrolled %}bg-emerald-50 text-emerald-600{% else %}bg-slate-100 text-slate-500{% endif %}">
+      {% if already_enrolled %}Already Enrolled{% else %}Not Enrolled{% endif %}
+    </span>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+
+    <div class="relative w-full max-w-sm mx-auto rounded-lg overflow-hidden bg-slate-900 aspect-[4/3]">
+      <video id="video" autoplay muted playsinline class="w-full h-full object-cover"></video>
+      <canvas id="overlay" class="absolute top-0 left-0 w-full h-full"></canvas>
+    </div>
+
+    <p id="status" class="text-center text-sm text-slate-500 mt-3">Loading face detection models…</p>
+    <p id="result" class="text-center text-sm font-medium mt-1"></p>
+
+    <div class="flex justify-center gap-3 mt-4">
+      <button id="verifyBtn" disabled
+        class="px-5 py-2.5 rounded-lg bg-brand-600 text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-brand-700">
+        <i class="fas fa-fingerprint mr-1"></i>
+        {% if already_enrolled %}Re-enroll Face{% else %}Enroll Face{% endif %}
+      </button>
+      <a href="{% url 'portal_dashboard' %}"
+        class="px-5 py-2.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200">
+        Back to Dashboard
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<!-- face-api.js: LOCAL file, hrms_project/static/js/face-api.min.js -->
+{% comment %} <script src="{% static 'js/face-api.min.js' %}"></script> {% endcomment %}
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script>
+const MODEL_URL = "{% static 'face-api-models' %}";
+const video      = document.getElementById('video');
+const overlay    = document.getElementById('overlay');
+const statusEl   = document.getElementById('status');
+const resultEl   = document.getElementById('result');
+const verifyBtn  = document.getElementById('verifyBtn');
+
+function getCookie(name) {
+  const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return match ? match.pop() : '';
+}
+
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+    video.srcObject = stream;
+  } catch (err) {
+    statusEl.textContent = 'Camera access denied / not available: ' + err.message;
+  }
+}
+
+async function loadModels() {
+  await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+  statusEl.textContent = 'Camera ke saamne apna chehra rakhein…';
+  verifyBtn.disabled = false;
+}
+
+let liveDescriptor = null;
+
+async function detectLoop() {
+  const options = new faceapi.TinyFaceDetectorOptions();
+  const result = await faceapi
+    .detectSingleFace(video, options)
+    .withFaceLandmarks()
+    .withFaceDescriptor();
+
+  const dims = faceapi.matchDimensions(overlay, video, true);
+  overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
+
+  if (result) {
+    const resized = faceapi.resizeResults(result, dims);
+    faceapi.draw.drawDetections(overlay, resized);
+    liveDescriptor = Array.from(result.descriptor);
+    statusEl.textContent = 'Face detected — verify ke liye ready.';
+  } else {
+    liveDescriptor = null;
+    statusEl.textContent = 'Face nahi mil raha — camera ke saamne aayein.';
+  }
+  requestAnimationFrame(detectLoop);
+}
+
+verifyBtn.addEventListener('click', async () => {
+  if (!liveDescriptor) {
+    resultEl.textContent = 'Pehle apna face camera ke saamne laayein.';
+    resultEl.className = 'text-center text-sm font-medium mt-1 text-amber-600';
+    return;
+  }
+  verifyBtn.disabled = true;
+  resultEl.textContent = 'Verifying…';
+  resultEl.className = 'text-center text-sm font-medium mt-1 text-slate-500';
+
+  try {
+    const res = await fetch("{% url 'portal_face_enroll_save' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: JSON.stringify({ descriptor: liveDescriptor }),
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      resultEl.textContent = data.message;
+      resultEl.className = 'text-center text-sm font-medium mt-1 text-emerald-600';
+      setTimeout(() => { window.location.href = "{% url 'portal_face_punch' %}"; }, 1200);
+    } else {
+      resultEl.textContent = data.error;
+      resultEl.className = 'text-center text-sm font-medium mt-1 text-red-600';
+      verifyBtn.disabled = false;
+    }
+  } catch (err) {
+    resultEl.textContent = 'Network error: ' + err.message;
+    resultEl.className = 'text-center text-sm font-medium mt-1 text-red-600';
+    verifyBtn.disabled = false;
+  }
+});
+
+(async () => {
+  await startCamera();
+  await loadModels();
+  detectLoop();
+})();
+</script>
+{% endblock %}

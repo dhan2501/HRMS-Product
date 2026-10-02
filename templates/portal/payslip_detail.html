@@ -1,0 +1,227 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}Payslip {{ slip.month }}/{{ slip.year }}{% endblock %}
+{% block page_heading %}My Payslip{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+
+  <!-- Back -->
+  <a href="{% url 'portal_payslips' %}"
+    class="no-print inline-flex items-center gap-2 text-slate-500 hover:text-slate-700 text-sm font-medium mb-4">
+    <i class="fas fa-arrow-left text-xs"></i> Back to Payslips
+  </a>
+
+  <!-- Release status banner (info only — employee cannot take action here) -->
+  {% if slip.is_release_ready %}
+  <div class="no-print mb-4 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center gap-2 text-xs text-emerald-700">
+    <i class="fas fa-circle-check"></i>
+    Approved for release{% if slip.approved_at %} on {{ slip.approved_at|date:"d M Y" }}{% endif %}. You can print or save this payslip as a PDF.
+  </div>
+  {% elif slip.status == 'paid' %}
+  <div class="no-print mb-4 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-100 flex items-center gap-2 text-xs text-amber-700">
+    <i class="fas fa-hourglass-half"></i>
+    Payment done — waiting on HR/Admin approval before you can print or download this payslip.
+  </div>
+  {% else %}
+  <div class="no-print mb-4 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-2 text-xs text-slate-500">
+    <i class="fas fa-circle-info"></i>
+    This payslip is still being processed by HR.
+  </div>
+  {% endif %}
+
+  <!-- Payslip document -->
+  <div id="payslipDoc" class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+
+    <!-- Company letterhead -->
+    <div class="p-6 border-b border-slate-100 flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3 min-w-0">
+        {% if site_settings.logo %}
+        <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.company_name }}"
+          class="w-12 h-12 rounded-xl object-contain bg-slate-50 border border-slate-100 p-1 shrink-0">
+        {% else %}
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-white"
+          style="background: {{ site_settings.primary_color|default:'#4338ca' }}">
+          <i class="fas fa-building text-lg"></i>
+        </div>
+        {% endif %}
+        <div class="min-w-0">
+          <p class="font-bold text-slate-800 text-base truncate">{{ site_settings.company_name|default:"DJ HRMS" }}</p>
+          {% if site_settings.company_code %}
+          <p class="text-slate-400 text-xs">{{ site_settings.company_code }}</p>
+          {% endif %}
+        </div>
+      </div>
+      <div class="text-right">
+        <p class="text-slate-400 text-[11px] uppercase tracking-wide font-medium">Payslip for</p>
+        <p class="text-slate-700 font-bold">{{ slip.get_month_display|default:slip.month }} {{ slip.year }}</p>
+      </div>
+    </div>
+
+    <!-- Employee + period -->
+    <div class="p-6 text-white" style="background: linear-gradient(135deg, {{ site_settings.primary_color|default:'#4f46e5' }}, #6366f1)">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <p class="text-indigo-200 text-xs font-medium uppercase tracking-wide">Employee</p>
+          <h2 class="text-white font-bold text-xl mt-0.5">{{ slip.employee.full_name }}</h2>
+          <p class="text-indigo-200 text-sm mt-1">
+            {{ slip.employee.designation.title|default:"" }}{% if slip.employee.designation and slip.employee.department %} &bull; {% endif %}{{ slip.employee.department.name|default:"" }}
+          </p>
+        </div>
+        <div class="text-right">
+          <p class="text-indigo-200 text-xs">Pay Period</p>
+          <p class="text-white font-bold text-lg">{{ slip.month }}/{{ slip.year }}</p>
+          <div class="flex items-center gap-1 mt-1 justify-end flex-wrap">
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium
+              {% if slip.status == 'paid' %}bg-emerald-400 text-white{% else %}bg-amber-300 text-amber-900{% endif %}">
+              {{ slip.get_status_display }}
+            </span>
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-white bg-opacity-20 text-white">
+              {{ slip.get_tax_regime_display }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-6">
+      <!-- Attendance summary strip -->
+      <div class="grid grid-cols-3 gap-3 mb-6">
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-slate-400 text-[10px] uppercase tracking-wide mb-1">Payable Days</p>
+          <p class="text-slate-700 font-semibold text-sm">{{ slip.payable_days|floatformat:0 }}</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-slate-400 text-[10px] uppercase tracking-wide mb-1">Present Days</p>
+          <p class="text-emerald-600 font-semibold text-sm">{{ slip.present_days|floatformat:1 }}</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-slate-400 text-[10px] uppercase tracking-wide mb-1">LOP Days</p>
+          <p class="text-red-500 font-semibold text-sm">{{ slip.lop_days|floatformat:1 }}</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+        <div>
+          <h3 class="text-slate-600 text-xs font-semibold uppercase tracking-wide mb-3">Earnings</h3>
+          <div class="space-y-2.5">
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">Basic Salary</span>
+              <span class="text-slate-700 font-medium">Rs. {{ slip.basic|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">HRA</span>
+              <span class="text-slate-700 font-medium">Rs. {{ slip.hra|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">Special Allowance</span>
+              <span class="text-slate-700 font-medium">Rs. {{ slip.special_allowance|floatformat:0 }}</span>
+            </div>
+            <div class="border-t border-slate-100 pt-2 flex justify-between text-sm font-semibold">
+              <span class="text-slate-700">Gross Salary</span>
+              <span class="text-emerald-600">Rs. {{ slip.gross_salary|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">Overtime ({{ slip.overtime_hours|floatformat:1 }} hrs)</span>
+              <span class="text-emerald-600 font-medium">+ Rs. {{ slip.overtime_amount|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">Bonus</span>
+              <span class="text-emerald-600 font-medium">+ Rs. {{ slip.bonus|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">Incentive</span>
+              <span class="text-emerald-600 font-medium">+ Rs. {{ slip.incentive|floatformat:0 }}</span>
+            </div>
+            <div class="border-t border-slate-100 pt-2 flex justify-between text-sm font-semibold">
+              <span class="text-slate-700">Total Earnings</span>
+              <span class="text-emerald-700">Rs. {{ slip.total_earnings|floatformat:0 }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-slate-600 text-xs font-semibold uppercase tracking-wide mb-3">Deductions</h3>
+          <div class="space-y-2.5">
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">PF Deduction</span>
+              <span class="text-red-500 font-medium">- Rs. {{ slip.pf_deduction|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">ESI Deduction</span>
+              <span class="text-red-500 font-medium">- Rs. {{ slip.esi_deduction|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">Professional Tax</span>
+              <span class="text-red-500 font-medium">- Rs. {{ slip.professional_tax|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">TDS</span>
+              <span class="text-red-500 font-medium">- Rs. {{ slip.tds|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">LOP ({{ slip.lop_days|floatformat:1 }} days)</span>
+              <span class="text-red-500 font-medium">- Rs. {{ slip.lop_amount|floatformat:0 }}</span>
+            </div>
+            <div class="border-t border-slate-100 pt-2 flex justify-between text-sm font-semibold">
+              <span class="text-slate-700">Total Deductions</span>
+              <span class="text-red-600">- Rs. {{ slip.total_deductions|floatformat:0 }}</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="mt-6 p-4 rounded-xl bg-brand-50 border border-brand-100">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <p class="text-slate-600 text-xs font-medium">Net Pay (Take Home)</p>
+            {% if slip.payment_date %}
+            <p class="text-slate-400 text-xs mt-0.5">Paid on {{ slip.payment_date|date:"d M Y" }}</p>
+            {% endif %}
+          </div>
+          <p class="text-brand-700 font-bold text-2xl">Rs. {{ slip.net_salary|floatformat:0 }}</p>
+        </div>
+      </div>
+
+      <p class="print-only text-center text-slate-400 text-[11px] mt-6">
+        This is a system-generated payslip issued by {{ site_settings.company_name|default:"DJ HRMS" }} and does not require a signature.
+      </p>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="no-print flex items-center gap-3 mt-5">
+    <a href="{% url 'portal_payslips' %}"
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+      <i class="fas fa-arrow-left text-xs"></i> Back
+    </a>
+
+    {% if slip.is_release_ready %}
+    <button onclick="window.print()"
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">
+      <i class="fas fa-print text-xs"></i> Print
+    </button>
+    <button onclick="window.print()"
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-brand-200 text-brand-700 text-sm font-medium hover:bg-brand-50">
+      <i class="fas fa-download text-xs"></i> Download PDF
+    </button>
+    {% else %}
+    <button disabled
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-slate-400 text-sm font-medium cursor-not-allowed"
+      title="Available once HR/Admin approves this payslip for release">
+      <i class="fas fa-lock text-xs"></i> Print / Download
+    </button>
+    {% endif %}
+  </div>
+
+</div>
+
+<style>
+  .print-only { display: none; }
+  @media print {
+    .print-only { display: block !important; }
+    #payslipDoc { border: none !important; box-shadow: none !important; }
+  }
+</style>
+{% endblock %}

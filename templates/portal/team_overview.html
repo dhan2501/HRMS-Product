@@ -1,0 +1,125 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}Team Overview{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="rounded-2xl p-5 sm:p-6 mb-5 text-white relative overflow-hidden" style="background: linear-gradient(135deg, #4338ca, #6366f1)">
+  <div class="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white opacity-5"></div>
+  <div class="relative flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-white font-bold text-xl">Team Overview</h1>
+      <p class="text-indigo-200 text-xs mt-1">{{ today|date:"d M Y" }} — aaj kaun present hai aur kaun kis project par kaam kar raha hai</p>
+    </div>
+    <div class="flex items-center gap-3 flex-wrap">
+      <div class="bg-white bg-opacity-15 rounded-xl px-4 py-2 text-center">
+        <p class="text-white font-bold text-lg leading-none">{{ team_count }}</p>
+        <p class="text-indigo-200 text-[10px] mt-1">Team Members</p>
+      </div>
+      <div class="bg-white bg-opacity-15 rounded-xl px-4 py-2 text-center">
+        <p class="text-white font-bold text-lg leading-none">{{ present_count }}</p>
+        <p class="text-indigo-200 text-[10px] mt-1">Present Today</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if not rows %}
+<div class="bg-white rounded-2xl border border-slate-100 p-14 text-center shadow-sm">
+  <div class="w-14 h-14 rounded-2xl bg-brand-50 flex items-center justify-center mx-auto mb-4">
+    <i class="fas fa-users-viewfinder text-brand-500 text-xl"></i>
+  </div>
+  <p class="text-slate-600 font-medium text-sm mb-1">No one reports to you yet</p>
+  <p class="text-slate-400 text-xs">Once HR assigns team members to you as their Reporting Manager, their attendance &amp; project status will show up here.</p>
+</div>
+{% else %}
+
+<!-- Status summary chips -->
+<div class="flex items-center gap-2 mb-5 flex-wrap">
+  <span class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+    <i class="fas fa-circle-check mr-1"></i>{{ present_count }} Present
+  </span>
+  <span class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+    <i class="fas fa-house-laptop mr-1"></i>{{ wfh_count }} WFH
+  </span>
+  <span class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+    <i class="fas fa-umbrella-beach mr-1"></i>{{ leave_count }} On Leave
+  </span>
+  <span class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+    <i class="fas fa-circle-xmark mr-1"></i>{{ absent_count }} Absent
+  </span>
+  <span class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+    <i class="fas fa-clock mr-1"></i>{{ not_marked_count }} Not Marked Yet
+  </span>
+</div>
+
+<!-- Team table -->
+<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+  <div class="px-5 py-3.5 border-b border-slate-100">
+    <h2 class="text-slate-700 font-semibold text-sm flex items-center gap-2">
+      <i class="fas fa-people-group text-brand-500"></i> Team — Today's Status &amp; Projects
+    </h2>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wide">
+        <tr>
+          <th class="text-left font-medium px-4 py-2.5">Employee</th>
+          <th class="text-left font-medium px-4 py-2.5">Designation</th>
+          <th class="text-left font-medium px-4 py-2.5">Today's Status</th>
+          <th class="text-left font-medium px-4 py-2.5">Check-in</th>
+          <th class="text-left font-medium px-4 py-2.5">Working On (Projects)</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for row in rows %}
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2.5">
+              {% if row.member.photo %}
+                <img src="{{ row.member.photo.url }}" class="w-8 h-8 rounded-full object-cover border border-slate-200">
+              {% else %}
+                <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-[11px] font-bold">
+                  {{ row.member.first_name|first|upper }}{{ row.member.last_name|first|upper }}
+                </div>
+              {% endif %}
+              <div class="min-w-0">
+                <p class="text-slate-700 font-medium text-sm truncate">{{ row.member.full_name }}</p>
+                <p class="text-slate-400 text-[11px] truncate">{{ row.member.employee_id }}</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3 text-slate-600 text-xs">{{ row.member.designation.title|default:"—" }}</td>
+          <td class="px-4 py-3">
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold
+              {% if row.status_color == 'emerald' %}bg-emerald-100 text-emerald-700
+              {% elif row.status_color == 'blue' %}bg-blue-100 text-blue-700
+              {% elif row.status_color == 'amber' %}bg-amber-100 text-amber-700
+              {% elif row.status_color == 'red' %}bg-red-100 text-red-700
+              {% else %}bg-slate-100 text-slate-500{% endif %}">
+              {{ row.status }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-slate-600 text-xs">
+            {% if row.check_in %}{{ row.check_in|time:"h:i A" }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+          </td>
+          <td class="px-4 py-3">
+            {% if row.projects %}
+              <div class="flex flex-wrap gap-1.5">
+                {% for proj in row.projects %}
+                <span class="text-[11px] font-medium px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600">{{ proj.name }}</span>
+                {% endfor %}
+              </div>
+            {% else %}
+              <span class="text-slate-300 text-xs">No active project</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}

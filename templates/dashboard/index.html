@@ -1,0 +1,598 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Welcome back! Here's what's happening today.{% endblock %}
+
+{% block content %}
+
+<!-- ============ Greeting strip — employee-portal style gradient card ============ -->
+<div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-500 text-white px-6 py-5 mb-6 flex flex-wrap items-center justify-between gap-4 shadow-lg shadow-indigo-500/20">
+  <!-- Subtle dot-grid texture overlay, jaise employee portal card mein hota hai -->
+  <div class="absolute inset-0 opacity-[0.15] pointer-events-none"
+       style="background-image: radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 1px); background-size: 18px 18px;"></div>
+  <div class="absolute inset-0 opacity-30 pointer-events-none"
+       style="background: radial-gradient(circle at 90% 10%, rgba(255,255,255,0.25), transparent 45%);"></div>
+
+  <!-- Left: Avatar + greeting + name/role -->
+  <div class="relative z-10 flex items-center gap-4 min-w-0">
+    <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/15 ring-2 ring-white/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+      {% if request.user.profile_photo %}
+        <img src="{{ request.user.profile_photo.url }}" alt="{{ request.user.get_full_name }}"
+             class="w-full h-full object-cover">
+      {% else %}
+        <span class="text-xl sm:text-2xl font-bold text-white">
+          {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+        </span>
+      {% endif %}
+    </div>
+    <div class="min-w-0">
+      <p id="clockGreeting" class="text-indigo-100 text-xs sm:text-sm font-medium">Welcome back</p>
+      <p class="text-white text-lg sm:text-xl font-bold mt-0.5 truncate">
+        {{ request.user.get_full_name|default:request.user.username }}
+      </p>
+      <p class="text-indigo-100 text-xs mt-1 flex items-center gap-1.5 truncate">
+        <span>Administrator</span>
+        <span class="w-1 h-1 bg-indigo-200 rounded-full flex-shrink-0"></span>
+        <span class="truncate">{{ request.user.username }}</span>
+      </p>
+    </div>
+  </div>
+
+  <!-- Right: Date + live clock (kept as-is, sirf style match kiya) -->
+  <div class="relative z-10 flex items-center gap-3 sm:gap-4">
+    <div class="text-right hidden sm:block">
+      <p class="text-indigo-100 text-xs font-medium">Today</p>
+      <p class="text-white text-sm font-semibold">{{ today|date:"D, d M Y" }}</p>
+    </div>
+    <div class="hidden sm:block w-px h-10 bg-white/20"></div>
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-clock text-white"></i>
+      </div>
+      <div>
+        <p id="liveClock" class="text-2xl sm:text-3xl font-bold tabular-nums tracking-tight leading-none text-white">--:--:--</p>
+        <p id="liveClockMeta" class="text-indigo-100 text-xs mt-1">{{ today|date:"l, d F Y" }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stats row -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+  <div class="stat-card bg-white rounded-xl p-5 border border-slate-100 border-t-[3px] border-t-brand-500 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-slate-500 text-xs font-medium">Total Employees</p>
+        <p class="text-3xl font-bold text-slate-800 mt-1 tabular-nums">{{ total_employees }}</p>
+        <p class="text-emerald-600 text-xs font-medium mt-1.5"><i class="fas fa-arrow-trend-up mr-1"></i>+3 this month</p>
+      </div>
+      <div class="w-11 h-11 bg-brand-50 rounded-xl flex items-center justify-center">
+        <i class="fas fa-users text-brand-600"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-card bg-white rounded-xl p-5 border border-slate-100 border-t-[3px] border-t-emerald-500 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-slate-500 text-xs font-medium">Present Today</p>
+        <p class="text-3xl font-bold text-slate-800 mt-1 tabular-nums">{{ today_present }}</p>
+        <p class="text-slate-400 text-xs font-medium mt-1.5"><i class="fas fa-calendar-day mr-1"></i>{{ today|date:"D, d M" }}</p>
+      </div>
+      <div class="w-11 h-11 bg-emerald-50 rounded-xl flex items-center justify-center">
+        <i class="fas fa-circle-check text-emerald-600"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-card bg-white rounded-xl p-5 border border-slate-100 border-t-[3px] border-t-amber-500 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-slate-500 text-xs font-medium">Pending Leaves</p>
+        <p class="text-3xl font-bold text-slate-800 mt-1 tabular-nums">{{ pending_leaves }}</p>
+        <p class="text-amber-600 text-xs font-medium mt-1.5"><i class="fas fa-hourglass-half mr-1"></i>Needs approval</p>
+      </div>
+      <div class="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center">
+        <i class="fas fa-umbrella-beach text-amber-600"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-card bg-white rounded-xl p-5 border border-slate-100 border-t-[3px] border-t-purple-500 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-slate-500 text-xs font-medium">Departments</p>
+        <p class="text-3xl font-bold text-slate-800 mt-1 tabular-nums">{{ departments.count }}</p>
+        <p class="text-slate-400 text-xs font-medium mt-1.5"><i class="fas fa-sitemap mr-1"></i>Active units</p>
+      </div>
+      <div class="w-11 h-11 bg-purple-50 rounded-xl flex items-center justify-center">
+        <i class="fas fa-sitemap text-purple-600"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if is_super_admin or on_leave_today or absent_today %}
+<!-- Who's Absent Today (Super Admin: everyone · Reporting Manager: own team) -->
+<div class="bg-white rounded-2xl border border-slate-100 p-5 mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h2 class="text-slate-700 font-semibold text-sm">
+        <i class="fas fa-user-clock text-rose-500 mr-1.5"></i>
+        {% if is_super_admin %}Who's Absent Today{% else %}My Team — Absent Today{% endif %}
+      </h2>
+      <p class="text-slate-400 text-xs mt-0.5">{{ today|date:"l, d M Y" }}</p>
+    </div>
+    {% if not is_working_day %}
+      <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-500">
+        {% if today_holiday %}Holiday · {{ today_holiday.name }}{% else %}Weekend{% endif %}
+      </span>
+    {% endif %}
+  </div>
+
+  {% if not is_working_day %}
+    <p class="text-slate-400 text-sm text-center py-4">
+      Today {% if today_holiday %}is a holiday ({{ today_holiday.name }}){% else %}is a weekend{% endif %} —
+      attendance isn't tracked.
+    </p>
+  {% else %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <p class="text-slate-500 text-xs font-medium mb-3">
+          Absent <span class="text-slate-400">({{ absent_today.count }})</span>
+        </p>
+        <div class="space-y-0 max-h-56 overflow-y-auto pr-1">
+          {% for emp in absent_today %}
+          <div class="flex items-center gap-2.5 py-2 border-l-2 border-rose-300 pl-3">
+            {% if emp.photo %}
+            <img src="{{ emp.photo.url }}" alt="{{ emp.full_name }}"
+                 class="w-7 h-7 rounded-full object-cover ring-2 ring-rose-100 flex-shrink-0">
+            {% else %}
+            <div class="w-7 h-7 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-[11px] font-bold flex-shrink-0">
+              {{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}
+            </div>
+            {% endif %}
+            <div class="min-w-0">
+              <p class="text-slate-700 text-xs font-medium truncate">{{ emp.full_name }}</p>
+              <p class="text-slate-400 text-[10px] truncate">{{ emp.department.name|default:"—" }}</p>
+            </div>
+          </div>
+          {% empty %}
+          <p class="text-slate-400 text-xs py-2">Everyone's present today 🎉</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div>
+        <p class="text-slate-500 text-xs font-medium mb-3">
+          On Approved Leave <span class="text-slate-400">({{ on_leave_today.count }})</span>
+        </p>
+        <div class="space-y-0 max-h-56 overflow-y-auto pr-1">
+          {% for emp in on_leave_today %}
+          <div class="flex items-center gap-2.5 py-2 border-l-2 border-amber-300 pl-3">
+            {% if emp.photo %}
+            <img src="{{ emp.photo.url }}" alt="{{ emp.full_name }}"
+                 class="w-7 h-7 rounded-full object-cover ring-2 ring-amber-100 flex-shrink-0">
+            {% else %}
+            <div class="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[11px] font-bold flex-shrink-0">
+              {{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}
+            </div>
+            {% endif %}
+            <div class="min-w-0">
+              <p class="text-slate-700 text-xs font-medium truncate">{{ emp.full_name }}</p>
+              <p class="text-slate-400 text-[10px] truncate">{{ emp.department.name|default:"—" }}</p>
+            </div>
+          </div>
+          {% empty %}
+          <p class="text-slate-400 text-xs py-2">No one on leave today</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Charts + quick info -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
+
+  <!-- ============ Departments — segmented bar + tile grid ============ -->
+  <div class="xl:col-span-1 bg-white rounded-2xl border border-slate-100 p-5 flex flex-col">
+    <div class="flex items-center justify-between mb-1">
+      <h2 class="text-slate-700 font-semibold text-sm">Departments</h2>
+      <a href="{% url 'department_list' %}" class="text-brand-600 text-xs font-medium hover:underline">View all</a>
+    </div>
+    <p class="text-slate-400 text-xs mb-4">{{ departments.count }} departments · {{ total_employees }} employees</p>
+
+    <!-- Proportional segmented bar — poora headcount ek nazar mein -->
+    <div class="h-3 w-full rounded-full overflow-hidden flex bg-slate-100 mb-4">
+      {% for dept in departments %}{% if dept.emp_count > 0 %}
+      <div class="h-full {% cycle 'bg-brand-500' 'bg-emerald-500' 'bg-amber-500' 'bg-purple-500' 'bg-pink-500' 'bg-sky-500' 'bg-rose-500' 'bg-teal-500' %}"
+           style="width: {% widthratio dept.emp_count total_employees 100 %}%; min-width: 4px;"
+           title="{{ dept.name }}: {{ dept.emp_count }}"></div>
+      {% endif %}{% endfor %}
+    </div>
+
+    <!-- Tile grid — staffed departments pehle (biggest se chhote), phir unstaffed dashed tiles -->
+    <div class="grid grid-cols-2 gap-2.5 flex-1 content-start overflow-y-auto max-h-72 pr-0.5">
+      {% for dept in departments %}
+        {% if dept.emp_count > 0 %}
+        <div class="rounded-xl border border-slate-100 border-l-4 p-3
+          {% cycle 'border-l-brand-500' 'border-l-emerald-500' 'border-l-amber-500' 'border-l-purple-500' 'border-l-pink-500' 'border-l-sky-500' 'border-l-rose-500' 'border-l-teal-500' %}
+          hover:bg-slate-50/70 transition-colors">
+          <p class="text-slate-600 text-xs font-medium truncate">{{ dept.name }}</p>
+          <div class="flex items-end justify-between mt-1.5">
+            <span class="text-slate-800 text-xl font-bold tabular-nums leading-none">{{ dept.emp_count }}</span>
+            <span class="text-slate-400 text-[10px] tabular-nums">{% widthratio dept.emp_count total_employees 100 %}%</span>
+          </div>
+        </div>
+        {% endif %}
+      {% empty %}
+        <p class="text-slate-400 text-sm text-center py-4 col-span-2">No departments yet</p>
+      {% endfor %}
+
+      {% for dept in departments %}
+        {% if dept.emp_count == 0 %}
+        <div class="rounded-xl border border-dashed border-slate-200 p-3">
+          <p class="text-slate-400 text-xs font-medium truncate">{{ dept.name }}</p>
+          <p class="text-slate-300 text-[10px] mt-1.5">Unstaffed</p>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ============ Attendance Overview (real data, stacked chart) ============ -->
+  <div class="xl:col-span-2 bg-white rounded-2xl border border-slate-100 p-5">
+    <div class="flex items-center justify-between mb-1">
+      <div>
+        <h2 class="text-slate-700 font-semibold text-sm">Attendance Overview</h2>
+        <p class="text-slate-400 text-xs mt-0.5">
+          {% if attendance_range_label %}{{ attendance_range_label }}{% else %}Last 7 working days{% endif %}
+        </p>
+      </div>
+      <select id="attendanceRangeSelect" class="text-xs border border-slate-200 rounded-lg px-2 py-1 text-slate-600 focus:outline-none focus:border-brand-300">
+        <option value="week" {% if attendance_range == 'month' %}{% else %}selected{% endif %}>This Week</option>
+        <option value="month" {% if attendance_range == 'month' %}selected{% endif %}>This Month</option>
+      </select>
+    </div>
+
+    {% if attendance_data %}
+    <div class="mt-2">
+      <canvas id="attendanceChart" height="120"></canvas>
+    </div>
+    <div class="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100">
+      <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-brand-500 inline-block"></span><span class="text-slate-500 text-xs">Present</span></div>
+      <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span><span class="text-slate-500 text-xs">Late</span></div>
+      <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block"></span><span class="text-slate-500 text-xs">Absent</span></div>
+      <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-100 border border-amber-300 inline-block"></span><span class="text-slate-500 text-xs">Leave</span></div>
+    </div>
+    {% else %}
+    <div class="h-40 flex flex-col items-center justify-center text-center">
+      <div class="w-11 h-11 bg-slate-50 rounded-xl flex items-center justify-center mb-2">
+        <i class="fas fa-chart-column text-slate-300"></i>
+      </div>
+      <p class="text-slate-500 text-sm font-medium">No attendance data yet</p>
+      <p class="text-slate-400 text-xs">Once employees start checking in, this chart fills in automatically.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Recent employees + pending leaves -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+  <!-- Recent employees -->
+  <div class="bg-white rounded-2xl border border-slate-100 p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-slate-700 font-semibold text-sm">Recent Employees</h2>
+      <a href="{% url 'employee_list' %}" class="text-brand-600 text-xs font-medium hover:underline">View all</a>
+    </div>
+    <div class="space-y-1">
+      {% for emp in recent_employees %}
+      <div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer">
+        {% if emp.photo %}
+        <img src="{{ emp.photo.url }}" alt="{{ emp.full_name }}"
+             class="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2
+             {% if emp.status == 'active' %}ring-emerald-200{% elif emp.status == 'on_leave' %}ring-amber-200{% else %}ring-slate-200{% endif %}">
+        {% else %}
+        <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
+          {% cycle 'bg-brand-100 text-brand-700' 'bg-emerald-100 text-emerald-700' 'bg-amber-100 text-amber-700' 'bg-purple-100 text-purple-700' 'bg-pink-100 text-pink-700' %}">
+          {{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}
+        </div>
+        {% endif %}
+        <div class="flex-1 min-w-0">
+          <p class="text-slate-700 text-sm font-medium truncate">{{ emp.full_name }}</p>
+          <p class="text-slate-400 text-xs truncate">{{ emp.designation.title|default:"—" }} · {{ emp.department.name|default:"—" }}</p>
+        </div>
+        <span class="text-[10px] px-2 py-0.5 rounded-full font-medium
+          {% if emp.status == 'active' %}bg-emerald-100 text-emerald-700
+          {% elif emp.status == 'on_leave' %}bg-amber-100 text-amber-700
+          {% else %}bg-slate-100 text-slate-500{% endif %}">
+          {{ emp.get_status_display }}
+        </span>
+      </div>
+      {% empty %}
+      <p class="text-slate-400 text-sm text-center py-6">No employees yet. <a href="#" class="text-brand-600 hover:underline">Add first employee</a></p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Pending leaves -->
+  <div class="bg-white rounded-2xl border border-slate-100 p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-slate-700 font-semibold text-sm">Pending Leave Requests</h2>
+      <span class="bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full">{{ pending_leaves }}</span>
+    </div>
+    <div class="space-y-3">
+      {% for leave in recent_leaves %}
+      <div class="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-brand-200 transition-colors">
+        {% if leave.employee.photo %}
+        <img src="{{ leave.employee.photo.url }}" alt="{{ leave.employee.full_name }}"
+             class="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-0.5">
+        {% else %}
+        <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <i class="fas fa-calendar-xmark text-amber-600 text-xs"></i>
+        </div>
+        {% endif %}
+        <div class="flex-1 min-w-0">
+          <p class="text-slate-700 text-sm font-medium truncate">{{ leave.employee.full_name }}</p>
+          <p class="text-slate-400 text-xs">{{ leave.leave_type.name }} · {{ leave.days }} day(s)</p>
+          <p class="text-slate-400 text-xs">{{ leave.start_date|date:"d M" }} — {{ leave.end_date|date:"d M Y" }}</p>
+        </div>
+        <div class="flex gap-1.5 flex-shrink-0">
+          <form method="post" action="{% url 'approve_leave' leave.pk %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors text-xs" title="Approve">
+              <i class="fas fa-check"></i>
+            </button>
+          </form>
+          <button type="button" onclick="quickReject({{ leave.pk }}, '{{ leave.employee.full_name|escapejs }}')"
+            class="w-7 h-7 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors text-xs" title="Reject">
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+      {% empty %}
+      <div class="text-center py-6">
+        <div class="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-2">
+          <i class="fas fa-circle-check text-emerald-500 text-lg"></i>
+        </div>
+        <p class="text-slate-500 text-sm font-medium">All caught up!</p>
+        <p class="text-slate-400 text-xs">No pending leave requests</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Quick Reject Modal -->
+<div id="quickRejectModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl w-full max-w-md shadow-xl p-6">
+    <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+      <i class="fas fa-circle-xmark text-red-500 text-lg"></i>
+    </div>
+    <h3 class="text-slate-800 font-semibold text-center mb-1">Reject Leave Request</h3>
+    <p class="text-slate-500 text-sm text-center mb-4">
+      For <span id="quickRejectEmpName" class="font-medium text-slate-700"></span>
+    </p>
+    <form method="post" id="quickRejectForm">
+      {% csrf_token %}
+      <textarea name="rejection_reason" rows="3"
+        placeholder="Reason for rejection (optional)…"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-red-300 resize-none mb-4"></textarea>
+      <div class="flex gap-3">
+        <button type="button" onclick="document.getElementById('quickRejectModal').classList.add('hidden')"
+          class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+          Cancel
+        </button>
+        <button type="submit"
+          class="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600">
+          Reject
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ============ Super-admin snapshot (asymmetric bento) ============ -->
+{% if is_super_admin %}
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-6">
+
+  <!-- Featured: Attendance % (spans 2 cols) -->
+  <div class="lg:col-span-2 rounded-2xl p-6 bg-gradient-to-br from-emerald-600 to-emerald-500 text-white flex flex-col justify-between">
+    <div class="flex items-center justify-between">
+      <p class="text-emerald-50 text-xs font-medium">Attendance Today</p>
+      <div class="w-9 h-9 bg-white/15 rounded-lg flex items-center justify-center">
+        <i class="fas fa-percent text-white text-sm"></i>
+      </div>
+    </div>
+    <p class="text-5xl font-bold mt-4 tabular-nums">{{ attendance_pct }}%</p>
+    <p class="text-emerald-50 text-xs mt-3">{{ today_present }} of {{ total_employees }} employees checked in</p>
+  </div>
+
+  <div class="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-5">
+    <div class="stat-card bg-white rounded-xl p-5 border border-slate-100">
+      <div class="w-9 h-9 bg-amber-50 rounded-lg flex items-center justify-center mb-3">
+        <i class="fas fa-user-clock text-amber-600 text-sm"></i>
+      </div>
+      <p class="text-slate-500 text-xs font-medium">Late Today</p>
+      <p class="text-2xl font-bold text-slate-800 mt-1 tabular-nums">{{ late_today }}</p>
+    </div>
+
+    <div class="stat-card bg-white rounded-xl p-5 border border-slate-100">
+      <div class="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center mb-3">
+        <i class="fas fa-money-bill-wave text-indigo-600 text-sm"></i>
+      </div>
+      <p class="text-slate-500 text-xs font-medium">Payroll Cost</p>
+      <p class="text-2xl font-bold text-slate-800 mt-1 tabular-nums">₹{{ payroll_cost.amount|floatformat:0 }}</p>
+      <p class="text-slate-400 text-[10px] mt-1">{% if payroll_cost.source == 'payslip' %}This month (actual){% else %}This month (est.){% endif %}</p>
+    </div>
+
+    <div class="stat-card bg-white rounded-xl p-5 border border-slate-100">
+      <div class="w-9 h-9 bg-sky-50 rounded-lg flex items-center justify-center mb-3">
+        <i class="fas fa-business-time text-sky-600 text-sm"></i>
+      </div>
+      <p class="text-slate-500 text-xs font-medium">Overtime</p>
+      <p class="text-2xl font-bold text-slate-800 mt-1 tabular-nums">{{ overtime.hours|floatformat:1 }}h</p>
+      <p class="text-slate-400 text-[10px] mt-1">₹{{ overtime.amount|floatformat:0 }} this month</p>
+    </div>
+
+    <div class="stat-card bg-white rounded-xl p-5 border border-slate-100 sm:col-span-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-rose-50 rounded-lg flex items-center justify-center">
+            <i class="fas fa-person-walking-arrow-right text-rose-600 text-sm"></i>
+          </div>
+          <div>
+            <p class="text-slate-500 text-xs font-medium">Attrition</p>
+            <p class="text-2xl font-bold text-slate-800 tabular-nums">{{ attrition.rate_percent }}%</p>
+          </div>
+        </div>
+        <p class="text-rose-600 text-xs font-medium"><i class="fas fa-arrow-trend-down mr-1"></i>{{ attrition.left_this_month }} left this month</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ============ Leave trends chart (real data, Chart.js) ============ -->
+{% if is_super_admin %}
+<div class="bg-white rounded-2xl border border-slate-100 p-5 mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-slate-700 font-semibold text-sm">Leave Trends (last 6 months)</h2>
+  </div>
+  <canvas id="leaveTrendsChart" height="90"></canvas>
+</div>
+
+<script>
+(function () {
+  const labels = [{% for t in leave_trends %}"{{ t.label }} {{ t.year }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const counts = [{% for t in leave_trends %}{{ t.count }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const days   = [{% for t in leave_trends %}{{ t.days }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+
+  const ctx = document.getElementById('leaveTrendsChart');
+  if (ctx && window.Chart) {
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Approved Requests',
+            data: counts,
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99,102,241,0.1)',
+            tension: 0.35,
+            fill: true,
+          },
+          {
+            label: 'Total Leave Days',
+            data: days,
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245,158,11,0.08)',
+            tension: 0.35,
+            fill: true,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+})();
+</script>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const REJECT_URL_TEMPLATE = "{% url 'reject_leave' 0 %}";  // -> /leaves/0/reject/
+
+function quickReject(pk, name) {
+  document.getElementById('quickRejectEmpName').textContent = name;
+  document.getElementById('quickRejectForm').action = REJECT_URL_TEMPLATE.replace('/0/', '/' + pk + '/');
+  document.getElementById('quickRejectModal').classList.remove('hidden');
+}
+
+// Live clock + time-of-day greeting (greeting strip ke naye layout ke saath compatible)
+function tickClock() {
+  const now = new Date();
+  const clockEl = document.getElementById('liveClock');
+  const greetEl = document.getElementById('clockGreeting');
+  if (!clockEl) return;
+
+  clockEl.textContent = now.toLocaleTimeString('en-IN', { hour12: true });
+
+  const hr = now.getHours();
+  let greeting = 'Good evening';
+  if (hr < 12) greeting = 'Good morning';
+  else if (hr < 17) greeting = 'Good afternoon';
+  if (greetEl) greetEl.textContent = greeting;
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+// ============ Attendance Overview — real data, stacked bar chart ============
+(function () {
+  const ctx = document.getElementById('attendanceChart');
+  if (!ctx || !window.Chart) return;
+
+  const labels  = [{% for d in attendance_data %}"{{ d.day }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const present = [{% for d in attendance_data %}{{ d.present|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const late    = [{% for d in attendance_data %}{{ d.late|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const absent  = [{% for d in attendance_data %}{{ d.absent|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const leave   = [{% for d in attendance_data %}{{ d.on_leave|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Present', data: present, backgroundColor: '#6366f1', borderRadius: 4, stack: 'attendance' },
+        { label: 'Late',    data: late,    backgroundColor: '#fbbf24', borderRadius: 4, stack: 'attendance' },
+        { label: 'On Leave',data: leave,   backgroundColor: '#fde68a', borderRadius: 4, stack: 'attendance' },
+        { label: 'Absent',  data: absent,  backgroundColor: '#cbd5e1', borderRadius: 4, stack: 'attendance' }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            footer: function (items) {
+              const total = items.reduce((sum, i) => sum + i.parsed.y, 0);
+              return 'Total: ' + total;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
+  });
+
+  // Range toggle re-loads the page with the chosen range so the server
+  // can return the right window of attendance_data.
+  const rangeSelect = document.getElementById('attendanceRangeSelect');
+  if (rangeSelect) {
+    rangeSelect.addEventListener('change', function () {
+      const url = new URL(window.location.href);
+      url.searchParams.set('attendance_range', this.value);
+      window.location.href = url.toString();
+    });
+  }
+})();
+</script>
+{% endblock %}

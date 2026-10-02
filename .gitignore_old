@@ -1,0 +1,53 @@
+# ===== Virtual environment (sabse bada culprit ~181MB) =====
+venv/
+env/
+ENV/
+.venv/
+
+# ===== Python cache/compiled files (542 __pycache__ folders mile) =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# ===== Django database files =====
+db.sqlite3
+db.sqlite3-journal
+tenant_databases/*.sqlite3
+
+# ===== Django collected static (generated via collectstatic, source 'static/' rakho) =====
+staticfiles/
+
+# ===== Media / user uploads (agar production data hai to ye bhi push nahi karna chahiye) =====
+media/
+
+# ===== Environment / secret files =====
+.env
+.env copy
+.env.*
+!.env.example
+
+# ===== Logs =====
+*.log
+
+# ===== IDE / editor files =====
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ===== OS files =====
+.DS_Store
+Thumbs.db
+
+# ===== Django migrations backup / misc =====
+*.pot
+
+# ===== Coverage / test artifacts =====
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+
+# ===== Node (agar future me frontend build add ho) =====
+node_modules/

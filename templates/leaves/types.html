@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block title %}Leave Types{% endblock %}
+{% block page_title %}Leave Types{% endblock %}
+{% block page_subtitle %}Manage leave categories{% endblock %}
+
+{% block content %}
+
+<div class="flex items-center justify-between mb-5">
+  <p class="text-slate-500 text-sm">
+    <span class="font-semibold text-slate-700">{{ types.count }}</span> leave type(s)
+  </p>
+  <a href="{% url 'add_leave_type' %}"
+    class="inline-flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors">
+    <i class="fas fa-plus text-xs"></i> Add Leave Type
+  </a>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+  {% for lt in types %}
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 hover:border-brand-200 hover:shadow-sm transition-all">
+    <div class="flex items-start justify-between mb-3">
+      <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+        <i class="fas fa-umbrella-beach text-amber-500 text-sm"></i>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold
+          {% if lt.is_paid %}bg-emerald-100 text-emerald-700{% else %}bg-red-100 text-red-500{% endif %}">
+          {% if lt.is_paid %}PAID{% else %}UNPAID{% endif %}
+        </span>
+        <span class="bg-slate-100 text-slate-600 text-xs font-mono px-2 py-0.5 rounded-lg">{{ lt.code }}</span>
+      </div>
+    </div>
+
+    <h3 class="text-slate-800 font-semibold text-sm mb-1">{{ lt.name }}</h3>
+    <p class="text-slate-400 text-xs mb-3">{{ lt.description|default:"No description"|truncatechars:60 }}</p>
+
+    <div class="space-y-1.5 mb-4">
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-500">Days Allowed</span>
+        <span class="font-semibold text-slate-700">{{ lt.days_allowed }} days/year</span>
+      </div>
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-slate-500">Carry Forward</span>
+        <span class="font-semibold {% if lt.carry_forward %}text-emerald-600{% else %}text-slate-400{% endif %}">
+          {% if lt.carry_forward %}Yes (max {{ lt.max_carry_forward_days }} days){% else %}No{% endif %}
+        </span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 pt-3 border-t border-slate-100">
+      <a href="{% url 'edit_leave_type' lt.pk %}"
+        class="flex-1 text-center text-xs font-medium text-brand-600 hover:underline py-1">
+        <i class="fas fa-pencil mr-1 text-[10px]"></i>Edit
+      </a>
+      <span class="text-slate-200">|</span>
+      <button onclick="confirmDelete('{{ lt.name }}', '{% url 'delete_leave_type' lt.pk %}')"
+        class="flex-1 text-center text-xs font-medium text-red-500 hover:underline py-1">
+        <i class="fas fa-trash mr-1 text-[10px]"></i>Delete
+      </button>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-span-3 bg-white rounded-2xl border border-slate-100 py-16 text-center">
+    <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+      <i class="fas fa-umbrella-beach text-slate-300 text-xl"></i>
+    </div>
+    <p class="text-slate-500 font-medium text-sm">No leave types yet</p>
+    <p class="text-slate-400 text-xs mt-1 mb-4">Create leave types like Casual, Sick, Earned etc.</p>
+    <a href="{% url 'add_leave_type' %}"
+      class="inline-flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-brand-700">
+      <i class="fas fa-plus text-xs"></i> Add First Leave Type
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+  <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+    <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+      <i class="fas fa-trash text-red-500 text-lg"></i>
+    </div>
+    <h3 class="text-slate-800 font-semibold text-center mb-1">Delete Leave Type?</h3>
+    <p class="text-slate-500 text-sm text-center mb-5">
+      "<span id="ltName" class="font-medium text-slate-700"></span>" will be permanently deleted.
+    </p>
+    <div class="flex gap-3">
+      <button onclick="document.getElementById('deleteModal').classList.add('hidden')"
+        class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+        Cancel
+      </button>
+      <form id="deleteForm" method="post" class="flex-1">
+        {% csrf_token %}
+        <button type="submit"
+          class="w-full px-4 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600">
+          Delete
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(name, url) {
+  document.getElementById('ltName').textContent = name;
+  document.getElementById('deleteForm').action = url;
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}

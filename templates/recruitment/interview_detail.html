@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Interview Detail{% endblock %}
+{% block page_title %}Interview Detail{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  <div class="bg-white rounded-2xl border border-slate-100 p-6">
+
+    <!-- Header -->
+    <div class="flex items-center gap-4 mb-6 pb-5 border-b border-slate-100">
+      <div class="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center text-lg font-bold">
+        {{ interview.candidate.first_name|first|upper }}{{ interview.candidate.last_name|first|upper }}
+      </div>
+      <div>
+        <h2 class="text-slate-800 font-bold text-base">{{ interview.candidate.full_name }}</h2>
+        <p class="text-slate-500 text-sm">{{ interview.get_interview_type_display }} &bull; {{ interview.candidate.job.title }}</p>
+        <p class="text-slate-400 text-xs mt-0.5">{{ interview.scheduled_at|date:"d M Y, H:i" }} &bull; {{ interview.duration_minutes }} min &bull; {{ interview.location }}</p>
+      </div>
+    </div>
+
+    <!-- Update Form -->
+    <form method="post">
+      {% csrf_token %}
+      <div class="space-y-4">
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Interview Status</label>
+          <select name="status" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 bg-white">
+            <option value="scheduled" {% if interview.status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+            <option value="completed" {% if interview.status == 'completed' %}selected{% endif %}>Completed</option>
+            <option value="cancelled" {% if interview.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            <option value="rescheduled" {% if interview.status == 'rescheduled' %}selected{% endif %}>Rescheduled</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-2">Rating</label>
+          <div class="grid grid-cols-5 gap-2">
+            {% for val, label in interview.RATING_CHOICES %}
+            <label class="cursor-pointer">
+              <input type="radio" name="rating" value="{{ val }}"
+                {% if interview.rating == val %}checked{% endif %}
+                class="peer hidden">
+              <div class="text-center border-2 border-slate-200 rounded-xl py-2 peer-checked:border-brand-500 peer-checked:bg-brand-50 hover:border-brand-300 transition-all">
+                <p class="text-lg">{% if val == 1 %}😞{% elif val == 2 %}😐{% elif val == 3 %}🙂{% elif val == 4 %}😊{% else %}🤩{% endif %}</p>
+                <p class="text-[9px] font-semibold text-slate-600 mt-0.5">{{ val }}/5</p>
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Feedback / Notes</label>
+          <textarea name="feedback" rows="4"
+            placeholder="Interview feedback, candidate performance..."
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 resize-none">{{ interview.feedback }}</textarea>
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+          <a href="{% url 'candidate_detail' interview.candidate.pk %}"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+            <i class="fas fa-arrow-left text-xs"></i> Back
+          </a>
+          <button type="submit"
+            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90"
+            style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+            <i class="fas fa-floppy-disk text-xs"></i> Save Changes
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}Expense Reports{% endblock %}
+{% block page_title %}Expense Reports{% endblock %}
+{% block page_subtitle %}{{ month_name }} {{ year }}{% endblock %}
+
+{% block content %}
+
+<!-- Month Navigation -->
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+  <div class="flex items-center gap-2">
+    <a href="?month={{ prev_month }}&year={{ prev_year }}"
+      class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50">
+      <i class="fas fa-chevron-left text-xs"></i>
+    </a>
+    <span class="text-slate-700 font-semibold text-sm px-2">{{ month_name }} {{ year }}</span>
+    <a href="?month={{ next_month }}&year={{ next_year }}"
+      class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50">
+      <i class="fas fa-chevron-right text-xs"></i>
+    </a>
+  </div>
+  <a href="{% url 'expense_requests' %}"
+    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+    <i class="fas fa-list text-xs"></i> All Claims
+  </a>
+</div>
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-5">
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 flex items-center gap-3">
+    <div class="w-11 h-11 bg-brand-50 rounded-xl flex items-center justify-center">
+      <i class="fas fa-wallet text-brand-600"></i>
+    </div>
+    <div>
+      <p class="text-slate-500 text-xs">Total Claimed</p>
+      <p class="text-xl font-bold text-slate-800">Rs.{{ total_amount|floatformat:0 }}</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 flex items-center gap-3">
+    <div class="w-11 h-11 bg-emerald-50 rounded-xl flex items-center justify-center">
+      <i class="fas fa-money-bill-transfer text-emerald-600"></i>
+    </div>
+    <div>
+      <p class="text-slate-500 text-xs">Reimbursed</p>
+      <p class="text-xl font-bold text-slate-800">Rs.{{ reimbursed_amount|floatformat:0 }}</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 flex items-center gap-3">
+    <div class="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center">
+      <i class="fas fa-hourglass-half text-amber-600"></i>
+    </div>
+    <div>
+      <p class="text-slate-500 text-xs">In Pipeline</p>
+      <p class="text-xl font-bold text-slate-800">Rs.{{ pending_amount|floatformat:0 }}</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 flex items-center gap-3">
+    <div class="w-11 h-11 bg-slate-50 rounded-xl flex items-center justify-center">
+      <i class="fas fa-file-lines text-slate-500"></i>
+    </div>
+    <div>
+      <p class="text-slate-500 text-xs">Total Claims</p>
+      <p class="text-xl font-bold text-slate-800">{{ total_claims }}</p>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+  <!-- Category-wise breakup -->
+  <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100">
+      <h2 class="text-slate-700 font-semibold text-sm">Category-wise Breakup</h2>
+    </div>
+    <div class="divide-y divide-slate-50">
+      {% for row in category_breakup %}
+      <div class="px-5 py-3.5 flex items-center justify-between">
+        <div>
+          <p class="text-slate-700 text-sm font-medium">{{ row.label }}</p>
+          <p class="text-slate-400 text-xs">{{ row.count }} claim{{ row.count|pluralize }}</p>
+        </div>
+        <p class="text-slate-800 font-semibold text-sm">Rs.{{ row.total|floatformat:0 }}</p>
+      </div>
+      {% empty %}
+      <div class="py-10 text-center text-slate-400 text-sm">No expense claims for this month.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Department-wise breakup -->
+  <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100">
+      <h2 class="text-slate-700 font-semibold text-sm">Department-wise Breakup</h2>
+    </div>
+    <div class="divide-y divide-slate-50">
+      {% for row in department_breakup %}
+      <div class="px-5 py-3.5 flex items-center justify-between">
+        <div>
+          <p class="text-slate-700 text-sm font-medium">{{ row.employee__department__name|default:"Unassigned" }}</p>
+          <p class="text-slate-400 text-xs">{{ row.count }} claim{{ row.count|pluralize }}</p>
+        </div>
+        <p class="text-slate-800 font-semibold text-sm">Rs.{{ row.total|floatformat:0 }}</p>
+      </div>
+      {% empty %}
+      <div class="py-10 text-center text-slate-400 text-sm">No expense claims for this month.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

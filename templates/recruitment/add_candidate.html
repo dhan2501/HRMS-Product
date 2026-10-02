@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block title %}Add Candidate{% endblock %}
+{% block page_title %}Add New Candidate{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+  <div class="bg-white rounded-2xl border border-slate-100 p-6">
+
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center">
+        <i class="fas fa-user-plus text-brand-600"></i>
+      </div>
+      <div>
+        <h2 class="text-slate-800 font-semibold text-sm">New Candidate</h2>
+        <p class="text-slate-400 text-xs">Add a candidate to the pipeline</p>
+      </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="space-y-4">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Job Opening <span class="text-red-500">*</span></label>
+            <select name="job" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 bg-white" required>
+              <option value="">-- Select --</option>
+              {% for job in jobs %}
+                <option value="{{ job.id }}">{{ job.title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">First Name <span class="text-red-500">*</span></label>
+            <input type="text" name="first_name" placeholder="e.g. Priya"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100" required>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Last Name <span class="text-red-500">*</span></label>
+            <input type="text" name="last_name" placeholder="e.g. Sharma"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100" required>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Email <span class="text-red-500">*</span></label>
+            <input type="email" name="email" placeholder="candidate@example.com"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400" required>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Phone <span class="text-red-500">*</span></label>
+            <input type="text" name="phone" placeholder="+91 98765 43210"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400" required>
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Years of Experience</label>
+            <input type="number" name="years_of_experience" value="0" min="0" step="0.5"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Current Company</label>
+            <input type="text" name="current_company" placeholder="e.g. Acme Corp"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Current Salary (₹/month)</label>
+            <input type="number" name="current_salary" placeholder="40000"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+          </div>
+
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Expected Salary (₹/month)</label>
+            <input type="number" name="expected_salary" placeholder="55000"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Resume</label>
+            <input type="file" name="resume"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 bg-white">
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Notes</label>
+            <textarea name="notes" rows="3"
+              placeholder="Any additional notes about the candidate..."
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 resize-none"></textarea>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+          <a href="{% url 'candidate_list' %}"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+            <i class="fas fa-arrow-left text-xs"></i> Cancel
+          </a>
+          <button type="submit"
+            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90"
+            style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+            <i class="fas fa-plus text-xs"></i>
+            Add Candidate
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

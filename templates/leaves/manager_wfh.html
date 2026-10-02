@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% block title %}WFH Management{% endblock %}
+{% block page_title %}WFH Requests{% endblock %}
+{% block page_subtitle %}Review Work From Home requests{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="grid grid-cols-3 gap-4 mb-5">
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+      <i class="fas fa-hourglass-half text-amber-500"></i>
+    </div>
+    <div><p class="text-2xl font-bold text-slate-800">{{ pending }}</p><p class="text-slate-500 text-xs">Pending</p></div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
+      <i class="fas fa-circle-check text-emerald-500"></i>
+    </div>
+    <div><p class="text-2xl font-bold text-slate-800">{{ approved }}</p><p class="text-slate-500 text-xs">Approved</p></div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3">
+    <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+      <i class="fas fa-house-laptop text-blue-500"></i>
+    </div>
+    <div><p class="text-2xl font-bold text-slate-800">{{ wfh_requests.count }}</p><p class="text-slate-500 text-xs">Total</p></div>
+  </div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="flex items-center gap-2 mb-4">
+  {% for s, l in status_choices|default:"" %}{% empty %}
+  <a href="?status=" class="px-4 py-2 rounded-xl text-xs font-medium {% if not status_filter %}bg-brand-600 text-white{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-50{% endif %}">All</a>
+  <a href="?status=pending" class="px-4 py-2 rounded-xl text-xs font-medium {% if status_filter == 'pending' %}bg-amber-500 text-white{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-50{% endif %}">Pending {% if pending %}<span class="ml-1 bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">{{ pending }}</span>{% endif %}</a>
+  <a href="?status=approved" class="px-4 py-2 rounded-xl text-xs font-medium {% if status_filter == 'approved' %}bg-emerald-500 text-white{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-50{% endif %}">Approved</a>
+  <a href="?status=rejected" class="px-4 py-2 rounded-xl text-xs font-medium {% if status_filter == 'rejected' %}bg-red-500 text-white{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-50{% endif %}">Rejected</a>
+  {% endfor %}
+</div>
+
+<!-- WFH Table -->
+<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+  <table class="w-full">
+    <thead>
+      <tr class="bg-slate-50 border-b border-slate-100">
+        <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-5 py-3.5">Employee</th>
+        <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">WFH Date</th>
+        <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Reason</th>
+        <th class="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide px-4 py-3.5">Status</th>
+        <th class="px-4 py-3.5 text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Action</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-50">
+      {% for req in wfh_requests %}
+      <tr class="hover:bg-slate-50/60 transition-colors">
+        <td class="px-5 py-3.5">
+          <div class="flex items-center gap-3">
+            {% if req.employee.photo %}
+              <img src="{{ req.employee.photo.url }}" class="w-8 h-8 rounded-full object-cover border border-slate-200">
+            {% else %}
+              <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">
+                {{ req.employee.first_name|first|upper }}{{ req.employee.last_name|first|upper }}
+              </div>
+            {% endif %}
+            <div>
+              <p class="text-slate-700 text-sm font-medium">{{ req.employee.full_name }}</p>
+              <p class="text-slate-400 text-xs">{{ req.employee.department.name|default:"—" }}</p>
+            </div>
+          </div>
+        </td>
+        <td class="px-4 py-3.5">
+          <p class="text-slate-700 text-sm font-semibold">{{ req.date|date:"d M Y" }}</p>
+          <p class="text-slate-400 text-xs">{{ req.date|date:"l" }}</p>
+        </td>
+        <td class="px-4 py-3.5 text-slate-600 text-sm max-w-xs">
+          <p class="truncate" title="{{ req.reason }}">{{ req.reason|truncatechars:50 }}</p>
+          {% if req.rejection_reason %}
+          <p class="text-red-400 text-xs mt-0.5">Rejected: {{ req.rejection_reason|truncatechars:30 }}</p>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3.5">
+          <span class="text-xs px-2.5 py-1 rounded-full font-medium
+            {% if req.status == 'pending' %}bg-amber-100 text-amber-700
+            {% elif req.status == 'approved' %}bg-emerald-100 text-emerald-700
+            {% elif req.status == 'rejected' %}bg-red-100 text-red-600
+            {% else %}bg-slate-100 text-slate-500{% endif %}">
+            {{ req.get_status_display }}
+          </span>
+        </td>
+        <td class="px-4 py-3.5">
+          {% if req.status == 'pending' %}
+          <div class="flex items-center gap-2">
+            <form method="post" action="{% url 'manager_approve_wfh' req.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="comment" value="Approved">
+              <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-medium hover:bg-emerald-100">
+                <i class="fas fa-check text-[10px]"></i> Approve
+              </button>
+            </form>
+            <button onclick="openRejectWFH({{ req.pk }}, '{{ req.employee.full_name }}')"
+              class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-medium hover:bg-red-100">
+              <i class="fas fa-xmark text-[10px]"></i> Reject
+            </button>
+          </div>
+          {% else %}
+          <span class="text-slate-400 text-xs">
+            {% if req.status == 'approved' %}<i class="fas fa-circle-check text-emerald-500 mr-1"></i>Done{% else %}—{% endif %}
+          </span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="py-12 text-center">
+          <i class="fas fa-house-laptop text-slate-200 text-3xl mb-3 block"></i>
+          <p class="text-slate-400 text-sm">No WFH requests found</p>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Reject Modal -->
+<div id="rejectWFHModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl w-full max-w-md shadow-xl p-6">
+    <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+      <i class="fas fa-house-laptop text-red-500 text-lg"></i>
+    </div>
+    <h3 class="text-slate-800 font-semibold text-center mb-1">Reject WFH Request</h3>
+    <p class="text-slate-500 text-sm text-center mb-4">For <span id="wfhEmpName" class="font-medium text-slate-700"></span></p>
+    <form method="post" id="rejectWFHForm">
+      {% csrf_token %}
+      <textarea name="reason" rows="3" placeholder="Reason for rejection..."
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-red-300 resize-none mb-4"></textarea>
+      <div class="flex gap-3">
+        <button type="button" onclick="document.getElementById('rejectWFHModal').classList.add('hidden')"
+          class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">Cancel</button>
+        <button type="submit" class="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600">Reject</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openRejectWFH(pk, name) {
+  document.getElementById('wfhEmpName').textContent = name;
+  document.getElementById('rejectWFHForm').action = '/leaves/manager/wfh/' + pk + '/reject/';
+  document.getElementById('rejectWFHModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}

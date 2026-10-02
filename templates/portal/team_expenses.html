@@ -1,0 +1,142 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}Team Expenses{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="rounded-2xl p-5 sm:p-6 mb-5 text-white relative overflow-hidden" style="background: linear-gradient(135deg, #047857, #10b981)">
+  <div class="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white opacity-5"></div>
+  <div class="relative flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-white font-bold text-xl">Team Expenses</h1>
+      <p class="text-emerald-100 text-xs mt-1">Expense claims from employees reporting to you</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="bg-white bg-opacity-15 rounded-xl px-4 py-2 text-center">
+        <p class="text-white font-bold text-lg leading-none">{{ team_members|length }}</p>
+        <p class="text-emerald-100 text-[10px] mt-1">Team Members</p>
+      </div>
+      <div class="bg-white bg-opacity-15 rounded-xl px-4 py-2 text-center">
+        <p class="text-white font-bold text-lg leading-none">{{ pending_count }}</p>
+        <p class="text-emerald-100 text-[10px] mt-1">Pending</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if not team_members %}
+<div class="bg-white rounded-2xl border border-slate-100 p-14 text-center shadow-sm">
+  <div class="w-14 h-14 rounded-2xl bg-brand-50 flex items-center justify-center mx-auto mb-4">
+    <i class="fas fa-people-group text-brand-500 text-xl"></i>
+  </div>
+  <p class="text-slate-600 font-medium text-sm mb-1">No one reports to you yet</p>
+  <p class="text-slate-400 text-xs">Once HR assigns team members to you as their Reporting Manager, their expense claims will show up here.</p>
+</div>
+{% else %}
+
+<!-- Status filter -->
+<div class="flex items-center gap-2 mb-5 flex-wrap">
+  {% for key, label in status_options %}
+  <a href="?status={{ key }}"
+    class="px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors
+      {% if status_filter == key %}bg-brand-600 text-white{% else %}bg-white border border-slate-200 text-slate-500 hover:bg-slate-50{% endif %}">
+    {{ label }}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Expense Claims -->
+<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+  <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+    <h2 class="text-slate-700 font-semibold text-sm flex items-center gap-2">
+      <i class="fas fa-receipt text-emerald-500"></i> Expense Claims
+      {% if pending_count > 0 %}
+      <span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">{{ pending_count }} pending</span>
+      {% endif %}
+    </h2>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wide">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Employee</th>
+          <th class="text-left px-4 py-3 font-semibold">Category</th>
+          <th class="text-left px-4 py-3 font-semibold">Date</th>
+          <th class="text-right px-4 py-3 font-semibold">Amount</th>
+          <th class="text-left px-4 py-3 font-semibold">Description</th>
+          <th class="text-left px-4 py-3 font-semibold">Status</th>
+          <th class="text-left px-4 py-3 font-semibold">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for claim in expense_claims %}
+        <tr class="hover:bg-slate-50/70 transition-colors">
+          <td class="px-5 py-3.5">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center text-[11px] font-bold flex-shrink-0">
+                {{ claim.employee.first_name|first|upper }}{{ claim.employee.last_name|first|upper }}
+              </div>
+              <div class="min-w-0">
+                <p class="text-slate-700 font-medium text-xs">{{ claim.employee.full_name }}</p>
+                <p class="text-slate-400 text-[10px]">{{ claim.employee.employee_id }}</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3.5">
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700">{{ claim.get_category_display }}</span>
+          </td>
+          <td class="px-4 py-3.5 text-slate-600 text-xs whitespace-nowrap">{{ claim.expense_date|date:"d M Y" }}</td>
+          <td class="px-4 py-3.5 text-right text-slate-700 font-semibold text-xs">Rs.{{ claim.amount|floatformat:0 }}</td>
+          <td class="px-4 py-3.5 text-slate-500 text-xs max-w-[220px] truncate" title="{{ claim.description }}">
+            {{ claim.description }}
+            {% if claim.bill %}
+            <a href="{{ claim.bill.url }}" target="_blank" class="text-brand-500 ml-1"><i class="fas fa-paperclip"></i></a>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3.5">
+            <span class="text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap
+              {% if claim.status == 'reimbursed' %}bg-brand-100 text-brand-700
+              {% elif claim.status == 'approved' %}bg-emerald-100 text-emerald-700
+              {% elif claim.status == 'pending_finance' %}bg-blue-100 text-blue-700
+              {% elif claim.status == 'rejected' %}bg-red-100 text-red-600
+              {% elif claim.status == 'cancelled' %}bg-slate-100 text-slate-500
+              {% else %}bg-amber-100 text-amber-700{% endif %}">
+              {{ claim.get_status_display }}
+            </span>
+          </td>
+          <td class="px-4 py-3.5">
+            {% if claim.status == 'pending_manager' %}
+            <div class="flex items-center gap-1.5">
+              <form method="post" action="{% url 'portal_team_expense_approve' claim.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600">
+                  <i class="fas fa-check text-[10px]"></i> Approve
+                </button>
+              </form>
+              <button type="button" onclick="document.getElementById('rejExp{{ claim.pk }}').classList.toggle('hidden')"
+                class="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">
+                <i class="fas fa-xmark text-[10px]"></i> Reject
+              </button>
+            </div>
+            <form method="post" action="{% url 'portal_team_expense_reject' claim.pk %}" id="rejExp{{ claim.pk }}" class="hidden mt-2 flex items-center gap-1.5">
+              {% csrf_token %}
+              <input type="text" name="rejection_reason" placeholder="Reason (optional)" class="text-xs border border-slate-200 rounded-lg px-2 py-1 w-40 focus:outline-none focus:border-red-300">
+              <button type="submit" class="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600">Confirm</button>
+            </form>
+            {% else %}
+            <span class="text-slate-300 text-xs">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="px-4 py-10 text-center text-slate-400 text-sm">No expense claims found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}

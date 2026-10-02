@@ -1,0 +1,63 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}My Projects{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+  <div class="flex items-center justify-between mb-5 gap-3">
+    <div>
+      <h1 class="text-slate-800 font-bold text-lg">My Projects</h1>
+      <p class="text-slate-500 text-xs mt-0.5">Projects you've been assigned to, and who else is on them</p>
+    </div>
+    {% if can_add_project %}
+    <a href="{% url 'portal_add_project' %}"
+      class="shrink-0 inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-colors">
+      <i class="fas fa-plus text-[11px]"></i> Add Project
+    </a>
+    {% endif %}
+  </div>
+
+  {% if can_add_project %}
+  <div class="mb-5 flex items-center gap-2 text-[11px] text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">
+    <i class="fas fa-user-tie"></i>
+    <span>You're a Reporting Manager, so you can create new projects for your team.</span>
+  </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+    {% for project in projects %}
+    <a href="{% url 'portal_project_detail' project.pk %}"
+       class="bg-white rounded-2xl border border-slate-100 p-5 hover:border-indigo-200 hover:shadow-sm transition-all block">
+      <div class="flex items-start justify-between mb-2">
+        <div>
+          <p class="text-slate-800 font-semibold text-sm">{{ project.name }}</p>
+          <p class="text-slate-400 text-xs font-mono">{{ project.code }}</p>
+        </div>
+        <span class="text-[10px] px-2 py-0.5 rounded-full font-medium
+          {% if project.status == 'active' %}bg-emerald-100 text-emerald-700
+          {% elif project.status == 'planning' %}bg-blue-100 text-blue-700
+          {% elif project.status == 'on_hold' %}bg-amber-100 text-amber-700
+          {% else %}bg-slate-100 text-slate-500{% endif %}">
+          {{ project.get_status_display }}
+        </span>
+      </div>
+      <p class="text-slate-500 text-xs mb-3 line-clamp-2">{{ project.description|default:"No description" }}</p>
+      <div class="flex items-center justify-between text-xs text-slate-400">
+        <span><i class="fas fa-calendar-day mr-1"></i>{{ project.start_date|date:"d M Y" }}{% if project.end_date %} → {{ project.end_date|date:"d M Y" }}{% endif %}</span>
+        <span><i class="fas fa-users mr-1"></i>{{ project.members.count }} member{{ project.members.count|pluralize }}</span>
+      </div>
+      {% if project.manager %}
+      <p class="text-slate-400 text-[11px] mt-2 pt-2 border-t border-slate-50">
+        <i class="fas fa-user-tie mr-1"></i>Managed by {{ project.manager.full_name }}
+      </p>
+      {% endif %}
+    </a>
+    {% empty %}
+    <div class="sm:col-span-2 bg-white rounded-2xl border border-slate-100 p-10 text-center">
+      <i class="fas fa-diagram-project text-slate-300 text-3xl mb-3"></i>
+      <p class="text-slate-400 text-sm">You haven't been assigned to any project yet.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subscription Expired</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f1c; --surface:#111a2e; --border:#243050;
+    --text:#e7ecf7; --text-muted:#8a95b3; --bad:#f43f5e; --bad-soft:rgba(244,63,94,.12);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; height:100vh; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(900px 500px at 50% 0%, rgba(244,63,94,.12), transparent 60%), var(--bg);
+    color:var(--text); font-family:'Inter', -apple-system, sans-serif;
+  }
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:44px 40px; max-width:420px; text-align:center;
+  }
+  .icon{
+    width:52px; height:52px; border-radius:50%; background:var(--bad-soft); color:var(--bad);
+    display:flex; align-items:center; justify-content:center; font-size:24px; margin:0 auto 20px;
+  }
+  h1{font-family:'Space Grotesk', sans-serif; font-size:20px; font-weight:700; margin:0 0 10px; color:#fb7185;}
+  p{color:var(--text-muted); font-size:14px; line-height:1.65; margin:0;}
+  .tenant-name{color:var(--text); font-weight:600;}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">!</div>
+    <h1>Subscription Expired</h1>
+    <p>
+      The HRMS subscription for <span class="tenant-name">{{ tenant.name }}</span> has expired or been suspended.
+      Please contact your provider to renew and restore access.
+    </p>
+  </div>
+</body>
+</html>

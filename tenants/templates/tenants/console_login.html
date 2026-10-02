@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Console Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f1c; --surface:#111a2e; --surface-2:#17233d; --border:#243050;
+    --text:#e7ecf7; --text-muted:#8a95b3; --accent:#6366f1; --accent-soft:rgba(99,102,241,.14);
+    --bad:#f43f5e; --bad-soft:rgba(244,63,94,.12);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(1000px 550px at 15% 10%, rgba(99,102,241,.18), transparent 60%),
+      radial-gradient(800px 500px at 85% 90%, rgba(99,102,241,.08), transparent 55%),
+      var(--bg);
+    color:var(--text); font-family:'Inter', -apple-system, sans-serif;
+    padding:20px;
+  }
+  .card{width:100%; max-width:400px;}
+  .brand{display:flex; align-items:center; gap:10px; margin-bottom:28px; justify-content:center;}
+  .brand-mark{
+    width:34px; height:34px; border-radius:9px; background:var(--accent);
+    display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk', sans-serif;
+    font-weight:700; font-size:15px; color:#fff; box-shadow:0 6px 18px -4px rgba(99,102,241,.6);
+  }
+  .brand-text{font-family:'JetBrains Mono', monospace; font-size:13px; letter-spacing:.08em; color:var(--text-muted); text-transform:uppercase;}
+
+  .panel{background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:34px 32px;}
+  h1{font-family:'Space Grotesk', sans-serif; font-size:22px; font-weight:700; margin:0 0 4px; text-align:center;}
+  .sub{color:var(--text-muted); font-size:13.5px; text-align:center; margin:0 0 26px;}
+
+  .error{
+    background:var(--bad-soft); border:1px solid rgba(244,63,94,.3); color:#fb7185;
+    padding:11px 14px; border-radius:8px; font-size:13px; margin-bottom:18px; text-align:center;
+  }
+
+  label{display:block; font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin:16px 0 7px;}
+  label:first-of-type{margin-top:0;}
+  input[type=text], input[type=password]{
+    width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    padding:12px 14px; border-radius:9px; font-size:14px; font-family:'Inter', sans-serif;
+    outline:none; transition:border-color .15s;
+  }
+  input:focus{border-color:var(--accent);}
+
+  .btn{
+    margin-top:24px; width:100%; background:var(--accent); color:#fff; border:none;
+    padding:13px 20px; border-radius:9px; font-weight:600; font-size:14.5px; cursor:pointer;
+    box-shadow:0 6px 20px -6px rgba(99,102,241,.55); transition:transform .12s;
+  }
+  .btn:hover{transform:translateY(-1px);}
+
+  .foot{text-align:center; margin-top:22px; font-size:12px; color:var(--text-muted); font-family:'JetBrains Mono', monospace;}
+  .errorlist{list-style:none; margin:4px 0 0; padding:0; color:#fb7185; font-size:12px;}
+</style>
+</head>
+<body>
+<div class="card">
+
+  <div class="brand">
+    <div class="brand-mark">◆</div>
+    <div class="brand-text">Platform Console</div>
+  </div>
+
+  <div class="panel">
+    <h1>Sign in</h1>
+    <p class="sub">Restricted to platform staff accounts only</p>
+
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <label for="id_username">Username</label>
+      {{ form.username }}
+      {{ form.username.errors }}
+
+      <label for="id_password">Password</label>
+      {{ form.password }}
+      {{ form.password.errors }}
+
+      <button type="submit" class="btn">Log in</button>
+    </form>
+  </div>
+
+  <div class="foot">tenants.console / secure access</div>
+</div>
+</body>
+</html>

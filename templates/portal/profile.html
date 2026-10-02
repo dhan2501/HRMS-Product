@@ -1,0 +1,1313 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+
+
+  {% if is_birthday_today %}
+  <!-- ── 🎂 Birthday Card Popup ──────────────────────────────────────────── -->
+  <div id="birthday-card-overlay"
+       class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
+    <div id="confetti-layer" class="pointer-events-none fixed inset-0 overflow-hidden z-[101]"></div>
+
+    <div class="relative z-[102] w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl animate-[bday-pop_0.45s_ease-out]"
+         style="background: linear-gradient(160deg,#7c3aed 0%,#4338ca 55%,#6d28d9 100%);">
+
+      <button type="button" onclick="closeBirthdayCard()"
+        class="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-colors">
+        <i class="fas fa-times"></i>
+      </button>
+
+      <div class="absolute inset-0 opacity-[0.10] pointer-events-none"
+           style="background-image: radial-gradient(circle, #fff 1.5px, transparent 1.5px); background-size: 20px 20px;"></div>
+
+      <div class="relative px-7 pt-8 pb-7 text-center">
+        <p class="text-3xl mb-1">🎉🎂🎈</p>
+
+        <div class="mx-auto w-24 h-24 rounded-full ring-4 ring-white/40 shadow-lg overflow-hidden bg-white/15 flex items-center justify-center mb-4">
+          {% if employee.photo %}
+            <img src="{{ employee.photo.url }}" alt="{{ employee.full_name }}" class="w-full h-full object-cover">
+          {% else %}
+            <span class="text-3xl font-bold text-white">{{ employee.first_name|first|upper }}{{ employee.last_name|first|upper }}</span>
+          {% endif %}
+        </div>
+
+        <h2 class="text-white text-2xl font-extrabold leading-snug">
+          Happy Birthday,<br>{{ employee.first_name }}! 🎊
+        </h2>
+
+        {% if birthday_age %}
+        <p class="text-indigo-100 text-sm mt-1.5 font-medium">Turning {{ birthday_age }} today ✨</p>
+        {% endif %}
+
+        <p class="text-indigo-100/90 text-sm leading-relaxed mt-4">
+          Wishing you a day filled with happiness and a year filled with joy.
+          Thank you for everything you bring to the team — have a wonderful celebration! 🥳
+        </p>
+
+        <button type="button" onclick="closeBirthdayCard()"
+          class="mt-6 px-6 py-2.5 bg-white text-brand-700 text-sm font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-md">
+          🎈 Thank You!
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if messages %}
+  <div class="mb-5 space-y-2">
+    {% for message in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-medium
+      {% if message.tags == 'error' %}bg-red-50 text-red-600{% else %}bg-emerald-50 text-emerald-700{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ── Profile header hero ─────────────────────────────────────────────── -->
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-600 via-brand-500 to-purple-500 text-white px-6 py-6 mb-6 flex flex-wrap items-center gap-5">
+    <div class="absolute inset-0 opacity-[0.12] pointer-events-none"
+         style="background-image: radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 1px); background-size: 18px 18px;"></div>
+
+    <div class="relative z-10 w-16 h-16 rounded-2xl bg-white/15 ring-2 ring-white/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+      {% if employee.photo %}
+        <img src="{{ employee.photo.url }}" alt="{{ employee.full_name }}" class="w-full h-full object-cover">
+      {% else %}
+        <span class="text-2xl font-bold text-white">{{ employee.first_name|first|upper }}{{ employee.last_name|first|upper }}</span>
+      {% endif %}
+    </div>
+
+    <div class="relative z-10 min-w-0 flex-1">
+      <p class="text-white text-xl font-bold truncate">{{ employee.full_name }}</p>
+      <p class="text-indigo-100 text-sm mt-0.5 truncate">
+        {{ employee.designation.title|default:"—" }} · {{ employee.department.name|default:"—" }}
+      </p>
+      <div class="flex items-center gap-2 mt-2">
+        <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-white/20 text-white">
+          <i class="fas fa-id-badge mr-1"></i> {{ employee.employee_id }}
+        </span>
+        <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-white/20 text-white">
+          {{ employee.get_status_display }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tabs ─────────────────────────────────────────────────────────────── -->
+  <div class="flex gap-1.5 mb-5 bg-slate-100 rounded-xl p-1.5 w-fit">
+    <button type="button" onclick="showProfileTab('details')" id="profile-tab-btn-details"
+      class="profile-tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+      <i class="fas fa-id-card mr-1.5"></i> Profile Details
+    </button>
+    <button type="button" onclick="showProfileTab('security')" id="profile-tab-btn-security"
+      class="profile-tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+      <i class="fas fa-lock mr-1.5"></i> Login & Security
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 1 — Profile Details (editable)
+       ══════════════════════════════════════════════════════════════════ -->
+  <div id="profile-tab-details" class="profile-tab space-y-5">
+
+    <form method="post" enctype="multipart/form-data" class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="details">
+
+      <h3 class="text-slate-800 font-bold text-base mb-5">Personal Details</h3>
+
+      <div class="mb-5">
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Photo</label>
+        <div class="flex items-center gap-4">
+          {% if employee.photo %}
+            <img src="{{ employee.photo.url }}" class="w-14 h-14 rounded-xl object-cover border border-slate-200">
+          {% else %}
+            <div class="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
+              <i class="fas fa-user text-xl"></i>
+            </div>
+          {% endif %}
+          {{ details_form.photo }}
+        </div>
+        {% if details_form.photo.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.photo.errors|first }}</p>{% endif %}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">First Name</label>
+          {{ details_form.first_name }}
+          {% if details_form.first_name.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.first_name.errors|first }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Last Name</label>
+          {{ details_form.last_name }}
+          {% if details_form.last_name.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.last_name.errors|first }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Email</label>
+          {{ details_form.email }}
+          {% if details_form.email.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.email.errors|first }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Phone</label>
+          {{ details_form.phone }}
+          {% if details_form.phone.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.phone.errors|first }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Date of Birth</label>
+          {{ details_form.date_of_birth }}
+          {% if details_form.date_of_birth.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.date_of_birth.errors|first }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Gender</label>
+          {{ details_form.gender }}
+          {% if details_form.gender.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.gender.errors|first }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="mb-5">
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Address</label>
+        {{ details_form.address }}
+        {% if details_form.address.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.address.errors|first }}</p>{% endif %}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Emergency Contact Name</label>
+          {{ details_form.emergency_contact_name }}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Emergency Contact Phone</label>
+          {{ details_form.emergency_contact_phone }}
+        </div>
+      </div>
+
+      <button type="submit"
+        class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl transition-colors">
+        <i class="fas fa-check mr-1.5"></i> Save Changes
+      </button>
+    </form>
+
+    <!-- Employment Info (read-only — admin managed) -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-3">
+        Employment Info <span class="text-slate-400 font-normal text-xs">(managed by HR)</span>
+      </h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div><p class="text-slate-400 text-xs mb-0.5">Employee ID</p><p class="text-slate-700 text-sm font-medium">{{ employee.employee_id }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Department</p><p class="text-slate-700 text-sm font-medium">{{ employee.department.name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Designation</p><p class="text-slate-700 text-sm font-medium">{{ employee.designation.title|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Reporting Manager</p><p class="text-slate-700 text-sm font-medium">{{ employee.reporting_manager.full_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Date of Joining</p><p class="text-slate-700 text-sm font-medium">{{ employee.date_joined|date:"d M Y" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Employment Type</p><p class="text-slate-700 text-sm font-medium">{{ employee.get_employment_type_display }}</p></div>
+      </div>
+    </div>
+
+    <!-- Company Details -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-3">Company Details</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div><p class="text-slate-400 text-xs mb-0.5">Company Name</p><p class="text-slate-700 text-sm font-medium">{{ site_settings.company_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Company Code</p><p class="text-slate-700 text-sm font-medium">{{ site_settings.company_code|default:"—" }}</p></div>
+      </div>
+    </div>
+
+    <!-- Bank & Government ID -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-slate-700 font-semibold text-sm flex items-center gap-2">
+          <i class="fas fa-building-columns text-teal-600 text-xs"></i> Bank & Government ID
+        </h3>
+        <a href="{% url 'portal_edit_bank_details' %}"
+          class="text-xs font-medium text-brand-600 hover:underline">
+          <i class="fas fa-pencil mr-1 text-[10px]"></i>Edit
+        </a>
+      </div>
+      {% if employee.bank_account_number or employee.aadhar_number or employee.pan_number %}
+      <div class="grid grid-cols-2 gap-4">
+        <div><p class="text-slate-400 text-xs mb-0.5">Account Holder</p><p class="text-slate-700 text-sm font-medium">{{ employee.bank_account_holder_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Bank Name</p><p class="text-slate-700 text-sm font-medium">{{ employee.bank_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Account Number</p><p class="text-slate-700 text-sm font-medium font-mono">{{ employee.bank_account_masked|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">IFSC Code</p><p class="text-slate-700 text-sm font-medium">{{ employee.bank_ifsc_code|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Aadhaar Number</p><p class="text-slate-700 text-sm font-medium font-mono">{{ employee.aadhar_masked|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">PAN Number</p><p class="text-slate-700 text-sm font-medium font-mono">{{ employee.pan_masked|default:"—" }}</p></div>
+      </div>
+      {% else %}
+      <p class="text-slate-400 text-sm">Not added yet — <a href="{% url 'portal_edit_bank_details' %}" class="text-brand-600 hover:underline">add your details</a>.</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 2 — Login & Security (username + password)
+       ══════════════════════════════════════════════════════════════════ -->
+  <div id="profile-tab-security" class="profile-tab hidden space-y-5">
+
+    <!-- Username -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+      <h3 class="text-slate-800 font-bold text-base mb-1">Login Username</h3>
+      <p class="text-slate-400 text-xs mb-4">This is what you type in on the login screen.</p>
+      <form method="post" class="flex flex-col sm:flex-row gap-3">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="username">
+        <input type="text" name="username" required value="{{ request.user.username }}"
+          class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+        <button type="submit"
+          class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl whitespace-nowrap">
+          <i class="fas fa-check mr-1.5"></i> Update Username
+        </button>
+      </form>
+    </div>
+
+    <!-- Password -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+      <div class="flex items-center justify-between mb-1 gap-3 flex-wrap">
+        <h3 class="text-slate-800 font-bold text-base">Change Password</h3>
+        <form method="post" class="inline">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="request_reset">
+          <button type="submit"
+            class="text-xs font-medium text-brand-600 hover:underline whitespace-nowrap">
+            <i class="fas fa-triangle-exclamation mr-1"></i>Forgot your current password? Notify Admin
+          </button>
+        </form>
+      </div>
+      <p class="text-slate-400 text-xs mb-4">
+        You'll stay logged in on this device after changing it. Your admin will be notified for security.
+      </p>
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="password">
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Current Password</label>
+          <div class="relative">
+            <input type="password" name="current_password" required id="id_current_password"
+              class="w-full border border-slate-200 rounded-xl pl-3 pr-10 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+            <button type="button" onclick="togglePwd('id_current_password', this)"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <i class="fas fa-eye text-sm"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">New Password</label>
+            <div class="relative">
+              <input type="password" name="new_password" required minlength="6" id="id_new_password"
+                class="w-full border border-slate-200 rounded-xl pl-3 pr-10 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+              <button type="button" onclick="togglePwd('id_new_password', this)"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <i class="fas fa-eye text-sm"></i>
+              </button>
+            </div>
+          </div>
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Confirm New Password</label>
+            <div class="relative">
+              <input type="password" name="confirm_password" required minlength="6" id="id_confirm_password"
+                class="w-full border border-slate-200 rounded-xl pl-3 pr-10 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+              <button type="button" onclick="togglePwd('id_confirm_password', this)"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <i class="fas fa-eye text-sm"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <p class="text-slate-400 text-[11px]">Minimum 6 characters.</p>
+
+        <button type="submit"
+          class="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors">
+          <i class="fas fa-key mr-1.5"></i> Change Password
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+  .profile-tab-btn { color: #64748b; }
+  .profile-tab-btn.active { background: white; color: #4338ca; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+
+  @keyframes bday-pop {
+    0%   { transform: scale(0.85); opacity: 0; }
+    100% { transform: scale(1);    opacity: 1; }
+  }
+  @keyframes bday-confetti-fall {
+    0%   { transform: translateY(-10vh) rotate(0deg);   opacity: 1; }
+    100% { transform: translateY(110vh) rotate(360deg); opacity: 0.9; }
+  }
+  .bday-confetti-piece {
+    position: absolute;
+    top: -10px;
+    width: 8px;
+    height: 14px;
+    opacity: 0.9;
+    animation-name: bday-confetti-fall;
+    animation-timing-function: linear;
+    animation-iteration-count: 1;
+    border-radius: 2px;
+  }
+</style>
+<script>
+function showProfileTab(name) {
+  document.querySelectorAll('.profile-tab').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.profile-tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('profile-tab-' + name).classList.remove('hidden');
+  document.getElementById('profile-tab-btn-' + name).classList.add('active');
+  localStorage.setItem('portalProfileActiveTab', name);
+}
+
+function togglePwd(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const icon = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.remove('fa-eye');
+    icon.classList.add('fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.remove('fa-eye-slash');
+    icon.classList.add('fa-eye');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const wanted = localStorage.getItem('portalProfileActiveTab') || 'details';
+  showProfileTab(wanted);
+});
+
+// ── 🎂 Birthday card popup ─────────────────────────────────────────────
+function closeBirthdayCard() {
+  const overlay = document.getElementById('birthday-card-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.classList.remove('flex');
+  }
+}
+
+function spawnConfetti() {
+  const layer = document.getElementById('confetti-layer');
+  if (!layer) return;
+  const colors = ['#facc15', '#fb7185', '#34d399', '#60a5fa', '#c084fc', '#f97316'];
+  for (let i = 0; i < 60; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'bday-confetti-piece';
+    piece.style.left = Math.random() * 100 + 'vw';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDuration = (2.5 + Math.random() * 2) + 's';
+    piece.style.animationDelay = (Math.random() * 1.2) + 's';
+    layer.appendChild(piece);
+  }
+  setTimeout(() => { layer.innerHTML = ''; }, 5000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const overlay = document.getElementById('birthday-card-overlay');
+  if (!overlay) return;
+
+  // Shows every time the birthday person opens/refreshes their own profile page.
+  overlay.classList.remove('hidden');
+  overlay.classList.add('flex');
+  spawnConfetti();
+});
+</script>
+{% endblock %}
+
+{% comment %} {% extends 'portal/base_portal.html' %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+
+  {% if messages %}
+  <div class="mb-5 space-y-2">
+    {% for message in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-medium
+      {% if message.tags == 'error' %}bg-red-50 text-red-600{% else %}bg-emerald-50 text-emerald-700{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ── Profile header hero ─────────────────────────────────────────────── -->
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-600 via-brand-500 to-purple-500 text-white px-6 py-6 mb-6 flex flex-wrap items-center gap-5">
+    <div class="absolute inset-0 opacity-[0.12] pointer-events-none"
+         style="background-image: radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 1px); background-size: 18px 18px;"></div>
+
+    <div class="relative z-10 w-16 h-16 rounded-2xl bg-white/15 ring-2 ring-white/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+      {% if employee.photo %}
+        <img src="{{ employee.photo.url }}" alt="{{ employee.full_name }}" class="w-full h-full object-cover">
+      {% else %}
+        <span class="text-2xl font-bold text-white">{{ employee.first_name|first|upper }}{{ employee.last_name|first|upper }}</span>
+      {% endif %}
+    </div>
+
+    <div class="relative z-10 min-w-0 flex-1">
+      <p class="text-white text-xl font-bold truncate">{{ employee.full_name }}</p>
+      <p class="text-indigo-100 text-sm mt-0.5 truncate">
+        {{ employee.designation.title|default:"—" }} · {{ employee.department.name|default:"—" }}
+      </p>
+      <div class="flex items-center gap-2 mt-2">
+        <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-white/20 text-white">
+          <i class="fas fa-id-badge mr-1"></i> {{ employee.employee_id }}
+        </span>
+        <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-white/20 text-white">
+          {{ employee.get_status_display }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tabs ─────────────────────────────────────────────────────────────── -->
+  <div class="flex gap-1.5 mb-5 bg-slate-100 rounded-xl p-1.5 w-fit">
+    <button type="button" onclick="showProfileTab('details')" id="profile-tab-btn-details"
+      class="profile-tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+      <i class="fas fa-id-card mr-1.5"></i> Profile Details
+    </button>
+    <button type="button" onclick="showProfileTab('security')" id="profile-tab-btn-security"
+      class="profile-tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+      <i class="fas fa-lock mr-1.5"></i> Login & Security
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 1 — Profile Details (editable)
+       ══════════════════════════════════════════════════════════════════ -->
+  <div id="profile-tab-details" class="profile-tab space-y-5">
+
+    <form method="post" enctype="multipart/form-data" class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="details">
+
+      <h3 class="text-slate-800 font-bold text-base mb-5">Personal Details</h3>
+
+      <div class="mb-5">
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Photo</label>
+        <div class="flex items-center gap-4">
+          {% if employee.photo %}
+            <img src="{{ employee.photo.url }}" class="w-14 h-14 rounded-xl object-cover border border-slate-200">
+          {% else %}
+            <div class="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
+              <i class="fas fa-user text-xl"></i>
+            </div>
+          {% endif %}
+          {{ details_form.photo }}
+        </div>
+        {% if details_form.photo.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.photo.errors|first }}</p>{% endif %}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">First Name</label>
+          {{ details_form.first_name }}
+          {% if details_form.first_name.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.first_name.errors|first }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Last Name</label>
+          {{ details_form.last_name }}
+          {% if details_form.last_name.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.last_name.errors|first }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Email</label>
+          {{ details_form.email }}
+          {% if details_form.email.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.email.errors|first }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Phone</label>
+          {{ details_form.phone }}
+          {% if details_form.phone.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.phone.errors|first }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Date of Birth</label>
+          {{ details_form.date_of_birth }}
+          {% if details_form.date_of_birth.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.date_of_birth.errors|first }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Gender</label>
+          {{ details_form.gender }}
+          {% if details_form.gender.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.gender.errors|first }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="mb-5">
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Address</label>
+        {{ details_form.address }}
+        {% if details_form.address.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.address.errors|first }}</p>{% endif %}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Emergency Contact Name</label>
+          {{ details_form.emergency_contact_name }}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Emergency Contact Phone</label>
+          {{ details_form.emergency_contact_phone }}
+        </div>
+      </div>
+
+      <button type="submit"
+        class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl transition-colors">
+        <i class="fas fa-check mr-1.5"></i> Save Changes
+      </button>
+    </form>
+
+    <!-- Employment Info (read-only — admin managed) -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-3">
+        Employment Info <span class="text-slate-400 font-normal text-xs">(managed by HR)</span>
+      </h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div><p class="text-slate-400 text-xs mb-0.5">Employee ID</p><p class="text-slate-700 text-sm font-medium">{{ employee.employee_id }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Department</p><p class="text-slate-700 text-sm font-medium">{{ employee.department.name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Designation</p><p class="text-slate-700 text-sm font-medium">{{ employee.designation.title|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Reporting Manager</p><p class="text-slate-700 text-sm font-medium">{{ employee.reporting_manager.full_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Date of Joining</p><p class="text-slate-700 text-sm font-medium">{{ employee.date_joined|date:"d M Y" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Employment Type</p><p class="text-slate-700 text-sm font-medium">{{ employee.get_employment_type_display }}</p></div>
+      </div>
+    </div>
+
+    <!-- Company Details -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-3">Company Details</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div><p class="text-slate-400 text-xs mb-0.5">Company Name</p><p class="text-slate-700 text-sm font-medium">{{ site_settings.company_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Company Code</p><p class="text-slate-700 text-sm font-medium">{{ site_settings.company_code|default:"—" }}</p></div>
+      </div>
+    </div>
+
+    <!-- Bank & Government ID -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-slate-700 font-semibold text-sm flex items-center gap-2">
+          <i class="fas fa-building-columns text-teal-600 text-xs"></i> Bank & Government ID
+        </h3>
+        <a href="{% url 'portal_edit_bank_details' %}"
+          class="text-xs font-medium text-brand-600 hover:underline">
+          <i class="fas fa-pencil mr-1 text-[10px]"></i>Edit
+        </a>
+      </div>
+      {% if employee.bank_account_number or employee.aadhar_number or employee.pan_number %}
+      <div class="grid grid-cols-2 gap-4">
+        <div><p class="text-slate-400 text-xs mb-0.5">Account Holder</p><p class="text-slate-700 text-sm font-medium">{{ employee.bank_account_holder_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Bank Name</p><p class="text-slate-700 text-sm font-medium">{{ employee.bank_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Account Number</p><p class="text-slate-700 text-sm font-medium font-mono">{{ employee.bank_account_masked|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">IFSC Code</p><p class="text-slate-700 text-sm font-medium">{{ employee.bank_ifsc_code|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Aadhaar Number</p><p class="text-slate-700 text-sm font-medium font-mono">{{ employee.aadhar_masked|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">PAN Number</p><p class="text-slate-700 text-sm font-medium font-mono">{{ employee.pan_masked|default:"—" }}</p></div>
+      </div>
+      {% else %}
+      <p class="text-slate-400 text-sm">Not added yet — <a href="{% url 'portal_edit_bank_details' %}" class="text-brand-600 hover:underline">add your details</a>.</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 2 — Login & Security (username + password)
+       ══════════════════════════════════════════════════════════════════ -->
+  <div id="profile-tab-security" class="profile-tab hidden space-y-5">
+
+    <!-- Username -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+      <h3 class="text-slate-800 font-bold text-base mb-1">Login Username</h3>
+      <p class="text-slate-400 text-xs mb-4">This is what you type in on the login screen.</p>
+      <form method="post" class="flex flex-col sm:flex-row gap-3">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="username">
+        <input type="text" name="username" required value="{{ request.user.username }}"
+          class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+        <button type="submit"
+          class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl whitespace-nowrap">
+          <i class="fas fa-check mr-1.5"></i> Update Username
+        </button>
+      </form>
+    </div>
+
+    <!-- Password -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+      <h3 class="text-slate-800 font-bold text-base mb-1">Change Password</h3>
+      <p class="text-slate-400 text-xs mb-4">
+        You'll stay logged in on this device after changing it. Your admin will be notified for security.
+      </p>
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="password">
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Current Password</label>
+          <input type="password" name="current_password" required
+            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">New Password</label>
+            <input type="password" name="new_password" required minlength="6"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          </div>
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Confirm New Password</label>
+            <input type="password" name="confirm_password" required minlength="6"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          </div>
+        </div>
+        <p class="text-slate-400 text-[11px]">Minimum 6 characters.</p>
+
+        <button type="submit"
+          class="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors">
+          <i class="fas fa-key mr-1.5"></i> Change Password
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+  .profile-tab-btn { color: #64748b; }
+  .profile-tab-btn.active { background: white; color: #4338ca; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+</style>
+<script>
+function showProfileTab(name) {
+  document.querySelectorAll('.profile-tab').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.profile-tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('profile-tab-' + name).classList.remove('hidden');
+  document.getElementById('profile-tab-btn-' + name).classList.add('active');
+  localStorage.setItem('portalProfileActiveTab', name);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const wanted = localStorage.getItem('portalProfileActiveTab') || 'details';
+  showProfileTab(wanted);
+});
+</script>
+{% endblock %} {% endcomment %}
+{% comment %} {% extends 'portal/base_portal.html' %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+
+  {% if messages %}
+  <div class="mb-5 space-y-2">
+    {% for message in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-medium
+      {% if message.tags == 'error' %}bg-red-50 text-red-600{% else %}bg-emerald-50 text-emerald-700{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ── Profile header hero ─────────────────────────────────────────────── -->
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-600 via-brand-500 to-purple-500 text-white px-6 py-6 mb-6 flex flex-wrap items-center gap-5">
+    <div class="absolute inset-0 opacity-[0.12] pointer-events-none"
+         style="background-image: radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 1px); background-size: 18px 18px;"></div>
+
+    <div class="relative z-10 w-16 h-16 rounded-2xl bg-white/15 ring-2 ring-white/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+      {% if employee.photo %}
+        <img src="{{ employee.photo.url }}" alt="{{ employee.full_name }}" class="w-full h-full object-cover">
+      {% else %}
+        <span class="text-2xl font-bold text-white">{{ employee.first_name|first|upper }}{{ employee.last_name|first|upper }}</span>
+      {% endif %}
+    </div>
+
+    <div class="relative z-10 min-w-0 flex-1">
+      <p class="text-white text-xl font-bold truncate">{{ employee.full_name }}</p>
+      <p class="text-indigo-100 text-sm mt-0.5 truncate">
+        {{ employee.designation.title|default:"—" }} · {{ employee.department.name|default:"—" }}
+      </p>
+      <div class="flex items-center gap-2 mt-2">
+        <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-white/20 text-white">
+          <i class="fas fa-id-badge mr-1"></i> {{ employee.employee_id }}
+        </span>
+        <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-white/20 text-white">
+          {{ employee.get_status_display }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tabs ─────────────────────────────────────────────────────────────── -->
+  <div class="flex gap-1.5 mb-5 bg-slate-100 rounded-xl p-1.5 w-fit">
+    <button type="button" onclick="showProfileTab('details')" id="profile-tab-btn-details"
+      class="profile-tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+      <i class="fas fa-id-card mr-1.5"></i> Profile Details
+    </button>
+    <button type="button" onclick="showProfileTab('security')" id="profile-tab-btn-security"
+      class="profile-tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+      <i class="fas fa-lock mr-1.5"></i> Login & Security
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 1 — Profile Details (editable)
+       ══════════════════════════════════════════════════════════════════ -->
+  <div id="profile-tab-details" class="profile-tab space-y-5">
+
+    <form method="post" enctype="multipart/form-data" class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="details">
+
+      <h3 class="text-slate-800 font-bold text-base mb-5">Personal Details</h3>
+
+      <div class="mb-5">
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Photo</label>
+        <div class="flex items-center gap-4">
+          {% if employee.photo %}
+            <img src="{{ employee.photo.url }}" class="w-14 h-14 rounded-xl object-cover border border-slate-200">
+          {% else %}
+            <div class="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
+              <i class="fas fa-user text-xl"></i>
+            </div>
+          {% endif %}
+          {{ details_form.photo }}
+        </div>
+        {% if details_form.photo.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.photo.errors|first }}</p>{% endif %}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">First Name</label>
+          {{ details_form.first_name }}
+          {% if details_form.first_name.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.first_name.errors|first }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Last Name</label>
+          {{ details_form.last_name }}
+          {% if details_form.last_name.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.last_name.errors|first }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Email</label>
+          {{ details_form.email }}
+          {% if details_form.email.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.email.errors|first }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Phone</label>
+          {{ details_form.phone }}
+          {% if details_form.phone.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.phone.errors|first }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Date of Birth</label>
+          {{ details_form.date_of_birth }}
+          {% if details_form.date_of_birth.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.date_of_birth.errors|first }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Gender</label>
+          {{ details_form.gender }}
+          {% if details_form.gender.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.gender.errors|first }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="mb-5">
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Address</label>
+        {{ details_form.address }}
+        {% if details_form.address.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.address.errors|first }}</p>{% endif %}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Emergency Contact Name</label>
+          {{ details_form.emergency_contact_name }}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Emergency Contact Phone</label>
+          {{ details_form.emergency_contact_phone }}
+        </div>
+      </div>
+
+      <button type="submit"
+        class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl transition-colors">
+        <i class="fas fa-check mr-1.5"></i> Save Changes
+      </button>
+    </form>
+
+    <!-- Employment Info (read-only — admin managed) -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-3">
+        Employment Info <span class="text-slate-400 font-normal text-xs">(managed by HR)</span>
+      </h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div><p class="text-slate-400 text-xs mb-0.5">Employee ID</p><p class="text-slate-700 text-sm font-medium">{{ employee.employee_id }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Department</p><p class="text-slate-700 text-sm font-medium">{{ employee.department.name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Designation</p><p class="text-slate-700 text-sm font-medium">{{ employee.designation.title|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Reporting Manager</p><p class="text-slate-700 text-sm font-medium">{{ employee.reporting_manager.full_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Date of Joining</p><p class="text-slate-700 text-sm font-medium">{{ employee.date_joined|date:"d M Y" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Employment Type</p><p class="text-slate-700 text-sm font-medium">{{ employee.get_employment_type_display }}</p></div>
+      </div>
+    </div>
+
+    <!-- Company Details -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-3">Company Details</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div><p class="text-slate-400 text-xs mb-0.5">Company Name</p><p class="text-slate-700 text-sm font-medium">{{ site_settings.company_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Company Code</p><p class="text-slate-700 text-sm font-medium">{{ site_settings.company_code|default:"—" }}</p></div>
+      </div>
+    </div>
+
+    <!-- Bank & Government ID -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-slate-700 font-semibold text-sm flex items-center gap-2">
+          <i class="fas fa-building-columns text-teal-600 text-xs"></i> Bank & Government ID
+        </h3>
+        <a href="{% url 'portal_edit_bank_details' %}"
+          class="text-xs font-medium text-brand-600 hover:underline">
+          <i class="fas fa-pencil mr-1 text-[10px]"></i>Edit
+        </a>
+      </div>
+      {% if employee.bank_account_number or employee.aadhar_number or employee.pan_number %}
+      <div class="grid grid-cols-2 gap-4">
+        <div><p class="text-slate-400 text-xs mb-0.5">Account Holder</p><p class="text-slate-700 text-sm font-medium">{{ employee.bank_account_holder_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Bank Name</p><p class="text-slate-700 text-sm font-medium">{{ employee.bank_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Account Number</p><p class="text-slate-700 text-sm font-medium font-mono">{{ employee.bank_account_masked|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">IFSC Code</p><p class="text-slate-700 text-sm font-medium">{{ employee.bank_ifsc_code|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Aadhaar Number</p><p class="text-slate-700 text-sm font-medium font-mono">{{ employee.aadhar_masked|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">PAN Number</p><p class="text-slate-700 text-sm font-medium font-mono">{{ employee.pan_masked|default:"—" }}</p></div>
+      </div>
+      {% else %}
+      <p class="text-slate-400 text-sm">Not added yet — <a href="{% url 'portal_edit_bank_details' %}" class="text-brand-600 hover:underline">add your details</a>.</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 2 — Login & Security (username + password)
+       ══════════════════════════════════════════════════════════════════ -->
+  <div id="profile-tab-security" class="profile-tab hidden space-y-5">
+
+    <!-- Username -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+      <h3 class="text-slate-800 font-bold text-base mb-1">Login Username</h3>
+      <p class="text-slate-400 text-xs mb-4">This is what you type in on the login screen.</p>
+      <form method="post" class="flex flex-col sm:flex-row gap-3">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="username">
+        <input type="text" name="username" required value="{{ request.user.username }}"
+          class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+        <button type="submit"
+          class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl whitespace-nowrap">
+          <i class="fas fa-check mr-1.5"></i> Update Username
+        </button>
+      </form>
+    </div>
+
+    <!-- Password -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+      <div class="flex items-center justify-between mb-1 gap-3 flex-wrap">
+        <h3 class="text-slate-800 font-bold text-base">Change Password</h3>
+        <form method="post" class="inline">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="request_reset">
+          <button type="submit"
+            class="text-xs font-medium text-brand-600 hover:underline whitespace-nowrap">
+            <i class="fas fa-triangle-exclamation mr-1"></i>Forgot your current password? Notify Admin
+          </button>
+        </form>
+      </div>
+      <p class="text-slate-400 text-xs mb-4">
+        You'll stay logged in on this device after changing it. Your admin will be notified for security.
+      </p>
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="password">
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Current Password</label>
+          <div class="relative">
+            <input type="password" name="current_password" required id="id_current_password"
+              class="w-full border border-slate-200 rounded-xl pl-3 pr-10 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+            <button type="button" onclick="togglePwd('id_current_password', this)"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <i class="fas fa-eye text-sm"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">New Password</label>
+            <div class="relative">
+              <input type="password" name="new_password" required minlength="6" id="id_new_password"
+                class="w-full border border-slate-200 rounded-xl pl-3 pr-10 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+              <button type="button" onclick="togglePwd('id_new_password', this)"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <i class="fas fa-eye text-sm"></i>
+              </button>
+            </div>
+          </div>
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Confirm New Password</label>
+            <div class="relative">
+              <input type="password" name="confirm_password" required minlength="6" id="id_confirm_password"
+                class="w-full border border-slate-200 rounded-xl pl-3 pr-10 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+              <button type="button" onclick="togglePwd('id_confirm_password', this)"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <i class="fas fa-eye text-sm"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <p class="text-slate-400 text-[11px]">Minimum 6 characters.</p>
+
+        <button type="submit"
+          class="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors">
+          <i class="fas fa-key mr-1.5"></i> Change Password
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+  .profile-tab-btn { color: #64748b; }
+  .profile-tab-btn.active { background: white; color: #4338ca; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+</style>
+<script>
+function showProfileTab(name) {
+  document.querySelectorAll('.profile-tab').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.profile-tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('profile-tab-' + name).classList.remove('hidden');
+  document.getElementById('profile-tab-btn-' + name).classList.add('active');
+  localStorage.setItem('portalProfileActiveTab', name);
+}
+
+function togglePwd(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const icon = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.remove('fa-eye');
+    icon.classList.add('fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.remove('fa-eye-slash');
+    icon.classList.add('fa-eye');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const wanted = localStorage.getItem('portalProfileActiveTab') || 'details';
+  showProfileTab(wanted);
+});
+</script>
+{% endblock %} {% endcomment %}
+
+{% comment %} {% extends 'portal/base_portal.html' %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+
+  {% if messages %}
+  <div class="mb-5 space-y-2">
+    {% for message in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-medium
+      {% if message.tags == 'error' %}bg-red-50 text-red-600{% else %}bg-emerald-50 text-emerald-700{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ── Profile header hero ─────────────────────────────────────────────── -->
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-600 via-brand-500 to-purple-500 text-white px-6 py-6 mb-6 flex flex-wrap items-center gap-5">
+    <div class="absolute inset-0 opacity-[0.12] pointer-events-none"
+         style="background-image: radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 1px); background-size: 18px 18px;"></div>
+
+    <div class="relative z-10 w-16 h-16 rounded-2xl bg-white/15 ring-2 ring-white/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+      {% if employee.photo %}
+        <img src="{{ employee.photo.url }}" alt="{{ employee.full_name }}" class="w-full h-full object-cover">
+      {% else %}
+        <span class="text-2xl font-bold text-white">{{ employee.first_name|first|upper }}{{ employee.last_name|first|upper }}</span>
+      {% endif %}
+    </div>
+
+    <div class="relative z-10 min-w-0 flex-1">
+      <p class="text-white text-xl font-bold truncate">{{ employee.full_name }}</p>
+      <p class="text-indigo-100 text-sm mt-0.5 truncate">
+        {{ employee.designation.title|default:"—" }} · {{ employee.department.name|default:"—" }}
+      </p>
+      <div class="flex items-center gap-2 mt-2">
+        <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-white/20 text-white">
+          <i class="fas fa-id-badge mr-1"></i> {{ employee.employee_id }}
+        </span>
+        <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-white/20 text-white">
+          {{ employee.get_status_display }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tabs ─────────────────────────────────────────────────────────────── -->
+  <div class="flex gap-1.5 mb-5 bg-slate-100 rounded-xl p-1.5 w-fit">
+    <button type="button" onclick="showProfileTab('details')" id="profile-tab-btn-details"
+      class="profile-tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+      <i class="fas fa-id-card mr-1.5"></i> Profile Details
+    </button>
+    <button type="button" onclick="showProfileTab('security')" id="profile-tab-btn-security"
+      class="profile-tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+      <i class="fas fa-lock mr-1.5"></i> Login & Security
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 1 — Profile Details (editable)
+       ══════════════════════════════════════════════════════════════════ -->
+  <div id="profile-tab-details" class="profile-tab space-y-5">
+
+    <form method="post" enctype="multipart/form-data" class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="details">
+
+      <h3 class="text-slate-800 font-bold text-base mb-5">Personal Details</h3>
+
+      <div class="mb-5">
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Photo</label>
+        <div class="flex items-center gap-4">
+          {% if employee.photo %}
+            <img src="{{ employee.photo.url }}" class="w-14 h-14 rounded-xl object-cover border border-slate-200">
+          {% else %}
+            <div class="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
+              <i class="fas fa-user text-xl"></i>
+            </div>
+          {% endif %}
+          {{ details_form.photo }}
+        </div>
+        {% if details_form.photo.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.photo.errors|first }}</p>{% endif %}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">First Name</label>
+          {{ details_form.first_name }}
+          {% if details_form.first_name.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.first_name.errors|first }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Last Name</label>
+          {{ details_form.last_name }}
+          {% if details_form.last_name.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.last_name.errors|first }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Email</label>
+          {{ details_form.email }}
+          {% if details_form.email.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.email.errors|first }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Phone</label>
+          {{ details_form.phone }}
+          {% if details_form.phone.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.phone.errors|first }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Date of Birth</label>
+          {{ details_form.date_of_birth }}
+          {% if details_form.date_of_birth.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.date_of_birth.errors|first }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Gender</label>
+          {{ details_form.gender }}
+          {% if details_form.gender.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.gender.errors|first }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="mb-5">
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Address</label>
+        {{ details_form.address }}
+        {% if details_form.address.errors %}<p class="text-red-500 text-xs mt-1.5">{{ details_form.address.errors|first }}</p>{% endif %}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Emergency Contact Name</label>
+          {{ details_form.emergency_contact_name }}
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Emergency Contact Phone</label>
+          {{ details_form.emergency_contact_phone }}
+        </div>
+      </div>
+
+      <button type="submit"
+        class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl transition-colors">
+        <i class="fas fa-check mr-1.5"></i> Save Changes
+      </button>
+    </form>
+
+    <!-- Employment Info (read-only — admin managed) -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-3">
+        Employment Info <span class="text-slate-400 font-normal text-xs">(managed by HR)</span>
+      </h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div><p class="text-slate-400 text-xs mb-0.5">Employee ID</p><p class="text-slate-700 text-sm font-medium">{{ employee.employee_id }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Department</p><p class="text-slate-700 text-sm font-medium">{{ employee.department.name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Designation</p><p class="text-slate-700 text-sm font-medium">{{ employee.designation.title|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Reporting Manager</p><p class="text-slate-700 text-sm font-medium">{{ employee.reporting_manager.full_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Date of Joining</p><p class="text-slate-700 text-sm font-medium">{{ employee.date_joined|date:"d M Y" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Employment Type</p><p class="text-slate-700 text-sm font-medium">{{ employee.get_employment_type_display }}</p></div>
+      </div>
+    </div>
+
+    <!-- Company Details -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <h3 class="text-slate-700 font-semibold text-sm mb-3">Company Details</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div><p class="text-slate-400 text-xs mb-0.5">Company Name</p><p class="text-slate-700 text-sm font-medium">{{ site_settings.company_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Company Code</p><p class="text-slate-700 text-sm font-medium">{{ site_settings.company_code|default:"—" }}</p></div>
+      </div>
+    </div>
+
+    <!-- Bank & Government ID -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-slate-700 font-semibold text-sm flex items-center gap-2">
+          <i class="fas fa-building-columns text-teal-600 text-xs"></i> Bank & Government ID
+        </h3>
+        <a href="{% url 'portal_edit_bank_details' %}"
+          class="text-xs font-medium text-brand-600 hover:underline">
+          <i class="fas fa-pencil mr-1 text-[10px]"></i>Edit
+        </a>
+      </div>
+      {% if employee.bank_account_number or employee.aadhar_number or employee.pan_number %}
+      <div class="grid grid-cols-2 gap-4">
+        <div><p class="text-slate-400 text-xs mb-0.5">Account Holder</p><p class="text-slate-700 text-sm font-medium">{{ employee.bank_account_holder_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Bank Name</p><p class="text-slate-700 text-sm font-medium">{{ employee.bank_name|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Account Number</p><p class="text-slate-700 text-sm font-medium font-mono">{{ employee.bank_account_masked|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">IFSC Code</p><p class="text-slate-700 text-sm font-medium">{{ employee.bank_ifsc_code|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">Aadhaar Number</p><p class="text-slate-700 text-sm font-medium font-mono">{{ employee.aadhar_masked|default:"—" }}</p></div>
+        <div><p class="text-slate-400 text-xs mb-0.5">PAN Number</p><p class="text-slate-700 text-sm font-medium font-mono">{{ employee.pan_masked|default:"—" }}</p></div>
+      </div>
+      {% else %}
+      <p class="text-slate-400 text-sm">Not added yet — <a href="{% url 'portal_edit_bank_details' %}" class="text-brand-600 hover:underline">add your details</a>.</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 2 — Login & Security (username + password)
+       ══════════════════════════════════════════════════════════════════ -->
+  <div id="profile-tab-security" class="profile-tab hidden space-y-5">
+
+    <!-- Username -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+      <h3 class="text-slate-800 font-bold text-base mb-1">Login Username</h3>
+      <p class="text-slate-400 text-xs mb-4">This is what you type in on the login screen.</p>
+      <form method="post" class="flex flex-col sm:flex-row gap-3">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="username">
+        <input type="text" name="username" required value="{{ request.user.username }}"
+          class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+        <button type="submit"
+          class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl whitespace-nowrap">
+          <i class="fas fa-check mr-1.5"></i> Update Username
+        </button>
+      </form>
+    </div>
+
+    <!-- Password -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+      <h3 class="text-slate-800 font-bold text-base mb-1">Change Password</h3>
+      <p class="text-slate-400 text-xs mb-4">
+        You'll stay logged in on this device after changing it. Your admin will be notified for security.
+      </p>
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="password">
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Current Password</label>
+          <input type="password" name="current_password" required
+            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">New Password</label>
+            <input type="password" name="new_password" required minlength="6"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          </div>
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Confirm New Password</label>
+            <input type="password" name="confirm_password" required minlength="6"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          </div>
+        </div>
+        <p class="text-slate-400 text-[11px]">Minimum 6 characters.</p>
+
+        <button type="submit"
+          class="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors">
+          <i class="fas fa-key mr-1.5"></i> Change Password
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+  .profile-tab-btn { color: #64748b; }
+  .profile-tab-btn.active { background: white; color: #4338ca; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+</style>
+<script>
+function showProfileTab(name) {
+  document.querySelectorAll('.profile-tab').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.profile-tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('profile-tab-' + name).classList.remove('hidden');
+  document.getElementById('profile-tab-btn-' + name).classList.add('active');
+  localStorage.setItem('portalProfileActiveTab', name);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const wanted = localStorage.getItem('portalProfileActiveTab') || 'details';
+  showProfileTab(wanted);
+});
+</script>
+{% endblock %} {% endcomment %}
+

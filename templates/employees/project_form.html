@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %}{% if is_edit %}Edit Project{% else %}Add Project{% endif %}{% endblock %}
+{% block page_title %}{% if is_edit %}Edit Project{% else %}Add New Project{% endif %}{% endblock %}
+{% block page_subtitle %}{% if is_edit %}Update assignment details{% else %}Create a project and assign team members{% endif %}{% endblock %}
+
+{% block content %}
+<div class="flex items-center gap-2 text-xs text-slate-400 mb-5">
+  <a href="{% url 'dashboard' %}" class="hover:text-brand-600 transition-colors">Dashboard</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <a href="{% url 'project_list' %}" class="hover:text-brand-600 transition-colors">Projects</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <span class="text-slate-600 font-medium">{% if is_edit %}Edit{% else %}Add Project{% endif %}</span>
+</div>
+
+<form method="post" class="bg-white rounded-2xl border border-slate-100 p-6 max-w-3xl">
+  {% csrf_token %}
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Project Name *</label>
+      <input type="text" name="name" required value="{{ project.name|default:'' }}"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-brand-300 focus:ring-1 focus:ring-brand-100">
+    </div>
+    <div>
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Project Code *</label>
+      <input type="text" name="code" required value="{{ project.code|default:'' }}" placeholder="e.g. PRJ-001"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 uppercase focus:outline-none focus:border-brand-300 focus:ring-1 focus:ring-brand-100">
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <label class="block text-slate-600 text-xs font-medium mb-1.5">Description</label>
+    <textarea name="description" rows="3"
+      class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-brand-300 focus:ring-1 focus:ring-brand-100">{{ project.description|default:'' }}</textarea>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div>
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Department</label>
+      <select name="department"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:border-brand-300 focus:ring-1 focus:ring-brand-100">
+        <option value="">— None —</option>
+        {% for dept in departments %}
+        <option value="{{ dept.id }}" {% if project.department_id == dept.id %}selected{% endif %}>{{ dept.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Project Manager</label>
+      <select name="manager"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:border-brand-300 focus:ring-1 focus:ring-brand-100">
+        <option value="">— None —</option>
+        {% for emp in employees %}
+        <option value="{{ emp.id }}" {% if project.manager_id == emp.id %}selected{% endif %}>{{ emp.full_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+    <div>
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Start Date *</label>
+      <input type="date" name="start_date" required value="{{ project.start_date|date:'Y-m-d' }}"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-brand-300 focus:ring-1 focus:ring-brand-100">
+    </div>
+    <div>
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Due / End Date</label>
+      <input type="date" name="end_date" value="{{ project.end_date|date:'Y-m-d' }}"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-brand-300 focus:ring-1 focus:ring-brand-100">
+    </div>
+    <div>
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Status</label>
+      <select name="status"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:border-brand-300 focus:ring-1 focus:ring-brand-100">
+        <option value="planning"  {% if project.status == 'planning' %}selected{% endif %}>Planning</option>
+        <option value="active"    {% if project.status == 'active' %}selected{% endif %}>Active</option>
+        <option value="on_hold"   {% if project.status == 'on_hold' %}selected{% endif %}>On Hold</option>
+        <option value="completed" {% if project.status == 'completed' %}selected{% endif %}>Completed</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="mb-6">
+    <label class="block text-slate-600 text-xs font-medium mb-1.5">Assign Team Members</label>
+    <div class="border border-slate-200 rounded-xl p-3 max-h-56 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+      {% for emp in employees %}
+      <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 text-sm text-slate-600 cursor-pointer">
+        <input type="checkbox" name="members" value="{{ emp.id }}"
+          {% if emp in project.members.all %}checked{% endif %}
+          class="rounded border-slate-300 text-brand-600 focus:ring-brand-200">
+        {{ emp.full_name }}
+        <span class="text-slate-400 text-xs">{{ emp.department.name|default:"" }}</span>
+      </label>
+      {% empty %}
+      <p class="text-slate-400 text-xs px-2 py-1.5">No active employees found.</p>
+      {% endfor %}
+    </div>
+    <p class="text-slate-400 text-[11px] mt-1.5">Everyone assigned here will see the project and their teammates on it.</p>
+  </div>
+
+  <div class="flex items-center gap-3">
+    <button type="submit" class="bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors">
+      <i class="fas fa-check mr-1.5"></i>{% if is_edit %}Save Changes{% else %}Create Project{% endif %}
+    </button>
+    <a href="{% url 'project_list' %}" class="text-slate-500 text-sm font-medium px-4 py-2.5 hover:text-slate-700">Cancel</a>
+  </div>
+</form>
+{% endblock %}

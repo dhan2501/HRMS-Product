@@ -1,0 +1,97 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}Announcements{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+
+  <div class="flex items-center justify-between mb-5">
+    <div>
+      <h1 class="text-slate-800 font-bold text-lg">Announcements</h1>
+      <p class="text-slate-500 text-xs mt-0.5">Company-wide broadcasts from the Super Admin</p>
+    </div>
+  </div>
+
+  <!-- Priority Filter Tabs -->
+  <div class="flex items-center gap-2 mb-5 border-b border-slate-100 pb-3">
+    <button type="button" onclick="filterAnnouncements('all', this)"
+      class="ann-tab active px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-800 text-white transition-colors" data-tab="all">
+      All <span class="opacity-70">({{ announcements|length }})</span>
+    </button>
+    <button type="button" onclick="filterAnnouncements('high', this)"
+      class="ann-tab px-4 py-1.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors" data-tab="high">
+      High
+    </button>
+    <button type="button" onclick="filterAnnouncements('medium', this)"
+      class="ann-tab px-4 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors" data-tab="medium">
+      Medium
+    </button>
+    <button type="button" onclick="filterAnnouncements('low', this)"
+      class="ann-tab px-4 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors" data-tab="low">
+      Low
+    </button>
+  </div>
+
+  <div class="space-y-3" id="announcementCards">
+    {% for a in announcements %}
+    <div data-priority="{{ a.priority }}"
+      onclick="openAnnouncementPopup('{% url 'portal_announcement_json' a.pk %}')"
+      class="ann-card cursor-pointer rounded-2xl p-4 flex items-start gap-3 border bg-white hover:shadow-sm transition-shadow
+      {% if a.priority == 'high' %}border-rose-200
+      {% elif a.priority == 'medium' %}border-amber-200
+      {% else %}border-emerald-200{% endif %}">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0
+        {% if a.priority == 'high' %}bg-rose-100 text-rose-600
+        {% elif a.priority == 'medium' %}bg-amber-100 text-amber-600
+        {% else %}bg-emerald-100 text-emerald-600{% endif %}">
+        <i class="fas fa-bullhorn"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide
+            {% if a.priority == 'high' %}bg-rose-200 text-rose-800
+            {% elif a.priority == 'medium' %}bg-amber-200 text-amber-800
+            {% else %}bg-emerald-200 text-emerald-800{% endif %}">
+            {{ a.get_priority_display }}
+          </span>
+          <p class="text-slate-800 text-sm font-semibold">{{ a.title }}</p>
+        </div>
+        <p class="text-slate-600 text-xs line-clamp-2">{{ a.message }}</p>
+        <p class="text-slate-400 text-[11px] mt-1.5">
+          {{ a.created_by.full_name|default:"Admin" }} &bull; {{ a.created_at|timesince }} ago &bull; expires {{ a.expires_at|timeuntil }} from now
+        </p>
+      </div>
+      <i class="fas fa-chevron-right text-slate-300 text-xs mt-2 flex-shrink-0"></i>
+    </div>
+    {% empty %}
+    <div class="bg-white rounded-2xl border border-slate-100 p-10 text-center">
+      <i class="fas fa-bullhorn text-slate-300 text-3xl mb-3"></i>
+      <p class="text-slate-400 text-sm">No announcements right now.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <p id="announcementEmptyMsg" class="hidden bg-white rounded-2xl border border-slate-100 p-10 text-center">
+    <i class="fas fa-bullhorn text-slate-300 text-3xl mb-3 block"></i>
+    <span class="text-slate-400 text-sm">No announcements in this priority right now.</span>
+  </p>
+</div>
+
+<script>
+function filterAnnouncements(priority, btn) {
+  document.querySelectorAll('.ann-tab').forEach(function (t) {
+    t.classList.remove('active', 'bg-slate-800', 'text-white');
+  });
+  btn.classList.add('active', 'bg-slate-800', 'text-white');
+
+  var visibleCount = 0;
+  document.querySelectorAll('.ann-card').forEach(function (card) {
+    var show = (priority === 'all' || card.dataset.priority === priority);
+    card.style.display = show ? 'flex' : 'none';
+    if (show) visibleCount++;
+  });
+
+  var emptyMsg = document.getElementById('announcementEmptyMsg');
+  if (emptyMsg) emptyMsg.classList.toggle('hidden', visibleCount !== 0);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,62 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.dashboard, name='dashboard'),
+    path('home/', views.dashboard, name='dashboard_home'),
+
+    # Employees
+    path('employees/', views.employee_list, name='employee_list'),
+    path('employees/add/', views.add_employee, name='add_employee'),
+    path('employees/<int:pk>/', views.employee_detail, name='employee_detail'),
+    path('employees/<int:pk>/edit/', views.edit_employee, name='edit_employee'),
+    path('employees/<int:pk>/status/', views.update_employee_status, name='update_employee_status'),
+    path('employees/<int:pk>/set-manager/', views.set_reporting_manager, name='set_reporting_manager'),
+
+    # ✅ Performance Section
+    path('employees/<int:pk>/performance/add/', views.add_performance_review, name='add_performance_review'),
+    path('employees/<int:pk>/performance/<int:review_pk>/edit/', views.edit_performance_review, name='edit_performance_review'),
+    path('employees/<int:pk>/performance/<int:review_pk>/delete/', views.delete_performance_review, name='delete_performance_review'),
+
+    # ✅ Reporting Manager connectivity
+    path('my-team/', views.my_team, name='my_team'),
+
+    # ✅ Login Credentials Management
+    path('employees/credentials/', views.employee_credentials, name='employee_credentials'),
+    path('employees/<int:pk>/create-login/', views.create_employee_login, name='create_employee_login'),
+    path('employees/<int:pk>/reset-password/', views.reset_employee_password, name='reset_employee_password'),
+    path('employees/create-all-logins/', views.create_all_logins, name='create_all_logins'),
+
+    # Departments
+    path('departments/', views.department_list, name='department_list'),
+    path('departments/add/', views.add_department, name='add_department'),
+    path('departments/<int:pk>/edit/', views.edit_department, name='edit_department'),
+    path('departments/<int:pk>/delete/', views.delete_department, name='delete_department'),
+
+    # Designations
+    path('designations/', views.designation_list, name='designation_list'),
+    path('designations/add/', views.add_designation, name='add_designation'),
+    path('designations/<int:pk>/edit/', views.edit_designation, name='edit_designation'),
+    path('designations/<int:pk>/delete/', views.delete_designation, name='delete_designation'),
+
+    # ✅ System Settings (theme, logo, superadmins, audit log)
+    path('settings/', views.system_settings, name='system_settings'),
+
+    # ✅ My Profile (any admin panel user — own username, password & details)
+    path('my-profile/', views.my_profile, name='my_profile'),
+
+    # ✅ Projects / Assignments (Super Admin + Reporting Managers)
+    path('projects/', views.project_list, name='project_list'),
+    path('projects/add/', views.add_project, name='add_project'),
+    path('projects/<int:pk>/', views.project_detail, name='project_detail'),
+    path('projects/<int:pk>/edit/', views.edit_project, name='edit_project'),
+    path('projects/<int:pk>/delete/', views.delete_project, name='delete_project'),
+
+    # employees/urls.py — list close hone se pehle
+
+    # ✅ Announcements (Super Admin only, High/Medium/Low, auto-expire in 24h)
+    path('announcements/', views.announcement_list, name='announcement_list'),
+    path('announcements/<int:pk>/delete/', views.delete_announcement, name='delete_announcement'),
+    path('announcements/<int:pk>/json/', views.announcement_detail_json, name='announcement_detail_json'),
+
+]

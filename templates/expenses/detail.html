@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+{% block title %}Expense Claim Detail{% endblock %}
+{% block page_title %}Expense Claim{% endblock %}
+{% block page_subtitle %}Claim detail &amp; activity timeline{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto screen-only">
+  <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden mb-5">
+
+    <div class="p-6 text-white" style="background: linear-gradient(135deg, #047857, #10b981)">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <p class="text-emerald-100 text-xs font-medium uppercase tracking-wide">Expense Claim</p>
+          <h2 class="text-white font-bold text-xl mt-0.5">{{ claim.employee.full_name }}</h2>
+          <p class="text-emerald-100 text-sm mt-1">
+            {{ claim.employee.designation.title|default:"" }} - {{ claim.employee.department.name|default:"" }}
+          </p>
+        </div>
+        <div class="text-right">
+          <p class="text-emerald-100 text-xs">Amount</p>
+          <p class="text-white font-bold text-2xl">Rs.{{ claim.amount|floatformat:0 }}</p>
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium
+            {% if claim.status == 'reimbursed' %}bg-white text-brand-700
+            {% elif claim.status == 'approved' %}bg-emerald-300 text-emerald-900
+            {% elif claim.status == 'pending_finance' %}bg-blue-200 text-blue-900
+            {% elif claim.status == 'rejected' %}bg-red-300 text-red-900
+            {% elif claim.status == 'cancelled' %}bg-white bg-opacity-30 text-white
+            {% else %}bg-amber-300 text-amber-900{% endif %}">
+            {{ claim.get_status_display }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-6">
+      <!-- Claim summary -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-slate-400 text-[10px] uppercase tracking-wide mb-1">Category</p>
+          <p class="text-slate-700 font-semibold text-sm">{{ claim.get_category_display }}</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-slate-400 text-[10px] uppercase tracking-wide mb-1">Expense Date</p>
+          <p class="text-slate-700 font-semibold text-sm">{{ claim.expense_date|date:"d M Y" }}</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-slate-400 text-[10px] uppercase tracking-wide mb-1">Submitted</p>
+          <p class="text-slate-700 font-semibold text-sm">{{ claim.created_at|date:"d M Y" }}</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-slate-400 text-[10px] uppercase tracking-wide mb-1">Bill</p>
+          {% if claim.bill %}
+          <a href="{{ claim.bill.url }}" target="_blank" class="text-brand-600 font-semibold text-sm hover:underline">
+            <i class="fas fa-paperclip"></i> View
+          </a>
+          {% else %}
+          <p class="text-slate-400 text-sm">—</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mb-6">
+        <h3 class="text-slate-600 text-xs font-semibold uppercase tracking-wide mb-2">Description</h3>
+        <p class="text-slate-700 text-sm bg-slate-50 rounded-xl p-4">{{ claim.description }}</p>
+      </div>
+
+      {% if claim.status == 'rejected' and claim.rejection_reason %}
+      <div class="mb-6 bg-red-50 border border-red-100 rounded-xl p-4">
+        <p class="text-red-500 text-xs font-medium mb-1">Rejection Reason</p>
+        <p class="text-slate-700 text-sm">{{ claim.rejection_reason }}</p>
+      </div>
+      {% endif %}
+
+      {% if claim.status == 'reimbursed' %}
+      <div class="mb-6 bg-brand-50 border border-brand-100 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-brand-600 text-xs font-medium mb-1">Reimbursed</p>
+          <p class="text-slate-700 text-sm">Transaction Ref: {{ claim.transaction_reference }}</p>
+        </div>
+        <p class="text-slate-400 text-xs">{{ claim.reimbursed_at|date:"d M Y, h:i A" }}</p>
+      </div>
+      {% endif %}
+
+      <!-- Finance actions -->
+      {% if claim.status == 'pending_finance' %}
+      <div class="border-t border-slate-100 pt-5 mb-5">
+        <h3 class="text-slate-600 text-xs font-semibold uppercase tracking-wide mb-3">Finance Review</h3>
+        <p class="text-slate-400 text-xs mb-3">
+          <i class="fas fa-circle-check text-emerald-500 mr-1"></i>
+          Approved by reporting manager {{ claim.manager_reviewed_by.full_name|default:"—" }}
+          on {{ claim.manager_reviewed_at|date:"d M Y" }}.
+        </p>
+        <div class="flex flex-wrap items-center gap-2">
+          <form method="post" action="{% url 'finance_approve_expense' claim.pk %}">
+            {% csrf_token %}
+            <button type="submit"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600">
+              <i class="fas fa-check text-xs"></i> Approve
+            </button>
+          </form>
+          <button type="button" onclick="document.getElementById('financeRejectForm').classList.toggle('hidden')"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100">
+            <i class="fas fa-xmark text-xs"></i> Reject
+          </button>
+        </div>
+        <form method="post" action="{% url 'finance_reject_expense' claim.pk %}" id="financeRejectForm" class="hidden mt-3 flex items-center gap-2">
+          {% csrf_token %}
+          <input type="text" name="rejection_reason" placeholder="Reason for rejection…"
+            class="flex-1 text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-red-300">
+          <button type="submit" class="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600">Confirm Reject</button>
+        </form>
+      </div>
+      {% endif %}
+
+      {% if claim.status == 'approved' %}
+      <div class="border-t border-slate-100 pt-5 mb-5">
+        <h3 class="text-slate-600 text-xs font-semibold uppercase tracking-wide mb-3">Mark as Reimbursed</h3>
+        <form method="post" action="{% url 'mark_expense_reimbursed' claim.pk %}" class="flex flex-wrap items-center gap-2">
+          {% csrf_token %}
+          <input type="text" name="transaction_reference" required placeholder="Bank transaction / UTR reference…"
+            class="flex-1 min-w-[220px] text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-400">
+          <button type="submit"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-medium hover:bg-brand-700">
+            <i class="fas fa-money-bill-transfer text-xs"></i> Mark Reimbursed
+          </button>
+        </form>
+      </div>
+      {% endif %}
+
+      <!-- Activity timeline -->
+      <div class="border-t border-slate-100 pt-5">
+        <h3 class="text-slate-600 text-xs font-semibold uppercase tracking-wide mb-3">Activity Timeline</h3>
+        <div class="space-y-3">
+          {% for entry in timeline %}
+          <div class="flex items-start gap-3">
+            <div class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <i class="fas fa-circle text-[6px] text-slate-400"></i>
+            </div>
+            <div class="flex-1">
+              <p class="text-slate-700 text-sm">
+                <span class="font-medium">{{ entry.get_action_display }}</span>
+                {% if entry.by_employee %} by {{ entry.by_employee.full_name }}{% endif %}
+              </p>
+              {% if entry.comment %}
+              <p class="text-slate-500 text-xs mt-0.5">{{ entry.comment }}</p>
+              {% endif %}
+              <p class="text-slate-300 text-[10px] mt-0.5">{{ entry.created_at|date:"d M Y, h:i A" }}</p>
+            </div>
+          </div>
+          {% empty %}
+          <p class="text-slate-400 text-xs">No activity recorded yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 mt-6 pt-5 border-t border-slate-100">
+        <a href="{% url 'expense_requests' %}"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+          Back
+        </a>
+        <button onclick="window.print()"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 ml-auto">
+          Print
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     PRINT-ONLY INVOICE — hidden on screen, this is what actually renders
+     when the user hits Print / Save as PDF.
+     ══════════════════════════════════════════════════════════════════════ -->
+<div class="print-only" style="font-family: 'Inter', sans-serif; color: #1e293b; max-width: 800px; margin: 0 auto; position: relative;">
+
+  <!-- Status stamp -->
+  {% if claim.status == 'reimbursed' %}
+  <div style="position: absolute; top: 90px; right: 40px; transform: rotate(-12deg); border: 3px solid #059669; color: #059669; font-weight: 800; font-size: 22px; letter-spacing: 3px; padding: 6px 18px; border-radius: 8px; opacity: 0.85;">PAID</div>
+  {% elif claim.status == 'approved' %}
+  <div style="position: absolute; top: 90px; right: 40px; transform: rotate(-12deg); border: 3px solid #10b981; color: #10b981; font-weight: 800; font-size: 20px; letter-spacing: 2px; padding: 6px 18px; border-radius: 8px; opacity: 0.85;">APPROVED</div>
+  {% elif claim.status == 'rejected' %}
+  <div style="position: absolute; top: 90px; right: 40px; transform: rotate(-12deg); border: 3px solid #dc2626; color: #dc2626; font-weight: 800; font-size: 20px; letter-spacing: 3px; padding: 6px 18px; border-radius: 8px; opacity: 0.85;">REJECTED</div>
+  {% else %}
+  <div style="position: absolute; top: 90px; right: 40px; transform: rotate(-12deg); border: 3px solid #d97706; color: #d97706; font-weight: 800; font-size: 18px; letter-spacing: 2px; padding: 6px 18px; border-radius: 8px; opacity: 0.85;">PENDING</div>
+  {% endif %}
+
+  <!-- Header: logo + company | document type + invoice no -->
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 3px solid {{ site_settings.primary_color|default:'#4338ca' }};">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      {% if site_settings.logo %}
+      <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.company_name }}" style="height: 52px; width: 52px; object-fit: contain; border-radius: 10px;">
+      {% else %}
+      <div style="height: 52px; width: 52px; border-radius: 10px; background: {{ site_settings.primary_color|default:'#4338ca' }}; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px;">
+        {{ site_settings.company_name|default:"DJ HRMS"|slice:":2"|upper }}
+      </div>
+      {% endif %}
+      <div>
+        <p style="font-size: 18px; font-weight: 800; margin: 0;">{{ site_settings.company_name|default:"DJ HRMS" }}</p>
+        <p style="font-size: 11px; margin: 2px 0 0; color: #94a3b8;">Smart HR Management</p>
+      </div>
+    </div>
+    <div style="text-align: right;">
+      <p style="font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: {{ site_settings.primary_color|default:'#4338ca' }}; margin: 0;">Expense Reimbursement Invoice</p>
+      <p style="font-size: 10px; color: #94a3b8; margin: 2px 0 10px;">Internal reimbursement voucher &middot; not a tax invoice</p>
+      <table style="font-size: 11px; color: #475569; border-collapse: collapse; margin-left: auto;">
+        <tr><td style="padding: 1px 8px 1px 0; text-align: right; color: #94a3b8;">Invoice No.</td><td style="padding: 1px 0; font-weight: 700;">EXP-{{ claim.pk|stringformat:"05d" }}</td></tr>
+        <tr><td style="padding: 1px 8px 1px 0; text-align: right; color: #94a3b8;">Invoice Date</td><td style="padding: 1px 0; font-weight: 700;">{{ claim.created_at|date:"d M Y" }}</td></tr>
+        <tr><td style="padding: 1px 8px 1px 0; text-align: right; color: #94a3b8;">Status</td><td style="padding: 1px 0; font-weight: 700;">{{ claim.get_status_display }}</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Bill To | Claim Info -->
+  <div style="display: flex; justify-content: space-between; gap: 24px; margin-top: 24px;">
+    <div style="flex: 1;">
+      <p style="font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #94a3b8; margin: 0 0 6px;">Claimant</p>
+      <p style="font-size: 15px; font-weight: 700; margin: 0;">{{ claim.employee.full_name }}</p>
+      <p style="font-size: 12px; color: #64748b; margin: 3px 0 0;">{{ claim.employee.designation.title|default:"—" }}</p>
+      <p style="font-size: 12px; color: #64748b; margin: 1px 0 0;">{{ claim.employee.department.name|default:"—" }} Department</p>
+      <p style="font-size: 12px; color: #64748b; margin: 1px 0 0;">Employee ID: {{ claim.employee.employee_id }}</p>
+    </div>
+    <div style="flex: 1; text-align: right;">
+      <p style="font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #94a3b8; margin: 0 0 6px;">Claim Info</p>
+      <p style="font-size: 12px; margin: 2px 0;"><span style="color: #94a3b8;">Category:</span> <strong>{{ claim.get_category_display }}</strong></p>
+      <p style="font-size: 12px; margin: 2px 0;"><span style="color: #94a3b8;">Expense Date:</span> <strong>{{ claim.expense_date|date:"d M Y" }}</strong></p>
+      <p style="font-size: 12px; margin: 2px 0;"><span style="color: #94a3b8;">Submitted On:</span> <strong>{{ claim.created_at|date:"d M Y" }}</strong></p>
+    </div>
+  </div>
+
+  <!-- Itemized charges table -->
+  <table style="width: 100%; border-collapse: collapse; margin-top: 28px; font-size: 12px;">
+    <thead>
+      <tr style="background: {{ site_settings.primary_color|default:'#4338ca' }}; color: #fff;">
+        <th style="text-align: left; padding: 10px 12px; font-weight: 600; border-radius: 6px 0 0 6px;">#</th>
+        <th style="text-align: left; padding: 10px 12px; font-weight: 600;">Description</th>
+        <th style="text-align: left; padding: 10px 12px; font-weight: 600;">Category</th>
+        <th style="text-align: left; padding: 10px 12px; font-weight: 600;">Date</th>
+        <th style="text-align: right; padding: 10px 12px; font-weight: 600; border-radius: 0 6px 6px 0;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom: 1px solid #e2e8f0;">
+        <td style="padding: 12px; color: #94a3b8;">1</td>
+        <td style="padding: 12px;">{{ claim.description }}</td>
+        <td style="padding: 12px;">{{ claim.get_category_display }}</td>
+        <td style="padding: 12px; white-space: nowrap;">{{ claim.expense_date|date:"d M Y" }}</td>
+        <td style="padding: 12px; text-align: right; font-weight: 600; white-space: nowrap;">Rs.{{ claim.amount|floatformat:2 }}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="4" style="padding: 14px 12px; text-align: right; font-weight: 700; font-size: 13px;">Total Reimbursable Amount</td>
+        <td style="padding: 14px 12px; text-align: right; font-weight: 800; font-size: 15px; color: {{ site_settings.primary_color|default:'#4338ca' }}; white-space: nowrap;">Rs.{{ claim.amount|floatformat:2 }}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  {% if claim.status == 'rejected' and claim.rejection_reason %}
+  <div style="margin-top: 20px; padding: 12px 14px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;">
+    <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #dc2626; margin: 0 0 4px;">Rejection Reason</p>
+    <p style="font-size: 12px; color: #475569; margin: 0;">{{ claim.rejection_reason }}</p>
+  </div>
+  {% endif %}
+
+  <!-- Approval trail -->
+  <p style="font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #94a3b8; margin: 28px 0 10px;">Approval Trail</p>
+  <div style="display: flex; gap: 14px;">
+    <div style="flex: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+      <p style="font-size: 10px; color: #94a3b8; margin: 0 0 4px;">1. Reporting Manager</p>
+      {% if claim.manager_reviewed_by %}
+      <p style="font-size: 12px; font-weight: 700; margin: 0; color: #059669;">&#10003; {{ claim.manager_reviewed_by.full_name }}</p>
+      <p style="font-size: 10px; color: #94a3b8; margin: 2px 0 0;">{{ claim.manager_reviewed_at|date:"d M Y, h:i A" }}</p>
+      {% else %}
+      <p style="font-size: 12px; color: #cbd5e1; margin: 0;">Awaiting review</p>
+      {% endif %}
+    </div>
+    <div style="flex: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+      <p style="font-size: 10px; color: #94a3b8; margin: 0 0 4px;">2. Finance / HR</p>
+      {% if claim.finance_reviewed_at %}
+      <p style="font-size: 12px; font-weight: 700; margin: 0; color: #059669;">
+        <i style="font-style: normal;">&#10003;</i> {{ claim.finance_reviewed_by.full_name|default:"HR / Finance Team" }}
+      </p>
+      <p style="font-size: 10px; color: #94a3b8; margin: 2px 0 0;">{{ claim.finance_reviewed_at|date:"d M Y, h:i A" }}</p>
+      {% else %}
+      <p style="font-size: 12px; color: #cbd5e1; margin: 0;">Awaiting review</p>
+      {% endif %}
+    </div>
+    <div style="flex: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+      <p style="font-size: 10px; color: #94a3b8; margin: 0 0 4px;">3. Reimbursement</p>
+      {% if claim.reimbursed_at %}
+      <p style="font-size: 12px; font-weight: 700; margin: 0; color: #059669;">&#10003; Ref: {{ claim.transaction_reference }}</p>
+      <p style="font-size: 10px; color: #94a3b8; margin: 2px 0 0;">{{ claim.reimbursed_at|date:"d M Y, h:i A" }}</p>
+      {% else %}
+      <p style="font-size: 12px; color: #cbd5e1; margin: 0;">Not yet paid</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="margin-top: 36px; padding-top: 14px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+    <p style="font-size: 10px; color: #94a3b8; margin: 0;">
+      This is a system-generated document from {{ site_settings.company_name|default:"DJ HRMS" }} &middot; no physical signature required.
+    </p>
+    <p style="font-size: 10px; color: #94a3b8; margin: 0;">Generated on {% now "d M Y, h:i A" %}</p>
+  </div>
+</div>
+{% endblock %}

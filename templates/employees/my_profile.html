@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% block title %}My Profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+{% block page_subtitle %}Update your login username, password and personal details{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+<div class="mb-5 space-y-2">
+  {% for message in messages %}
+  <div class="rounded-xl px-4 py-3 text-sm font-medium
+    {% if message.tags == 'error' %}bg-red-50 text-red-600{% else %}bg-emerald-50 text-emerald-700{% endif %}">
+    {{ message }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ── Profile header card ─────────────────────────────────────────────── -->
+<div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-500 text-white px-6 py-6 mb-6 flex flex-wrap items-center gap-5">
+  <div class="absolute inset-0 opacity-[0.15] pointer-events-none"
+       style="background-image: radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 1px); background-size: 18px 18px;"></div>
+
+  <div class="relative z-10 w-16 h-16 rounded-2xl bg-white/15 ring-2 ring-white/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+    {% if employee.photo %}
+      <img src="{{ employee.photo.url }}" alt="{{ employee.full_name }}" class="w-full h-full object-cover">
+    {% else %}
+      <span class="text-2xl font-bold text-white">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</span>
+    {% endif %}
+  </div>
+
+  <div class="relative z-10 min-w-0 flex-1">
+    <p class="text-white text-xl font-bold truncate">{{ request.user.get_full_name|default:request.user.username }}</p>
+    <p class="text-indigo-100 text-sm mt-0.5 truncate">
+      {{ request.user.username }}
+      {% if employee %} · {{ employee.designation.title|default:"—" }} · {{ employee.department.name|default:"—" }}{% endif %}
+    </p>
+    <div class="flex items-center gap-2 mt-2">
+      {% if request.user.is_superuser %}
+      <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-white/20 text-white">
+        <i class="fas fa-user-shield mr-1"></i> Super Admin
+        {% if employee.is_primary_admin %} · Full Access{% endif %}
+      </span>
+      {% else %}
+      <span class="text-xs px-2.5 py-1 rounded-full font-medium bg-white/20 text-white">Administrator</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ── Tabs ─────────────────────────────────────────────────────────────── -->
+<div class="flex gap-1.5 mb-5 bg-slate-100 rounded-xl p-1.5 w-fit">
+  <button type="button" onclick="showProfileTab('details')" id="profile-tab-btn-details"
+    class="profile-tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+    <i class="fas fa-id-card mr-1.5"></i> Profile Details
+  </button>
+  <button type="button" onclick="showProfileTab('security')" id="profile-tab-btn-security"
+    class="profile-tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+    <i class="fas fa-lock mr-1.5"></i> Login & Security
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     TAB 1 — Profile Details
+     ══════════════════════════════════════════════════════════════════════ -->
+<div id="profile-tab-details" class="profile-tab">
+  <form method="post" enctype="multipart/form-data" class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm max-w-2xl">
+    {% csrf_token %}
+    <input type="hidden" name="form_type" value="details">
+
+    <h3 class="text-slate-800 font-bold text-base mb-5">Personal Details</h3>
+
+    {% if employee %}
+    <div class="mb-5">
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Photo</label>
+      <div class="flex items-center gap-4">
+        {% if employee.photo %}
+          <img src="{{ employee.photo.url }}" class="w-14 h-14 rounded-xl object-cover border border-slate-200">
+        {% else %}
+          <div class="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
+            <i class="fas fa-user text-xl"></i>
+          </div>
+        {% endif %}
+        <input type="file" name="photo" accept="image/*"
+          class="text-sm text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-brand-50 file:text-brand-700 file:text-sm file:font-medium hover:file:bg-brand-100">
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+      <div>
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">First Name</label>
+        <input type="text" name="first_name" required value="{{ request.user.first_name }}"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+      </div>
+      <div>
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Last Name</label>
+        <input type="text" name="last_name" value="{{ request.user.last_name }}"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+      <div>
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Email</label>
+        <input type="email" name="email" required value="{{ request.user.email }}"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+      </div>
+      <div>
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Phone</label>
+        <input type="text" name="phone" value="{{ employee.phone }}" {% if not employee %}disabled placeholder="No employee profile linked"{% endif %}
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 disabled:bg-slate-50 disabled:text-slate-400">
+      </div>
+    </div>
+
+    {% if employee %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+      <div>
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Date of Birth</label>
+        <input type="date" name="date_of_birth" value="{{ employee.date_of_birth|date:'Y-m-d' }}"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+      </div>
+      <div>
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Gender</label>
+        <select name="gender"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 bg-white">
+          <option value="">-- Select --</option>
+          <option value="M" {% if employee.gender == 'M' %}selected{% endif %}>Male</option>
+          <option value="F" {% if employee.gender == 'F' %}selected{% endif %}>Female</option>
+          <option value="O" {% if employee.gender == 'O' %}selected{% endif %}>Other</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mb-5">
+      <label class="block text-slate-600 text-xs font-medium mb-1.5">Address</label>
+      <textarea name="address" rows="2"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 resize-none">{{ employee.address }}</textarea>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div>
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Emergency Contact Name</label>
+        <input type="text" name="emergency_contact_name" value="{{ employee.emergency_contact_name }}"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+      </div>
+      <div>
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Emergency Contact Phone</label>
+        <input type="text" name="emergency_contact_phone" value="{{ employee.emergency_contact_phone }}"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+      </div>
+    </div>
+    {% else %}
+    <p class="text-slate-400 text-xs mb-6">
+      <i class="fas fa-circle-info mr-1"></i>
+      No Employee profile is linked to this login — only the basic login details above can be updated here.
+    </p>
+    {% endif %}
+
+    <button type="submit"
+      class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl transition-colors">
+      <i class="fas fa-check mr-1.5"></i> Save Changes
+    </button>
+  </form>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     TAB 2 — Login & Security (username + password)
+     ══════════════════════════════════════════════════════════════════════ -->
+<div id="profile-tab-security" class="profile-tab hidden">
+
+  <!-- Username -->
+  <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm max-w-2xl mb-5">
+    <h3 class="text-slate-800 font-bold text-base mb-1">Login Username</h3>
+    <p class="text-slate-400 text-xs mb-4">This is what you type in on the login screen.</p>
+    <form method="post" class="flex flex-col sm:flex-row gap-3">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="username">
+      <input type="text" name="username" required value="{{ request.user.username }}"
+        class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+      <button type="submit"
+        class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl whitespace-nowrap">
+        <i class="fas fa-check mr-1.5"></i> Update Username
+      </button>
+    </form>
+  </div>
+
+  <!-- Password -->
+  <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm max-w-2xl">
+    <h3 class="text-slate-800 font-bold text-base mb-1">Change Password</h3>
+    <p class="text-slate-400 text-xs mb-4">You'll stay logged in on this device after changing it.</p>
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="password">
+
+      <div>
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Current Password</label>
+        <div class="relative">
+          <input type="password" name="current_password" id="id_current_password" required
+            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 pr-10 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          <button type="button" onclick="togglePwd('id_current_password', this)"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">New Password</label>
+          <div class="relative">
+            <input type="password" name="new_password" id="id_new_password" required minlength="6"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2.5 pr-10 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+            <button type="button" onclick="togglePwd('id_new_password', this)"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Confirm New Password</label>
+          <div class="relative">
+            <input type="password" name="confirm_password" id="id_confirm_password" required minlength="6"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2.5 pr-10 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+            <button type="button" onclick="togglePwd('id_confirm_password', this)"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <p class="text-slate-400 text-[11px]">Minimum 6 characters.</p>
+
+      <button type="submit"
+        class="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors">
+        <i class="fas fa-key mr-1.5"></i> Change Password
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<style>
+  .profile-tab-btn { color: #64748b; }
+  .profile-tab-btn.active { background: white; color: #4338ca; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+</style>
+<script>
+function togglePwd(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const icon = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.remove('fa-eye');
+    icon.classList.add('fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.remove('fa-eye-slash');
+    icon.classList.add('fa-eye');
+  }
+}
+
+function showProfileTab(name) {
+  document.querySelectorAll('.profile-tab').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.profile-tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('profile-tab-' + name).classList.remove('hidden');
+  document.getElementById('profile-tab-btn-' + name).classList.add('active');
+  localStorage.setItem('myProfileActiveTab', name);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const wanted = localStorage.getItem('myProfileActiveTab') || 'details';
+  showProfileTab(wanted);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% block title %}Biometric Devices{% endblock %}
+{% block page_title %}Biometric Devices{% endblock %}
+{% block page_subtitle %}Fingerprint/biometric punch machines connected to this server, and PIN-to-employee mapping{% endblock %}
+
+{% block content %}
+
+<!-- Setup instructions -->
+<div class="bg-white rounded-2xl border border-slate-100 p-5 mb-5 shadow-sm">
+  <h2 class="text-slate-700 font-semibold text-sm mb-3 flex items-center gap-2">
+    <i class="fas fa-fingerprint text-brand-600"></i> Connect a device
+  </h2>
+  <p class="text-slate-500 text-xs mb-3">On the device's network/cloud-server settings screen, enter:</p>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div class="bg-slate-50 rounded-xl p-3">
+      <p class="text-slate-400 text-[10px] uppercase font-semibold mb-1">Server Address</p>
+      <p class="text-slate-700 text-sm font-mono">{{ request.get_host }}</p>
+    </div>
+    <div class="bg-slate-50 rounded-xl p-3">
+      <p class="text-slate-400 text-[10px] uppercase font-semibold mb-1">Upload Path</p>
+      <p class="text-slate-700 text-sm font-mono">/attendance/device/iclock/cdata/</p>
+    </div>
+  </div>
+  <p class="text-slate-400 text-[11px] mt-3">Each employee also needs their device User ID / PIN saved on their profile — set it from Employee &rarr; Edit, or map it below once a punch arrives unmapped.</p>
+</div>
+
+<!-- Devices -->
+<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm mb-5">
+  <div class="px-5 py-3.5 border-b border-slate-100">
+    <h2 class="text-slate-700 font-semibold text-sm">Connected Devices</h2>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wide">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Serial Number</th>
+          <th class="text-left px-4 py-3 font-semibold">Name / Location</th>
+          <th class="text-left px-4 py-3 font-semibold">Last Seen</th>
+          <th class="text-left px-4 py-3 font-semibold">Last IP</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for dev in devices %}
+        <tr>
+          <td class="px-5 py-3 font-mono text-xs text-slate-700">{{ dev.serial_number }}</td>
+          <td class="px-4 py-3 text-slate-600 text-sm">{{ dev.name|default:"—" }} {% if dev.location %}<span class="text-slate-400">({{ dev.location }})</span>{% endif %}</td>
+          <td class="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{{ dev.last_seen_at|date:"d M Y, h:i A"|default:"Never" }}</td>
+          <td class="px-4 py-3 text-slate-400 text-xs font-mono">{{ dev.last_ip|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="px-4 py-10 text-center text-slate-400 text-sm">
+            No device has connected yet. Once one pings this server, it'll show up here.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Unmapped PINs -->
+{% if unmapped_pins %}
+<div class="bg-white rounded-2xl border border-amber-200 overflow-hidden shadow-sm mb-5">
+  <div class="px-5 py-3.5 border-b border-amber-100 bg-amber-50">
+    <h2 class="text-amber-800 font-semibold text-sm flex items-center gap-2">
+      <i class="fas fa-triangle-exclamation"></i> Unmapped PINs — map these to employees
+    </h2>
+  </div>
+  <div class="p-5 space-y-3">
+    {% for pin in unmapped_pins %}
+    <form method="post" class="flex items-center gap-3 flex-wrap">
+      {% csrf_token %}
+      <input type="hidden" name="device_user_id" value="{{ pin }}">
+      <span class="text-xs font-mono bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-lg">PIN: {{ pin }}</span>
+      <i class="fas fa-arrow-right-long text-slate-300 text-xs"></i>
+      <select name="employee" required
+        class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:border-brand-400">
+        <option value="">— Select employee —</option>
+        {% for emp in employees %}
+        <option value="{{ emp.pk }}">{{ emp.full_name }} ({{ emp.employee_id }})</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-brand-600 text-white hover:bg-brand-700">
+        <i class="fas fa-link mr-1"></i> Map
+      </button>
+    </form>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Recent raw pushes -->
+<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+  <div class="px-5 py-3.5 border-b border-slate-100">
+    <h2 class="text-slate-700 font-semibold text-sm">Recent Device Pushes</h2>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wide">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Time</th>
+          <th class="text-left px-4 py-3 font-semibold">Device PIN</th>
+          <th class="text-left px-4 py-3 font-semibold">Employee</th>
+          <th class="text-left px-4 py-3 font-semibold">Device</th>
+          <th class="text-left px-4 py-3 font-semibold">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for log in raw_logs %}
+        <tr>
+          <td class="px-5 py-3 text-slate-600 text-xs whitespace-nowrap">{{ log.timestamp|date:"d M Y, h:i:s A" }}</td>
+          <td class="px-4 py-3 font-mono text-xs text-slate-500">{{ log.device_user_id }}</td>
+          <td class="px-4 py-3 text-slate-700 text-sm">{{ log.employee.full_name|default:"—" }}</td>
+          <td class="px-4 py-3 text-slate-400 text-xs font-mono">{{ log.device_serial|default:"—" }}</td>
+          <td class="px-4 py-3">
+            {% if log.employee %}
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-100 text-emerald-700">Matched</span>
+            {% else %}
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">Unmapped</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="px-4 py-10 text-center text-slate-400 text-sm">No punches received from any device yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

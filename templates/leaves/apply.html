@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}Apply Leave{% endblock %}
+{% block page_title %}Apply Leave{% endblock %}
+{% block page_subtitle %}Submit a new leave request{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-xs text-slate-400 mb-6">
+  <a href="{% url 'dashboard' %}" class="hover:text-brand-600">Dashboard</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <a href="{% url 'leave_requests' %}" class="hover:text-brand-600">Leave Requests</a>
+  <i class="fas fa-chevron-right text-[9px]"></i>
+  <span class="text-slate-600 font-medium">Apply Leave</span>
+</div>
+
+<div class="max-w-2xl">
+  <div class="bg-white rounded-2xl border border-slate-100 p-6">
+
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+        <i class="fas fa-umbrella-beach text-amber-500"></i>
+      </div>
+      <div>
+        <h2 class="text-slate-800 font-semibold text-sm">New Leave Request</h2>
+        <p class="text-slate-400 text-xs">Fill in the details below</p>
+      </div>
+    </div>
+
+    <form method="post" id="leaveForm">
+      {% csrf_token %}
+      <div class="space-y-4">
+
+        <!-- Employee -->
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">
+            Employee <span class="text-red-500">*</span>
+          </label>
+          <select name="employee" required
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 bg-white">
+            <option value="">-- Select Employee --</option>
+            {% for emp in employees %}
+              <option value="{{ emp.id }}">{{ emp.full_name }} ({{ emp.employee_id }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Leave Type -->
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">
+            Leave Type <span class="text-red-500">*</span>
+          </label>
+          <select name="leave_type" required
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 bg-white">
+            <option value="">-- Select Leave Type --</option>
+            {% for lt in leave_types %}
+              <option value="{{ lt.id }}">
+                {{ lt.name }} ({{ lt.code }}) — {{ lt.days_allowed }} days/year
+                {% if lt.is_paid %}[Paid]{% else %}[Unpaid]{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          {% if not leave_types %}
+            <p class="text-amber-500 text-[11px] mt-1">
+              <i class="fas fa-triangle-exclamation mr-1"></i>
+              No leave types found.
+              <a href="{% url 'add_leave_type' %}" class="underline font-medium">Add leave type first</a>
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Date Range -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">
+              Start Date <span class="text-red-500">*</span>
+            </label>
+            <input type="date" name="start_date" id="startDate" required
+              onchange="calculateDays()"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          </div>
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">
+              End Date <span class="text-red-500">*</span>
+            </label>
+            <input type="date" name="end_date" id="endDate" required
+              onchange="calculateDays()"
+              class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          </div>
+        </div>
+
+        <!-- Days Calculator -->
+        <div id="daysInfo" class="hidden bg-brand-50 border border-brand-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <i class="fas fa-calendar-days text-brand-500"></i>
+          <p class="text-brand-700 text-sm font-medium">
+            Total: <span id="daysCount" class="font-bold text-lg">0</span> day(s)
+          </p>
+        </div>
+
+        <!-- Reason -->
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">
+            Reason <span class="text-red-500">*</span>
+          </label>
+          <textarea name="reason" rows="4" required
+            placeholder="Please provide reason for leave…"
+            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100 resize-none"></textarea>
+        </div>
+
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex items-center justify-between mt-6 pt-5 border-t border-slate-100">
+        <a href="{% url 'leave_requests' %}"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+          <i class="fas fa-arrow-left text-xs"></i> Cancel
+        </a>
+        <button type="submit"
+          class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 active:scale-[0.98] shadow-sm"
+          style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+          <i class="fas fa-paper-plane text-xs"></i> Submit Request
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function calculateDays() {
+  const s = document.getElementById('startDate').value;
+  const e = document.getElementById('endDate').value;
+  if (s && e) {
+    const start = new Date(s);
+    const end   = new Date(e);
+    const diff  = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    const info  = document.getElementById('daysInfo');
+    if (diff > 0) {
+      document.getElementById('daysCount').textContent = diff;
+      info.classList.remove('hidden');
+    } else {
+      info.classList.add('hidden');
+    }
+  }
+}
+</script>
+{% endblock %}

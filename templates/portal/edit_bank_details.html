@@ -1,0 +1,87 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}Bank & ID Details{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+
+  <div class="flex items-center gap-2 text-xs text-slate-400 mb-5">
+    <a href="{% url 'portal_profile' %}" class="hover:text-brand-600">My Profile</a>
+    <i class="fas fa-chevron-right text-[9px]"></i>
+    <span class="text-slate-600 font-medium">Bank & ID Details</span>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="bg-white rounded-2xl border border-slate-100 p-6">
+      <h3 class="text-slate-700 font-semibold text-sm mb-1 flex items-center gap-2">
+        <span class="w-5 h-5 bg-teal-100 rounded-md flex items-center justify-center"><i class="fas fa-building-columns text-teal-600 text-[10px]"></i></span>
+        Bank & Government ID Details
+      </h3>
+      <p class="text-slate-400 text-xs mb-5">
+        Only you can see and edit these details — HR cannot change them once you've added them.
+      </p>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Account Holder Name</label>
+          <input type="text" name="bank_account_holder_name" value="{{ form.bank_account_holder_name.value|default:'' }}"
+            placeholder="As per bank records"
+            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Bank Name</label>
+            <input type="text" name="bank_name" value="{{ form.bank_name.value|default:'' }}"
+              placeholder="e.g. HDFC Bank"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          </div>
+          <div>
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">IFSC Code</label>
+            <input type="text" name="bank_ifsc_code" value="{{ form.bank_ifsc_code.value|default:'' }}"
+              placeholder="e.g. HDFC0001234" style="text-transform:uppercase"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-600 text-xs font-medium mb-1.5">Account Number</label>
+          <input type="text" name="bank_account_number" value="{{ form.bank_account_number.value|default:'' }}"
+            placeholder="Bank account number"
+            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+          <div class="pt-4">
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">Aadhaar Number</label>
+            <input type="text" name="aadhar_number" value="{{ form.aadhar_number.value|default:'' }}"
+              placeholder="12-digit Aadhaar number" maxlength="12"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+            {% if form.aadhar_number.errors %}<p class="text-red-500 text-xs mt-1">{{ form.aadhar_number.errors|striptags }}</p>{% endif %}
+          </div>
+          <div class="pt-4">
+            <label class="block text-slate-600 text-xs font-medium mb-1.5">PAN Number</label>
+            <input type="text" name="pan_number" value="{{ form.pan_number.value|default:'' }}"
+              placeholder="e.g. ABCDE1234F" maxlength="10" style="text-transform:uppercase"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+            {% if form.pan_number.errors %}<p class="text-red-500 text-xs mt-1">{{ form.pan_number.errors|striptags }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between mt-5">
+      <a href="{% url 'portal_profile' %}"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+        <i class="fas fa-arrow-left text-xs"></i> Cancel
+      </a>
+      <button type="submit"
+        class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 active:scale-[0.98] shadow-sm"
+        style="background: linear-gradient(135deg, #0d9488, #14b8a6)">
+        <i class="fas fa-floppy-disk text-xs"></i> Save Details
+      </button>
+    </div>
+  </form>
+
+</div>
+{% endblock %}

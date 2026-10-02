@@ -1,0 +1,217 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}Team Requests{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="rounded-2xl p-5 sm:p-6 mb-5 text-white relative overflow-hidden" style="background: linear-gradient(135deg, #4338ca, #6366f1)">
+  <div class="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white opacity-5"></div>
+  <div class="relative flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-white font-bold text-xl">Team Requests</h1>
+      <p class="text-indigo-200 text-xs mt-1">Leave &amp; WFH requests from employees reporting to you</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="bg-white bg-opacity-15 rounded-xl px-4 py-2 text-center">
+        <p class="text-white font-bold text-lg leading-none">{{ team_members|length }}</p>
+        <p class="text-indigo-200 text-[10px] mt-1">Team Members</p>
+      </div>
+      <div class="bg-white bg-opacity-15 rounded-xl px-4 py-2 text-center">
+        <p class="text-white font-bold text-lg leading-none">{{ leave_pending_count|add:wfh_pending_count }}</p>
+        <p class="text-indigo-200 text-[10px] mt-1">Pending</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if not team_members %}
+<div class="bg-white rounded-2xl border border-slate-100 p-14 text-center shadow-sm">
+  <div class="w-14 h-14 rounded-2xl bg-brand-50 flex items-center justify-center mx-auto mb-4">
+    <i class="fas fa-people-group text-brand-500 text-xl"></i>
+  </div>
+  <p class="text-slate-600 font-medium text-sm mb-1">No one reports to you yet</p>
+  <p class="text-slate-400 text-xs">Once HR assigns team members to you as their Reporting Manager, their leave &amp; WFH requests will show up here.</p>
+</div>
+{% else %}
+
+<!-- Status filter -->
+<div class="flex items-center gap-2 mb-5 flex-wrap">
+  {% for key, label in status_options %}
+  <a href="?status={{ key }}"
+    class="px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors
+      {% if status_filter == key %}bg-brand-600 text-white{% else %}bg-white border border-slate-200 text-slate-500 hover:bg-slate-50{% endif %}">
+    {{ label }}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Leave Requests -->
+<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm mb-5">
+  <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+    <h2 class="text-slate-700 font-semibold text-sm flex items-center gap-2">
+      <i class="fas fa-umbrella-beach text-amber-500"></i> Leave Requests
+      {% if leave_pending_count > 0 %}
+      <span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">{{ leave_pending_count }} pending</span>
+      {% endif %}
+    </h2>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wide">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Employee</th>
+          <th class="text-left px-4 py-3 font-semibold">Type</th>
+          <th class="text-left px-4 py-3 font-semibold">Dates</th>
+          <th class="text-left px-4 py-3 font-semibold">Days</th>
+          <th class="text-left px-4 py-3 font-semibold">Reason</th>
+          <th class="text-left px-4 py-3 font-semibold">Status</th>
+          <th class="text-left px-4 py-3 font-semibold">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for leave in leave_requests %}
+        <tr class="hover:bg-slate-50/70 transition-colors">
+          <td class="px-5 py-3.5">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center text-[11px] font-bold flex-shrink-0">
+                {{ leave.employee.first_name|first|upper }}{{ leave.employee.last_name|first|upper }}
+              </div>
+              <div class="min-w-0">
+                <p class="text-slate-700 font-medium text-xs">{{ leave.employee.full_name }}</p>
+                <p class="text-slate-400 text-[10px]">{{ leave.employee.employee_id }}</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3.5">
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700">{{ leave.leave_type.code|default:leave.leave_type.name }}</span>
+          </td>
+          <td class="px-4 py-3.5 text-slate-600 text-xs whitespace-nowrap">
+            {{ leave.start_date|date:"d M" }} — {{ leave.end_date|date:"d M Y" }}
+          </td>
+          <td class="px-4 py-3.5 text-slate-700 font-semibold text-xs">{{ leave.days }}</td>
+          <td class="px-4 py-3.5 text-slate-500 text-xs max-w-[220px] truncate" title="{{ leave.reason }}">{{ leave.reason }}</td>
+          <td class="px-4 py-3.5">
+            <span class="text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap
+              {% if leave.status == 'approved' %}bg-emerald-100 text-emerald-700
+              {% elif leave.status == 'rejected' %}bg-red-100 text-red-600
+              {% elif leave.status == 'cancelled' %}bg-slate-100 text-slate-500
+              {% else %}bg-amber-100 text-amber-700{% endif %}">
+              {{ leave.get_status_display }}
+            </span>
+          </td>
+          <td class="px-4 py-3.5">
+            {% if leave.status == 'pending' %}
+            <div class="flex items-center gap-1.5">
+              <form method="post" action="{% url 'portal_team_leave_approve' leave.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600">
+                  <i class="fas fa-check text-[10px]"></i> Approve
+                </button>
+              </form>
+              <button type="button" onclick="document.getElementById('rejLeave{{ leave.pk }}').classList.toggle('hidden')"
+                class="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">
+                <i class="fas fa-xmark text-[10px]"></i> Reject
+              </button>
+            </div>
+            <form method="post" action="{% url 'portal_team_leave_reject' leave.pk %}" id="rejLeave{{ leave.pk }}" class="hidden mt-2 flex items-center gap-1.5">
+              {% csrf_token %}
+              <input type="text" name="rejection_reason" placeholder="Reason (optional)" class="text-xs border border-slate-200 rounded-lg px-2 py-1 w-40 focus:outline-none focus:border-red-300">
+              <button type="submit" class="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600">Confirm</button>
+            </form>
+            {% else %}
+            <span class="text-slate-300 text-xs">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="px-4 py-10 text-center text-slate-400 text-sm">No leave requests found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- WFH Requests -->
+<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+  <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+    <h2 class="text-slate-700 font-semibold text-sm flex items-center gap-2">
+      <i class="fas fa-house-laptop text-blue-500"></i> Work From Home Requests
+      {% if wfh_pending_count > 0 %}
+      <span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">{{ wfh_pending_count }} pending</span>
+      {% endif %}
+    </h2>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wide">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Employee</th>
+          <th class="text-left px-4 py-3 font-semibold">Date</th>
+          <th class="text-left px-4 py-3 font-semibold">Reason</th>
+          <th class="text-left px-4 py-3 font-semibold">Status</th>
+          <th class="text-left px-4 py-3 font-semibold">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for wfh in wfh_requests %}
+        <tr class="hover:bg-slate-50/70 transition-colors">
+          <td class="px-5 py-3.5">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-[11px] font-bold flex-shrink-0">
+                {{ wfh.employee.first_name|first|upper }}{{ wfh.employee.last_name|first|upper }}
+              </div>
+              <div class="min-w-0">
+                <p class="text-slate-700 font-medium text-xs">{{ wfh.employee.full_name }}</p>
+                <p class="text-slate-400 text-[10px]">{{ wfh.employee.employee_id }}</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3.5 text-slate-600 text-xs whitespace-nowrap">{{ wfh.date|date:"d M Y" }}</td>
+          <td class="px-4 py-3.5 text-slate-500 text-xs max-w-[260px] truncate" title="{{ wfh.reason }}">{{ wfh.reason }}</td>
+          <td class="px-4 py-3.5">
+            <span class="text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap
+              {% if wfh.status == 'approved' %}bg-emerald-100 text-emerald-700
+              {% elif wfh.status == 'rejected' %}bg-red-100 text-red-600
+              {% elif wfh.status == 'cancelled' %}bg-slate-100 text-slate-500
+              {% else %}bg-amber-100 text-amber-700{% endif %}">
+              {{ wfh.get_status_display }}
+            </span>
+          </td>
+          <td class="px-4 py-3.5">
+            {% if wfh.status == 'pending' %}
+            <div class="flex items-center gap-1.5">
+              <form method="post" action="{% url 'portal_team_wfh_approve' wfh.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600">
+                  <i class="fas fa-check text-[10px]"></i> Approve
+                </button>
+              </form>
+              <button type="button" onclick="document.getElementById('rejWfh{{ wfh.pk }}').classList.toggle('hidden')"
+                class="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">
+                <i class="fas fa-xmark text-[10px]"></i> Reject
+              </button>
+            </div>
+            <form method="post" action="{% url 'portal_team_wfh_reject' wfh.pk %}" id="rejWfh{{ wfh.pk }}" class="hidden mt-2 flex items-center gap-1.5">
+              {% csrf_token %}
+              <input type="text" name="rejection_reason" placeholder="Reason (optional)" class="text-xs border border-slate-200 rounded-lg px-2 py-1 w-40 focus:outline-none focus:border-red-300">
+              <button type="submit" class="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600">Confirm</button>
+            </form>
+            {% else %}
+            <span class="text-slate-300 text-xs">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="px-4 py-10 text-center text-slate-400 text-sm">No WFH requests found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}

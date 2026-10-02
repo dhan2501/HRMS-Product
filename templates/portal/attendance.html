@@ -1,0 +1,331 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}My Attendance{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl bg-brand-100 flex items-center justify-center shrink-0">
+      <i class="fas fa-calendar-check text-brand-600"></i>
+    </div>
+    <div>
+      <p class="text-slate-400 text-xs font-semibold uppercase tracking-wide">Attendance</p>
+      <h2 class="text-slate-800 font-bold text-lg leading-tight">{{ month_name }} {{ year }}</h2>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <a href="?month={{ prev_month }}&year={{ prev_year }}"
+      class="w-9 h-9 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-brand-600 transition-colors">
+      <i class="fas fa-chevron-left text-xs"></i>
+    </a>
+    <a href="?month={{ current_month }}&year={{ current_year }}"
+      class="h-9 px-3 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-500 text-xs font-semibold hover:bg-slate-50 hover:text-brand-600 transition-colors">
+      Today
+    </a>
+    <a href="?month={{ next_month }}&year={{ next_year }}"
+      class="w-9 h-9 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-brand-600 transition-colors">
+      <i class="fas fa-chevron-right text-xs"></i>
+    </a>
+  </div>
+</div>
+
+<!-- Summary — moved up top so the headline numbers are seen first -->
+<div class="grid grid-cols-3 sm:grid-cols-5 gap-2.5 mb-5">
+  <div class="bg-white rounded-xl border border-slate-100 p-3 flex items-center gap-2.5">
+    <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+      <i class="fas fa-check text-emerald-600 text-xs"></i>
+    </div>
+    <div class="min-w-0">
+      <p class="text-slate-400 text-[10px] font-semibold uppercase tracking-wide">Present</p>
+      <p class="text-lg font-bold text-slate-800 leading-tight">{{ present }}</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-100 p-3 flex items-center gap-2.5">
+    <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+      <i class="fas fa-xmark text-red-600 text-xs"></i>
+    </div>
+    <div class="min-w-0">
+      <p class="text-slate-400 text-[10px] font-semibold uppercase tracking-wide">Absent</p>
+      <p class="text-lg font-bold text-slate-800 leading-tight">{{ absent }}</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-100 p-3 flex items-center gap-2.5">
+    <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+      <i class="fas fa-clock text-amber-600 text-xs"></i>
+    </div>
+    <div class="min-w-0">
+      <p class="text-slate-400 text-[10px] font-semibold uppercase tracking-wide">Late</p>
+      <p class="text-lg font-bold text-slate-800 leading-tight">{{ late }}</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-100 p-3 flex items-center gap-2.5">
+    <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+      <i class="fas fa-house-laptop text-blue-600 text-xs"></i>
+    </div>
+    <div class="min-w-0">
+      <p class="text-slate-400 text-[10px] font-semibold uppercase tracking-wide">WFH</p>
+      <p class="text-lg font-bold text-slate-800 leading-tight">{{ wfh }}</p>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-100 p-3 flex items-center gap-2.5">
+    <div class="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
+      <i class="fas fa-hourglass-half text-violet-600 text-xs"></i>
+    </div>
+    <div class="min-w-0">
+      <p class="text-slate-400 text-[10px] font-semibold uppercase tracking-wide">Half day</p>
+      <p class="text-lg font-bold text-slate-800 leading-tight">{{ half_day }}</p>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-[minmax(0,340px)_1fr] gap-5 items-start">
+
+  <!-- LEFT COLUMN: compact calendar + legend -->
+  <div class="bg-white rounded-2xl border border-slate-100 p-4">
+    <div class="flex items-center justify-between mb-3">
+      <p class="text-slate-700 text-sm font-bold">Calendar</p>
+      <p class="text-slate-400 text-[11px]">{{ month_name }} {{ year }}</p>
+    </div>
+
+    <div class="grid grid-cols-7 gap-1 mb-1.5">
+      <div class="text-center text-[9px] font-semibold text-slate-400 uppercase py-1">Mo</div>
+      <div class="text-center text-[9px] font-semibold text-slate-400 uppercase py-1">Tu</div>
+      <div class="text-center text-[9px] font-semibold text-slate-400 uppercase py-1">We</div>
+      <div class="text-center text-[9px] font-semibold text-slate-400 uppercase py-1">Th</div>
+      <div class="text-center text-[9px] font-semibold text-slate-400 uppercase py-1">Fr</div>
+      <div class="text-center text-[9px] font-semibold text-slate-400 uppercase py-1">Sa</div>
+      <div class="text-center text-[9px] font-semibold text-slate-400 uppercase py-1">Su</div>
+    </div>
+
+    <div class="grid grid-cols-7 gap-1" id="calGrid">
+      {% for item in calendar_data %}
+      <div class="relative aspect-square rounded-lg flex flex-col items-center justify-center overflow-hidden transition-all duration-150 hover:shadow-md hover:-translate-y-0.5 hover:z-10 cursor-default
+        {% if item.status == 'present' %}bg-emerald-500
+        {% elif item.status == 'absent' %}bg-red-500
+        {% elif item.status == 'late' %}bg-amber-500
+        {% elif item.status == 'work_from_home' %}bg-blue-500
+        {% elif item.status == 'half_day' %}bg-violet-500
+        {% elif item.status == 'holiday' %}bg-orange-500
+        {% elif item.is_today %}bg-brand-600
+        {% elif item.is_weekend %}bg-slate-100 border border-dashed border-slate-200
+        {% else %}bg-white border border-slate-100{% endif %}
+        {% if item.is_today %}ring-2 ring-brand-700 ring-offset-1{% endif %}"
+        {% if item.record %}title="{{ item.record.get_status_display }}{% if item.record.check_in %} | In: {{ item.record.check_in|time:'H:i' }}{% endif %}{% if item.record.check_out %} | Out: {{ item.record.check_out|time:'H:i' }}{% endif %}"{% endif %}>
+
+        <span class="text-[11px] font-bold leading-none
+          {% if item.status or item.is_today %}text-white
+          {% elif item.is_weekend %}text-slate-300
+          {% else %}text-slate-500{% endif %}">
+          {{ item.date.day }}
+        </span>
+
+        {% if item.status %}
+        <span class="text-[6px] font-bold uppercase tracking-wide leading-none mt-0.5 text-white/80">
+          {% if item.status == 'present' %}P
+          {% elif item.status == 'absent' %}A
+          {% elif item.status == 'late' %}L
+          {% elif item.status == 'work_from_home' %}WFH
+          {% elif item.status == 'half_day' %}HD
+          {% elif item.status == 'holiday' %}HOL
+          {% endif %}
+        </span>
+        {% elif item.is_today %}
+        <span class="text-[6px] font-bold uppercase tracking-wide leading-none mt-0.5 text-white/80">TODAY</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Legend -->
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-4 pt-3 border-t border-slate-100">
+      <span class="flex items-center gap-1.5 text-[11px] text-slate-500"><span class="w-2.5 h-2.5 rounded-[3px] bg-emerald-500 inline-block"></span>Present</span>
+      <span class="flex items-center gap-1.5 text-[11px] text-slate-500"><span class="w-2.5 h-2.5 rounded-[3px] bg-red-500 inline-block"></span>Absent</span>
+      <span class="flex items-center gap-1.5 text-[11px] text-slate-500"><span class="w-2.5 h-2.5 rounded-[3px] bg-amber-500 inline-block"></span>Late</span>
+      <span class="flex items-center gap-1.5 text-[11px] text-slate-500"><span class="w-2.5 h-2.5 rounded-[3px] bg-blue-500 inline-block"></span>WFH</span>
+      <span class="flex items-center gap-1.5 text-[11px] text-slate-500"><span class="w-2.5 h-2.5 rounded-[3px] bg-violet-500 inline-block"></span>Half day</span>
+      <span class="flex items-center gap-1.5 text-[11px] text-slate-500"><span class="w-2.5 h-2.5 rounded-[3px] bg-orange-500 inline-block"></span>Holiday</span>
+      <span class="flex items-center gap-1.5 text-[11px] text-slate-500"><span class="w-2.5 h-2.5 rounded-[3px] bg-brand-600 inline-block"></span>Today</span>
+      <span class="flex items-center gap-1.5 text-[11px] text-slate-500"><span class="w-2.5 h-2.5 rounded-[3px] border border-dashed border-slate-300 bg-slate-100 inline-block"></span>Weekend</span>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN: punch log + date-range filter -->
+  <div class="flex flex-col gap-5">
+
+    <!-- Punch log -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5">
+      <form method="get" class="flex flex-wrap items-end gap-3 mb-4 pb-4 border-b border-slate-100">
+        <input type="hidden" name="month" value="{{ month }}">
+        <input type="hidden" name="year" value="{{ year }}">
+        <div>
+          <label class="block text-slate-500 text-xs font-medium mb-1">Punch log for date</label>
+          <input type="date" name="punch_date" value="{{ punch_date_str }}"
+            class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+        <button type="submit"
+          class="bg-brand-600 text-white text-sm font-medium px-4 py-1.5 rounded-lg hover:bg-brand-700 transition-colors">
+          <i class="fas fa-clock-rotate-left mr-1"></i> Show
+        </button>
+      </form>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <!-- Punch In -->
+        <div>
+          <p class="text-slate-500 text-xs font-semibold mb-2 flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+              <i class="fas fa-right-to-bracket text-emerald-600 text-[10px]"></i>
+            </span>
+            Punch in ({{ day_punch_ins|length }})
+          </p>
+          <div class="space-y-1.5">
+            {% for log in day_punch_ins %}
+            <div class="flex items-center gap-2.5 bg-emerald-50 rounded-lg px-3 py-2">
+              <span class="w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">{{ forloop.counter }}</span>
+              <span class="text-emerald-700 text-xs font-semibold flex-shrink-0">{{ log.timestamp|time:"h:i A" }}</span>
+              {% if log.has_location %}
+              <a href="{{ log.maps_url }}" target="_blank" rel="noopener"
+                 class="text-emerald-600 text-xs truncate hover:underline flex items-center gap-1 min-w-0">
+                <i class="fas fa-location-dot text-[10px] flex-shrink-0"></i>
+                <span class="truncate">{{ log.location_name|default:"View on map" }}</span>
+              </a>
+              {% else %}
+              <span class="text-slate-300 text-xs">No location</span>
+              {% endif %}
+            </div>
+            {% empty %}
+            <p class="text-slate-300 text-xs flex items-center gap-1.5"><i class="fas fa-circle-info text-[10px]"></i>Is din koi Punch In nahi hua.</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Punch Out -->
+        <div>
+          <p class="text-slate-500 text-xs font-semibold mb-2 flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-full bg-rose-100 flex items-center justify-center">
+              <i class="fas fa-right-from-bracket text-rose-600 text-[10px]"></i>
+            </span>
+            Punch out ({{ day_punch_outs|length }})
+          </p>
+          <div class="space-y-1.5">
+            {% for log in day_punch_outs %}
+            <div class="flex items-center gap-2.5 bg-rose-50 rounded-lg px-3 py-2">
+              <span class="w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">{{ forloop.counter }}</span>
+              <span class="text-rose-700 text-xs font-semibold flex-shrink-0">{{ log.timestamp|time:"h:i A" }}</span>
+              {% if log.has_location %}
+              <a href="{{ log.maps_url }}" target="_blank" rel="noopener"
+                 class="text-rose-600 text-xs truncate hover:underline flex items-center gap-1 min-w-0">
+                <i class="fas fa-location-dot text-[10px] flex-shrink-0"></i>
+                <span class="truncate">{{ log.location_name|default:"View on map" }}</span>
+              </a>
+              {% else %}
+              <span class="text-slate-300 text-xs">No location</span>
+              {% endif %}
+            </div>
+            {% empty %}
+            <p class="text-slate-300 text-xs flex items-center gap-1.5"><i class="fas fa-circle-info text-[10px]"></i>Is din koi Punch Out nahi hua.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Date-range filter -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5">
+      <p class="text-slate-700 text-sm font-bold mb-3">Search records</p>
+      <form method="get" class="flex flex-wrap items-end gap-3">
+        <div>
+          <label class="block text-slate-500 text-xs font-medium mb-1">From date</label>
+          <input type="date" name="from_date" value="{{ from_date_str }}"
+            class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+        <div>
+          <label class="block text-slate-500 text-xs font-medium mb-1">To date</label>
+          <input type="date" name="to_date" value="{{ to_date_str }}"
+            class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+        <button type="submit"
+          class="bg-brand-600 text-white text-sm font-medium px-4 py-1.5 rounded-lg hover:bg-brand-700 transition-colors">
+          <i class="fas fa-filter mr-1"></i> Filter
+        </button>
+        {% if filter_applied %}
+        <a href="{% url 'portal_attendance' %}"
+          class="text-slate-500 text-sm font-medium px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
+          Clear
+        </a>
+        {% endif %}
+      </form>
+
+      {% if filter_applied %}
+      <div class="mt-4 overflow-x-auto rounded-xl border border-slate-100">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-slate-400 text-xs uppercase bg-slate-50">
+              <th class="py-2.5 px-3">Date</th>
+              <th class="py-2.5 px-3">Status</th>
+              <th class="py-2.5 px-3">Check in</th>
+              <th class="py-2.5 px-3">Check out</th>
+              <th class="py-2.5 px-3">Working hours</th>
+              <th class="py-2.5 px-3">Breaks</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for rec in filtered_records %}
+            <tr class="border-t border-slate-50 hover:bg-slate-50/70 transition-colors">
+              <td class="py-2.5 px-3 text-slate-700 font-medium whitespace-nowrap">{{ rec.date|date:"d M Y" }}</td>
+              <td class="py-2.5 px-3">
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap
+                  {% if rec.status == 'present' %}bg-emerald-100 text-emerald-700
+                  {% elif rec.status == 'absent' %}bg-red-100 text-red-700
+                  {% elif rec.status == 'late' %}bg-amber-100 text-amber-700
+                  {% elif rec.status == 'work_from_home' %}bg-blue-100 text-blue-700
+                  {% elif rec.status == 'half_day' %}bg-violet-100 text-violet-700
+                  {% else %}bg-slate-100 text-slate-600{% endif %}">
+                  {{ rec.get_status_display }}
+                </span>
+              </td>
+              <td class="py-2.5 px-3 text-slate-600">{{ rec.check_in|time:"H:i"|default:"—" }}</td>
+              <td class="py-2.5 px-3 text-slate-600">{{ rec.check_out|time:"H:i"|default:"—" }}</td>
+              <td class="py-2.5 px-3 text-slate-600">{{ rec.working_hours|default:"—" }}</td>
+              <td class="py-2.5 px-3 text-slate-600">{{ rec.break_count }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="py-8 text-center text-slate-400">
+                <i class="fas fa-inbox text-lg mb-1.5 block"></i>
+                Is date range mein koi attendance record nahi mila.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var grid = document.getElementById('calGrid');
+  if (!grid) return;
+  var firstCell = grid.children[0];
+  if (!firstCell) return;
+
+  var firstDateStr = "{{ calendar_data.0.date|date:'Y-m-d' }}";
+  var firstDate = new Date(firstDateStr);
+  var dayOfWeek = firstDate.getDay();
+  dayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+
+  for (var i = 0; i < dayOfWeek; i++) {
+    var empty = document.createElement('div');
+    empty.className = 'aspect-square';
+    grid.insertBefore(empty, firstCell);
+  }
+});
+</script>
+{% endblock %}

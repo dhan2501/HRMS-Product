@@ -1,0 +1,55 @@
+{% extends 'portal/base_portal.html' %}
+{% block title %}Raise a Claim{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+  <div class="bg-white rounded-2xl border border-slate-100 p-6">
+    <div class="w-12 h-12 bg-brand-50 rounded-xl flex items-center justify-center mb-4">
+      <i class="fas fa-flag text-brand-600"></i>
+    </div>
+    <h2 class="text-slate-800 font-semibold text-lg mb-1">Raise an Attendance / Leave Claim</h2>
+    <p class="text-slate-400 text-xs mb-5">
+      Example: "8 Aug ko mera leave nahi thi, mai present tha" — HR/Super Admin isko review karke correct karenge.
+    </p>
+
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+
+      <div>
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Date being disputed</label>
+        <input type="date" name="date" value="{{ prefill_date }}" required
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+      </div>
+
+      <div>
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">This day should actually be marked as</label>
+        <select name="claimed_status" required
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400">
+          <option value="">Select correct status...</option>
+          {% for value, label in status_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-slate-600 text-xs font-medium mb-1.5">Reason / explanation</label>
+        <textarea name="reason" rows="4" required
+          placeholder="Explain why this day was wrongly marked..."
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-sm focus:outline-none focus:border-brand-400 resize-none"></textarea>
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <a href="{% url 'portal_disputes' %}"
+          class="flex-1 text-center py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">
+          Cancel
+        </a>
+        <button type="submit"
+          class="flex-1 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700">
+          Submit Claim
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

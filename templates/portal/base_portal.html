@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}DJ{% endblock %} — HRMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f4ff', 100: '#e0e9ff', 200: '#c7d7fe',
+              300: '#a5b8fd', 400: '#8293fb', 500: '#6366f1',
+              600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81'
+            }
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+
+    /* Sidebar links */
+    .side-link { position: relative; transition: background-color .15s ease, color .15s ease; }
+    .side-link:hover { background: rgba(255,255,255,0.10); }
+    .side-link.active { background: rgba(255,255,255,0.16); font-weight: 600; }
+    .side-link.active::before {
+      content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px;
+      border-radius: 0 3px 3px 0; background: #fff;
+    }
+    .side-group-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+      color: rgba(224,233,255,0.55); padding: 14px 14px 6px;
+    }
+
+    .nav-icon-btn { transition: background-color .15s ease; }
+    .nav-icon-btn:hover { background: rgba(15,23,42,0.06); }
+    .badge-dot { min-width: 16px; height: 16px; font-size: 9px; line-height: 16px; }
+
+    #sidebar { transition: transform .25s ease; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    @media (max-width: 1023px) {
+      #sidebar { transform: translateX(-100%); }
+      #sidebar.open { transform: translateX(0); }
+    }
+
+    /* ── Print: hide app chrome, show only the .print-area content ── */
+    @media print {
+      #sidebar, header, #sidebar-backdrop, #toastContainer, .no-print { display: none !important; }
+      body, .min-h-screen { background: #fff !important; }
+      main { padding: 0 !important; }
+      .print-area { box-shadow: none !important; border: none !important; }
+      @page { margin: 12mm; }
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-50">
+
+<div class="min-h-screen lg:flex">
+
+  <!-- Mobile backdrop -->
+  <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-black/40 z-40 lg:hidden"></div>
+
+  <!-- ================= SIDEBAR (all links live here — single source, always visible on desktop) ================= -->
+  <aside id="sidebar"
+    class="fixed inset-y-0 left-0 z-50 w-72 flex flex-col text-white shadow-xl lg:static lg:z-30 lg:shrink-0"
+    style="background: linear-gradient(180deg, #4338ca 0%, #4f46e5 55%, #6366f1 100%)">
+
+    <!-- Logo -->
+    <div class="flex items-center justify-between px-4 h-16 border-b border-white/10 shrink-0">
+      <a href="{% url 'portal_dashboard' %}" class="flex items-center gap-2.5 min-w-0">
+        {% if site_settings.logo %}
+        <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.company_name }}"
+          class="w-9 h-9 rounded-lg object-contain bg-white/15 ring-1 ring-white/20 shrink-0 p-1">
+        {% else %}
+        <div class="w-9 h-9 bg-white/15 rounded-lg flex items-center justify-center ring-1 ring-white/20 shrink-0">
+          <i class="fas fa-building text-white text-sm"></i>
+        </div>
+        {% endif %}
+        <div class="leading-tight min-w-0">
+          <div class="text-white font-bold text-sm tracking-tight truncate">{{ site_settings.company_name|default:"DJ HRMS" }}</div>
+          <div class="text-indigo-200 text-[10px] -mt-0.5">Employee Portal</div>
+        </div>
+      </a>
+      <button type="button" id="sidebar-close" aria-label="Close menu" class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-white hover:bg-white/10">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Nav links (all visible, scrollable if needed, none hidden) -->
+    <nav class="flex-1 overflow-y-auto no-scrollbar py-2">
+
+      <p class="side-group-label">Workspace</p>
+      <a href="{% url 'portal_dashboard' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_dashboard' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-house w-4 text-center text-[13px]"></i> Dashboard
+      </a>
+      <a href="{% url 'portal_attendance' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_attendance' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-clock w-4 text-center text-[13px]"></i> Attendance
+      </a>
+      <a href="{% url 'portal_apply_leave' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_apply_leave' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-umbrella-beach w-4 text-center text-[13px]"></i> Leave
+      </a>
+      <a href="{% url 'portal_disputes' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_disputes' or request.resolver_match.url_name == 'portal_raise_dispute' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-flag w-4 text-center text-[13px]"></i> My Claims
+      </a>
+      <a href="{% url 'portal_payslips' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_payslips' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-file-invoice-dollar w-4 text-center text-[13px]"></i> Payslips
+      </a>
+      <a href="{% url 'portal_wfh' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_wfh' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-house-laptop w-4 text-center text-[13px]"></i> WFH
+      </a>
+      <a href="{% url 'portal_apply_expense' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_apply_expense' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-receipt w-4 text-center text-[13px]"></i> Expenses
+      </a>
+      <a href="{% url 'portal_events' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_events' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-calendar-days w-4 text-center text-[13px]"></i> Events
+      </a>
+
+      <a href="{% url 'portal_birthday_calendar' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_birthday_calendar' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-cake-candles w-4 text-center text-[13px]"></i> Birthdays
+      </a>
+
+      <p class="side-group-label">Work</p>
+      <a href="{% url 'portal_my_projects' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_my_projects' or request.resolver_match.url_name == 'portal_project_detail' or request.resolver_match.url_name == 'portal_add_project' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-diagram-project w-4 text-center text-[13px]"></i> Projects
+      </a>
+      <a href="{% url 'portal_announcements' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_announcements' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-bullhorn w-4 text-center text-[13px]"></i> Announcements
+      </a>
+      <a href="{% url 'portal_profile' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_profile' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-user w-4 text-center text-[13px]"></i> Profile
+      </a>
+
+      {% if is_reporting_manager %}
+      <p class="side-group-label">Manage</p>
+      <a href="{% url 'portal_team_overview' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_team_overview' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-users-viewfinder w-4 text-center text-[13px]"></i>
+        <span class="flex-1">Team Overview</span>
+      </a>
+      <a href="{% url 'portal_team_requests' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_team_requests' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-user-check w-4 text-center text-[13px]"></i>
+        <span class="flex-1">Team Requests</span>
+        {% if team_requests_pending_count > 0 %}
+        <span class="badge-dot flex items-center justify-center px-1 bg-amber-400 rounded-full text-indigo-900 font-bold">{{ team_requests_pending_count }}</span>
+        {% endif %}
+      </a>
+      <a href="{% url 'portal_team_expenses' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_team_expenses' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-receipt w-4 text-center text-[13px]"></i>
+        <span class="flex-1">Team Expenses</span>
+        {% if team_expenses_pending_count > 0 %}
+        <span class="badge-dot flex items-center justify-center px-1 bg-amber-400 rounded-full text-indigo-900 font-bold">{{ team_expenses_pending_count }}</span>
+        {% endif %}
+      </a>
+      {% endif %}
+
+      <p class="side-group-label">Quick access</p>
+      <a href="{% url 'portal_notifications' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_notifications' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-bell w-4 text-center text-[13px]"></i>
+        <span class="flex-1">Notifications</span>
+        {% if team_notification_unread_count > 0 %}
+        <span class="nav-chat-badge badge-dot flex items-center justify-center px-1 bg-red-500 rounded-full text-white font-bold">{{ team_notification_unread_count }}</span>
+        {% endif %}
+      </a>
+      <a href="{% url 'chat_home' %}"
+        class="side-link {% if request.resolver_match.url_name == 'chat_home' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-message w-4 text-center text-[13px]"></i>
+        <span class="flex-1">Chat</span>
+        {% if unread_messages_count > 0 %}
+        <span class="nav-chat-badge badge-dot flex items-center justify-center px-1 bg-red-500 rounded-full text-white font-bold">{{ unread_messages_count }}</span>
+        {% endif %}
+      </a>
+      <a href="{% url 'portal_wellness' %}"
+        class="side-link {% if request.resolver_match.url_name == 'portal_wellness' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-spa w-4 text-center text-[13px]"></i> Relax
+      </a>
+      <a href="{% url 'help_home' %}"
+        class="side-link {% if request.resolver_match.url_name == 'help_home' %}active{% endif %} flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-white text-sm">
+        <i class="fas fa-circle-question w-4 text-center text-[13px]"></i> Help
+      </a>
+    </nav>
+
+    <!-- User card + logout (bottom, sticky) -->
+    <div class="shrink-0 border-t border-white/10 p-3">
+      <a href="{% url 'portal_profile' %}" class="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-white/10">
+        {% if employee %}
+          {% if employee.photo %}
+            <img src="{{ employee.photo.url }}" class="w-9 h-9 rounded-full object-cover border-2 border-white/30 shrink-0">
+          {% else %}
+            <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold shrink-0">
+              {{ employee.first_name|first|upper }}{{ employee.last_name|first|upper }}
+            </div>
+          {% endif %}
+          <div class="leading-tight min-w-0 flex-1">
+            <div class="text-white text-xs font-semibold truncate">{{ employee.first_name }} {{ employee.last_name }}</div>
+            <div class="text-indigo-200 text-[10px] truncate">{{ employee.designation.title|default:"Employee" }}</div>
+            {% if is_reporting_manager %}
+            <span class="inline-flex items-center gap-1 mt-1 text-[9px] font-semibold text-white bg-white/15 px-1.5 py-0.5 rounded-full">
+              <i class="fas fa-user-tie text-[8px]"></i> Reporting Manager
+            </span>
+            {% endif %}
+          </div>
+        {% endif %}
+      </a>
+      <a href="{% url 'employee_logout' %}"
+        class="mt-1 flex items-center gap-2.5 px-3 py-2 rounded-lg text-red-100 text-xs font-medium hover:bg-red-500/20">
+        <i class="fas fa-arrow-right-from-bracket w-4 text-center"></i> Logout
+      </a>
+    </div>
+  </aside>
+  <!-- ================= /SIDEBAR ================= -->
+
+  <!-- ================= MAIN COLUMN ================= -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- Top bar -->
+    <header class="sticky top-0 z-20 bg-white border-b border-slate-100 shadow-sm">
+      <div class="flex items-center justify-between h-14 px-3 sm:px-5 gap-2">
+        <div class="flex items-center gap-2 min-w-0">
+          <button type="button" id="sidebar-open" aria-label="Open menu"
+            class="nav-icon-btn lg:hidden w-9 h-9 flex items-center justify-center rounded-lg text-slate-600">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h2 class="text-slate-700 font-semibold text-sm truncate">{% block page_heading %}{% endblock %}</h2>
+        </div>
+
+        <div class="flex items-center gap-0.5 shrink-0">
+          <a href="{% url 'portal_notifications' %}" title="Notifications"
+            class="nav-icon-btn relative flex items-center justify-center w-9 h-9 rounded-lg text-slate-600">
+            <i class="fas fa-bell text-sm"></i>
+            {% if team_notification_unread_count > 0 %}
+            <span class="nav-chat-badge badge-dot absolute top-0.5 right-0.5 px-1 bg-red-500 rounded-full text-white font-bold flex items-center justify-center">{{ team_notification_unread_count }}</span>
+            {% endif %}
+          </a>
+          <a href="{% url 'chat_home' %}" title="Chat"
+            class="nav-icon-btn relative flex items-center justify-center w-9 h-9 rounded-lg text-slate-600">
+            <i class="fas fa-message text-sm"></i>
+            {% if unread_messages_count > 0 %}
+            <span class="nav-chat-badge badge-dot absolute top-0.5 right-0.5 px-1 bg-red-500 rounded-full text-white font-bold flex items-center justify-center">{{ unread_messages_count }}</span>
+            {% endif %}
+          </a>
+          <a href="{% url 'portal_wellness' %}" title="Relax"
+            class="nav-icon-btn hidden sm:flex items-center justify-center w-9 h-9 rounded-lg text-slate-600">
+            <i class="fas fa-spa text-sm"></i>
+          </a>
+          <a href="{% url 'help_home' %}" title="Help"
+            class="nav-icon-btn hidden sm:flex items-center justify-center w-9 h-9 rounded-lg text-slate-600">
+            <i class="fas fa-circle-question text-sm"></i>
+          </a>
+          <div class="w-px h-6 bg-slate-200 mx-1.5"></div>
+          {% if employee %}
+          <div class="relative" id="userMenuWrapper">
+            <button type="button" onclick="toggleUserMenu(event)" id="userMenuBtn"
+              class="flex items-center justify-center rounded-full">
+              {% if employee.photo %}
+                <img src="{{ employee.photo.url }}" class="w-8 h-8 rounded-full object-cover border-2 border-slate-100">
+              {% else %}
+                <div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 text-[10px] font-bold">
+                  {{ employee.first_name|first|upper }}{{ employee.last_name|first|upper }}
+                </div>
+              {% endif %}
+            </button>
+
+            <div id="userMenuDropdown"
+              class="hidden absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden">
+              <div class="px-4 py-3 border-b border-slate-100">
+                <p class="text-slate-800 text-xs font-semibold truncate">{{ employee.first_name }} {{ employee.last_name }}</p>
+                <p class="text-slate-400 text-[11px] truncate">{{ employee.designation.title|default:"Employee" }}</p>
+                {% if is_reporting_manager %}
+                <span class="inline-flex items-center gap-1 mt-1.5 text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                  <i class="fas fa-user-tie text-[9px]"></i> Reporting Manager
+                </span>
+                {% endif %}
+              </div>
+              <a href="{% url 'portal_profile' %}"
+                class="flex items-center gap-2.5 px-4 py-2.5 text-slate-700 text-sm font-medium hover:bg-slate-50">
+                <i class="fas fa-user w-4 text-slate-400"></i> Profile
+              </a>
+              <a href="{% url 'employee_logout' %}"
+                class="flex items-center gap-2.5 px-4 py-2.5 text-red-600 text-sm font-medium hover:bg-red-50">
+                <i class="fas fa-arrow-right-from-bracket w-4 text-red-400"></i> Logout
+              </a>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <!-- Toast Notifications (floating, auto-dismiss) -->
+    {% if messages %}
+    <div id="toastContainer" class="fixed top-4 right-4 left-4 sm:left-auto z-[100] flex flex-col gap-2 sm:max-w-sm w-auto">
+      {% for msg in messages %}
+      <div class="toast-item flex items-start gap-2.5 px-4 py-3 rounded-xl text-sm font-medium shadow-lg border transition-all duration-300 ease-out opacity-0 translate-y-[-8px]
+        {% if msg.tags == 'success' %}bg-emerald-50 text-emerald-700 border-emerald-200
+        {% elif msg.tags == 'error' %}bg-red-50 text-red-700 border-red-200
+        {% else %}bg-blue-50 text-blue-700 border-blue-200{% endif %}">
+        <i class="fas {% if msg.tags == 'success' %}fa-check-circle{% elif msg.tags == 'error' %}fa-circle-exclamation{% else %}fa-circle-info{% endif %} mt-0.5"></i>
+        <span class="flex-1">{{ msg }}</span>
+        <button type="button" class="toast-close text-current opacity-50 hover:opacity-100 ml-1" aria-label="Close">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+      {% endfor %}
+    </div>
+    <script>
+    (function () {
+      var items = document.querySelectorAll('#toastContainer .toast-item');
+      items.forEach(function (el, i) {
+        setTimeout(function () {
+          el.classList.remove('opacity-0', 'translate-y-[-8px]');
+        }, 30 + i * 80);
+
+        var dismiss = function () {
+          el.classList.add('opacity-0', 'translate-y-[-8px]');
+          setTimeout(function () { el.remove(); }, 300);
+        };
+
+        var timer = setTimeout(dismiss, 4000);
+        var closeBtn = el.querySelector('.toast-close');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', function () {
+            clearTimeout(timer);
+            dismiss();
+          });
+        }
+      });
+    })();
+    </script>
+    {% endif %}
+
+    <!-- Page Content -->
+    <main class="flex-1 w-full px-4 py-6">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-100 py-3 text-center">
+      <p class="text-slate-400 text-xs">{{ site_settings.company_name|default:"DJ HRMS" }} &copy; 2026 &mdash; Employee Self Service Portal</p>
+    </footer>
+  </div>
+  <!-- ================= /MAIN COLUMN ================= -->
+
+</div>
+
+<script>
+(function () {
+  var sidebar = document.getElementById('sidebar');
+  var backdrop = document.getElementById('sidebar-backdrop');
+  var openBtn = document.getElementById('sidebar-open');
+  var closeBtn = document.getElementById('sidebar-close');
+
+  function openMenu() {
+    sidebar.classList.add('open');
+    backdrop.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  }
+  function closeMenu() {
+    sidebar.classList.remove('open');
+    backdrop.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+  if (openBtn) openBtn.addEventListener('click', openMenu);
+  if (closeBtn) closeBtn.addEventListener('click', closeMenu);
+  if (backdrop) backdrop.addEventListener('click', closeMenu);
+  window.addEventListener('resize', function () {
+    if (window.innerWidth >= 1024) closeMenu();
+  });
+})();
+
+// User avatar dropdown (Profile / Logout)
+(function () {
+  var btn = document.getElementById('userMenuBtn');
+  var dropdown = document.getElementById('userMenuDropdown');
+  var wrapper = document.getElementById('userMenuWrapper');
+  if (!btn || !dropdown || !wrapper) return;
+
+  function closeUserMenu() {
+    dropdown.classList.add('hidden');
+  }
+
+  window.toggleUserMenu = function (e) {
+    e.stopPropagation();
+    dropdown.classList.toggle('hidden');
+  };
+
+  document.addEventListener('click', function (e) {
+    if (!wrapper.contains(e.target)) closeUserMenu();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeUserMenu();
+  });
+})();
+</script>
+
+<!-- Announcement Popup Modal (shared — used by Dashboard widget & Notifications page) -->
+<div id="announcementModalBackdrop" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onclick="if(event.target===this) closeAnnouncementModal()">
+  <div class="bg-white rounded-2xl max-w-md w-full p-6 relative shadow-xl">
+    <button onclick="closeAnnouncementModal()" class="absolute top-4 right-4 text-slate-300 hover:text-slate-500">
+      <i class="fas fa-times"></i>
+    </button>
+    <span id="annModalPriority" class="text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide inline-block mb-2"></span>
+    <h3 id="annModalTitle" class="text-slate-800 font-bold text-lg mb-2"></h3>
+    <p id="annModalMessage" class="text-slate-600 text-sm whitespace-pre-line mb-4"></p>
+    <p id="annModalMeta" class="text-slate-400 text-[11px] border-t border-slate-50 pt-3"></p>
+  </div>
+</div>
+<script>
+function openAnnouncementPopup(jsonUrl) {
+  fetch(jsonUrl).then(function (r) { return r.json(); }).then(function (data) {
+    var colors = {
+      high:   'bg-rose-100 text-rose-700',
+      medium: 'bg-amber-100 text-amber-700',
+      low:    'bg-emerald-100 text-emerald-700'
+    };
+    document.getElementById('annModalPriority').textContent = data.priority_display;
+    document.getElementById('annModalPriority').className =
+      'text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide inline-block mb-2 ' + (colors[data.priority] || colors.medium);
+    document.getElementById('annModalTitle').textContent = data.title;
+    document.getElementById('annModalMessage').textContent = data.message;
+    document.getElementById('annModalMeta').textContent = 'Posted by ' + data.created_by + ' \u00b7 ' + data.created_at;
+    document.getElementById('announcementModalBackdrop').classList.remove('hidden');
+  }).catch(function () {
+    alert('This announcement is no longer available (it may have expired).');
+  });
+}
+function closeAnnouncementModal() {
+  document.getElementById('announcementModalBackdrop').classList.add('hidden');
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeAnnouncementModal();
+});
+</script>
+{% include 'hr_assistant/widget.html' %}
+{% block extra_js %}{% endblock %}
+</body>
+</html>
