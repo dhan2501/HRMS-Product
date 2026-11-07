@@ -112,7 +112,8 @@ def toggle_punch(employee, at=None, source='web', latitude=None, longitude=None,
     PunchLog.objects.create(
         employee=employee, date=today, punch_type=next_type, timestamp=now,
         source=source,
-        latitude=latitude, longitude=longitude, location_name=location_name or '',
+        latitude=latitude, longitude=longitude,
+        location_name=(location_name or '')[:255],   # model max_length=255
     )
     record = recalculate_attendance(employee, today)
     return next_type, record

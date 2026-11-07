@@ -1,0 +1,102 @@
+{# Shared helper: gets the user's CURRENT GPS position and resolves it to a complete street address. #}
+<script>
+window.HRMSGeo = (function () {
+  'use strict';
+
+  function fetchJSON(url, timeoutMs) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs || 8000);
+    return fetch(url, { headers: { 'Accept': 'application/json' }, signal: ctrl.signal })
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .finally(() => clearTimeout(t));
+  }
+
+  function uniq(parts) {
+    const seen = new Set(), out = [];
+    parts.forEach(p => {
+      if (!p) return;
+      const s = String(p).trim();
+      const k = s.toLowerCase();
+      if (s && !seen.has(k)) { seen.add(k); out.push(s); }
+    });
+    return out;
+  }
+
+  // Build "House/Building, Road, Area, Locality, City, District, State, PIN, Country"
+  function fromNominatim(d) {
+    const a = d.address || {};
+    const parts = uniq([
+      a.house_number && a.road ? (a.house_number + ', ' + a.road) : (a.house_number || ''),
+      a.building || a.amenity || a.office || a.shop || a.commercial || a.industrial || '',
+      a.road || a.pedestrian || a.footway || a.path || '',
+      a.neighbourhood || a.residential || a.quarter || '',
+      a.suburb || a.hamlet || a.village || a.locality || '',
+      a.city_district || '',
+      a.city || a.town || a.municipality || '',
+      a.county || a.state_district || '',
+      a.state || '',
+      a.postcode || '',
+      a.country || ''
+    ]);
+    // Use Nominatim's own full string when it carries more detail than our rebuild.
+    const full = (d.display_name || '').trim();
+    if (full && full.split(',').length > parts.length) return full;
+    return parts.length ? parts.join(', ') : full;
+  }
+
+  function fromBigDataCloud(d) {
+    return uniq([
+      d.locality, d.city, d.localityInfo && d.localityInfo.administrative &&
+        (d.localityInfo.administrative.slice(-1)[0] || {}).name,
+      d.principalSubdivision, d.postcode, d.countryName
+    ]).join(', ');
+  }
+
+  async function reverseGeocode(lat, lng) {
+    const nom = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1' +
+                '&zoom=18&accept-language=en&lat=' + lat + '&lon=' + lng;
+    for (let i = 0; i < 2; i++) {            // one retry
+      try {
+        const addr = fromNominatim(await fetchJSON(nom, 8000));
+        if (addr) return addr;
+      } catch (e) { /* retry / fall through */ }
+    }
+    try {                                      // fallback provider
+      const addr = fromBigDataCloud(await fetchJSON(
+        'https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=en&latitude=' + lat + '&longitude=' + lng, 8000));
+      if (addr) return addr;
+    } catch (e) { /* ignore */ }
+    return '';
+  }
+
+  // Resolves { lat, lng, accuracy, address } or rejects with { code, message }.
+  function getLocation() {
+    return new Promise((resolve, reject) => {
+      if (!('geolocation' in navigator))
+        return reject({ code: 'unsupported', message: 'Location not supported by this browser' });
+      if (!window.isSecureContext)
+        return reject({ code: 'insecure', message: 'Location needs HTTPS (or localhost)' });
+
+      navigator.geolocation.getCurrentPosition(
+        async pos => {
+          const lat = pos.coords.latitude, lng = pos.coords.longitude;
+          const address = await reverseGeocode(lat.toFixed(6), lng.toFixed(6));
+          resolve({ lat, lng, accuracy: pos.coords.accuracy, address });
+        },
+        err => {
+          const msgs = {
+            1: 'Location permission denied',
+            2: 'Location unavailable (GPS/WiFi signal not found)',
+            3: 'Location request timed out'
+          };
+          reject({ code: err.code, message: msgs[err.code] || 'Could not get location' });
+        },
+        // maximumAge:0 => always a FRESH fix, never a cached old position
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    });
+  }
+
+  return { getLocation: getLocation };
+})();
+</script>

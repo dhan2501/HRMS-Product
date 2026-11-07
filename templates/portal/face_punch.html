@@ -27,6 +27,9 @@
 
     <p id="status" class="text-center text-sm text-slate-500 mt-3">Loading face detection models…</p>
     <p id="result" class="text-center text-sm font-medium mt-1"></p>
+    <p id="locHint" class="text-center text-xs text-slate-400 mt-2 flex items-start justify-center gap-1">
+      <i class="fas fa-location-dot mt-0.5"></i><span id="locText">Fetching your current location…</span>
+    </p>
 
     <div class="flex justify-center gap-3 mt-4">
       <button id="verifyBtn" disabled
@@ -45,7 +48,9 @@
 {% block extra_js %}
 <!-- face-api.js: LOCAL file, hrms_project/static/js/face-api.min.js -->
 {% comment %} <script src="{% static 'js/face-api.min.js' %}"></script> {% endcomment %}
+{% comment %} <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script> {% endcomment %}
 <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+{% include 'portal/_geo_address.html' %}
 <script>
 const MODEL_URL = "{% static 'face-api-models' %}";
 const video      = document.getElementById('video');
@@ -59,33 +64,21 @@ function getCookie(name) {
   return match ? match.pop() : '';
 }
 
-// ── Location capture (best-effort, mirrors the dashboard punch button) ──
+// ── Location capture: CURRENT position + complete address ──
 let capturedLat = null, capturedLng = null, capturedLocationName = '';
+const locText = document.getElementById('locText');
+const locHint = document.getElementById('locHint');
 
-function reverseGeocode(lat, lng) {
-  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`, {
-    headers: { 'Accept': 'application/json' }
-  })
-    .then(r => r.ok ? r.json() : null)
-    .then(data => {
-      if (data && data.display_name) {
-        capturedLocationName = data.display_name;
-      }
-    })
-    .catch(() => {});
-}
-
-if ('geolocation' in navigator) {
-  navigator.geolocation.getCurrentPosition(
-    function (pos) {
-      capturedLat = pos.coords.latitude;
-      capturedLng = pos.coords.longitude;
-      reverseGeocode(capturedLat, capturedLng);
-    },
-    function () { /* silently punch without location, same as dashboard button */ },
-    { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
-  );
-}
+const locationPromise = HRMSGeo.getLocation().then(function (loc) {
+  capturedLat = loc.lat;
+  capturedLng = loc.lng;
+  capturedLocationName = loc.address;
+  const acc = loc.accuracy ? ' (±' + Math.round(loc.accuracy) + ' m)' : '';
+  locText.textContent = (loc.address || (loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5))) + acc;
+  locHint.className = 'text-center text-xs text-emerald-600 mt-2 flex items-start justify-center gap-1';
+}).catch(function (err) {
+  locText.textContent = (err && err.message ? err.message : 'Could not get location') + ' — punching without location';
+});
 
 async function startCamera() {
   try {
@@ -145,6 +138,7 @@ verifyBtn.addEventListener('click', async () => {
   }
   verifyBtn.disabled = true;
   resultEl.textContent = 'Verifying…';
+  await Promise.race([locationPromise, new Promise(r => setTimeout(r, 25000))]);
   resultEl.className = 'text-center text-sm font-medium mt-1 text-slate-500';
 
   try {

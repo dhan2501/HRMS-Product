@@ -482,7 +482,7 @@
         {% endif %}
       </div>
       <p id="punchLocHint" class="text-slate-400 text-[11px] flex items-center gap-1 sm:justify-end text-center sm:text-right">
-        <i class="fas fa-location-dot"></i> Location capture ho rahi hai&hellip;
+        <i class="fas fa-location-dot"></i> Fetching your current location&hellip;
       </p>
     </div>
   </div>
@@ -625,6 +625,7 @@
   </div>
 </div>
 
+{% include 'portal/_geo_address.html' %}
 <script>
 // ── Live clock for the "This Week" empty state ─────────────────────────────
 (function () {
@@ -652,6 +653,7 @@
 })();
 
 // ── Punch In/Out: capture browser location before submitting ──────────────
+// ── Punch In/Out: capture CURRENT location + complete address before submitting ──
 (function () {
   const form   = document.getElementById('punchForm');
   const btn    = document.getElementById('punchBtn');
@@ -662,82 +664,45 @@
   const nameEl = document.getElementById('punchLocationName');
   if (!form) return;
 
-  if (!('geolocation' in navigator)) {
-    hint.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Location not supported by this browser';
-    return;
-  }
-
-  // Geolocation API only works on secure origins (https:// or localhost).
-  // On plain http:// it fails silently with a generic error — flag that
-  // clearly instead of misreporting it as "permission denied".
-  if (!window.isSecureContext) {
-    hint.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Location needs HTTPS (or localhost) — punching without location';
-  }
-
-  let locationReady = false;
+  const idleLabel = '{% if punch_state.is_punched_in %}Punch Out{% else %}Punch In{% endif %}';
+  let locationReady = false;   // true once location+address resolved OR we gave up
 
   function setHint(text, ok) {
-    hint.innerHTML = '<i class="fas fa-location-dot"></i> ' + text;
-    hint.className = 'text-[11px] mt-1.5 flex items-center gap-1 ' + (ok ? 'text-emerald-500' : 'text-slate-400');
+    hint.textContent = '';
+    const i = document.createElement('i');
+    i.className = 'fas fa-location-dot mt-0.5 flex-shrink-0';
+    hint.appendChild(i);
+    hint.appendChild(document.createTextNode(' ' + text));
+    hint.className = 'text-[11px] leading-snug flex items-start gap-1 sm:justify-end text-left sm:text-right max-w-md ' +
+                     (ok ? 'text-emerald-600' : 'text-slate-400');
   }
 
-  // Reverse-geocode lat/lng into a human readable address (best-effort;
-  // punch still works even if this fails / is slow).
-  function reverseGeocode(lat, lng) {
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`, {
-      headers: { 'Accept': 'application/json' }
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data && data.display_name) {
-          nameEl.value = data.display_name;
-          setHint(data.display_name, true);
-        }
-      })
-      .catch(() => {});
-  }
+  setHint('Fetching your current location…', false);
 
-  navigator.geolocation.getCurrentPosition(
-    function (pos) {
-      latEl.value = pos.coords.latitude;
-      lngEl.value = pos.coords.longitude;
-      locationReady = true;
-      setHint('Location captured', true);
-      reverseGeocode(pos.coords.latitude, pos.coords.longitude);
-    },
-    function (err) {
-      locationReady = true; // don't block punching if location fails
-      let msg;
-      switch (err.code) {
-        case err.PERMISSION_DENIED:
-          msg = 'Location permission denied — punching without location';
-          break;
-        case err.POSITION_UNAVAILABLE:
-          msg = 'Location unavailable (GPS/WiFi signal not found) — punching without location';
-          break;
-        case err.TIMEOUT:
-          msg = 'Location request timed out — punching without location';
-          break;
-        default:
-          msg = 'Could not get location — punching without location';
-      }
-      setHint(msg, false);
-    },
-    { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
-  );
+  HRMSGeo.getLocation().then(function (loc) {
+    latEl.value  = loc.lat;
+    lngEl.value  = loc.lng;
+    nameEl.value = loc.address;
+    const acc = loc.accuracy ? ' (±' + Math.round(loc.accuracy) + ' m)' : '';
+    setHint(loc.address ? loc.address + acc : 'Location captured: ' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5) + acc, true);
+  }).catch(function (err) {
+    setHint((err && err.message ? err.message : 'Could not get location') + ' — punching without location', false);
+  }).finally(function () {
+    locationReady = true;      // never block punching if location fails
+  });
 
   form.addEventListener('submit', function (e) {
-    if (locationReady) return; // location already set (or gave up), let it submit
-    // Still waiting on geolocation: hold the submit briefly instead of
-    // punching with no location, but never block for more than ~8s.
+    if (locationReady) return;
+    // Still resolving location/address: hold the submit briefly (max ~25s).
     e.preventDefault();
     btn.disabled = true;
     label.textContent = 'Locating…';
+    const started = Date.now();
     const check = setInterval(function () {
-      if (locationReady) {
+      if (locationReady || Date.now() - started > 25000) {
         clearInterval(check);
         btn.disabled = false;
-        label.textContent = '{% if punch_state.is_punched_in %}Punch Out{% else %}Punch In{% endif %}';
+        label.textContent = idleLabel;
         form.submit();
       }
     }, 200);

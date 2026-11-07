@@ -12,7 +12,7 @@ from .models import (
     Project, EmployeeRole, Notification, Announcement,
 )
 from .notifications import can_manage_projects, is_super_admin, notify_all_of_announcement
-from attendance.models import AttendanceRecord, ShiftTiming, Holiday
+from attendance.models import AttendanceRecord, ShiftTiming, Holiday, PunchLog
 from leaves.models import LeaveRequest
 from datetime import date
 from django.utils import timezone
@@ -239,83 +239,7 @@ class EmployeeBankDetailsForm(forms.ModelForm):
 #     })
 
 
-# employees/views.py — @login_required def dashboard(request): — pura function
-
-@login_required
-def dashboard(request):
-    if not request.user.is_authenticated:
-        return redirect('/admin-login/')
-
-    if not (request.user.is_staff or request.user.is_superuser):
-        return redirect('/portal/')
-
-    today            = date.today()
-    total_employees  = Employee.objects.filter(status='active').count()
-    today_present    = AttendanceRecord.objects.filter(
-        date=today,
-        status__in=['present', 'late', 'work_from_home']
-    ).count()
-    pending_leaves   = LeaveRequest.objects.filter(status='pending').count()
-    departments      = Department.objects.annotate(
-        emp_count=Count('employees', filter=Q(employees__status='active'))
-    )
-    recent_employees = Employee.objects.filter(
-        status='active'
-    ).order_by('-date_joined')[:5]
-    recent_leaves    = LeaveRequest.objects.filter(
-        status='pending'
-    ).order_by('-created_at')[:5]
-
-    # ── Who's absent today? (Super Admin sees everyone, a Reporting
-    # Manager only sees their own team) — skipped on weekends/holidays.
-    current_emp   = Employee.objects.filter(user=request.user).first()
-    is_weekend    = today.weekday() in (5, 6)          # Sat, Sun
-    today_holiday = Holiday.objects.filter(date=today).first()
-    is_working_day = not is_weekend and not today_holiday
-
-    absent_today   = Employee.objects.none()
-    on_leave_today = Employee.objects.none()
-    is_super_admin = bool(current_emp and current_emp.is_primary_admin)
-
-    if is_working_day:
-        active_employees = Employee.objects.filter(status='active')
-        if not is_super_admin and current_emp and current_emp.team_members.exists():
-            # Reporting manager: restrict the widget to their own team.
-            active_employees = active_employees.filter(
-                Q(reporting_manager=current_emp) | Q(id=current_emp.id)
-            )
-
-        present_ids = AttendanceRecord.objects.filter(
-            date=today, status__in=['present', 'late', 'work_from_home', 'half_day']
-        ).values_list('employee_id', flat=True)
-
-        on_leave_today = active_employees.filter(
-            leave_requests__status='approved',
-            leave_requests__start_date__lte=today,
-            leave_requests__end_date__gte=today,
-        ).distinct()
-
-        absent_today = active_employees.exclude(
-            id__in=present_ids
-        ).exclude(
-            id__in=on_leave_today.values_list('id', flat=True)
-        ).distinct()
-
-    return render(request, 'dashboard/index.html', {
-        'total_employees':  total_employees,
-        'today_present':    today_present,
-        'pending_leaves':   pending_leaves,
-        'departments':      departments,
-        'recent_employees': recent_employees,
-        'recent_leaves':    recent_leaves,
-        'today':            today,
-        'is_working_day':   is_working_day,
-        'today_holiday':    today_holiday,
-        'absent_today':     absent_today,
-        'on_leave_today':   on_leave_today,
-        'is_super_admin':   is_super_admin,
-        'can_manage_projects': can_manage_projects(current_emp),
-    })
+# NOTE: dashboard() ab sirf is file ke END mein defined hai (duplicate hata diya gaya).
 
 # ── Employee List ─────────────────────────────────────────────────────────────
 @login_required
@@ -1659,6 +1583,22 @@ def dashboard(request):
     attendance_range_label = get_attendance_range_label(attendance_range)
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # <<< Currently In Office (Super Admin only) >>>
+    # Employee "currently present" = aaj ka LAST punch "in" hai.
+    # ------------------------------------------------------------------
+    show_live_presence = bool(request.user.is_superuser or is_super_admin)
+    currently_in = []
+    if show_live_presence:
+        last_punch = {}
+        for log in (PunchLog.objects
+                    .filter(date=timezone.localdate(), employee__status='active')
+                    .select_related('employee', 'employee__department')
+                    .order_by('timestamp')):
+            last_punch[log.employee_id] = log      # later punch overwrites earlier one
+        currently_in = [l for l in last_punch.values() if l.punch_type == 'in']
+        currently_in.sort(key=lambda l: l.timestamp)
+
     return render(request, 'dashboard/index.html', {
         'total_employees':  total_employees,
         'today_present':    today_present,
@@ -1678,6 +1618,11 @@ def dashboard(request):
         'attendance_data':        attendance_data,
         'attendance_range':       attendance_range,
         'attendance_range_label': attendance_range_label,
+
+        # <<< Currently In Office >>>
+        'show_live_presence':  show_live_presence,
+        'currently_in':        currently_in,
+        'currently_in_count':  len(currently_in),
 
         # <<< super-admin analytics >>>
         'late_today':      analytics.get('late_today'),
