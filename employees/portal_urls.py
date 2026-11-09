@@ -5,6 +5,7 @@ from . import hr_assistant_view
 urlpatterns = [
     path('', portal_views.portal_dashboard, name='portal_dashboard'),
     path('punch/', portal_views.portal_punch, name='portal_punch'),
+    path('live-salary/', portal_views.portal_live_salary, name='portal_live_salary'),
     path('attendance/', portal_views.portal_attendance, name='portal_attendance'),
     path('leave/apply/', portal_views.portal_apply_leave, name='portal_apply_leave'),
     path('leave/cancel/<int:pk>/', portal_views.portal_cancel_leave, name='portal_cancel_leave'),

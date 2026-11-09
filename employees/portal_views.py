@@ -190,10 +190,17 @@ def portal_dashboard(request):
 
     # ── Live, attendance-driven salary estimate for THIS month (recomputed
     # fresh on every dashboard load — not a stored/generated Payslip) ─────
+    # live_salary = None
+    # if salary:
+    #     from payroll.payroll_calc import estimate_live_salary
+    #     live_salary = estimate_live_salary(employee, salary, reference_date=today)
+
     live_salary = None
+    earned_salary = None
     if salary:
-        from payroll.payroll_calc import estimate_live_salary
+        from payroll.payroll_calc import estimate_live_salary, estimate_earned_salary_to_date
         live_salary = estimate_live_salary(employee, salary, reference_date=today)
+        earned_salary = estimate_earned_salary_to_date(employee, salary, reference_date=today)
 
 # week Attendance
     week_start   = today - timedelta(days=today.weekday())
@@ -236,6 +243,7 @@ def portal_dashboard(request):
         'latest_payslip':  latest_payslip,
         'salary':          salary,
         'live_salary':     live_salary,
+        'earned_salary':   earned_salary,
         'week_records':    week_records,
         'month_name':      calendar.month_name[month],
         'upcoming_events': upcoming_events,
@@ -804,7 +812,26 @@ def portal_team_wfh_reject(request, pk):
         messages.success(request, f'WFH rejected for {wfh.employee.full_name}.')
     return redirect('portal_team_requests')
 
-
+# ── Live earned-salary JSON (dashboard polls this every minute) ──────────────
+@employee_required
+def portal_live_salary(request):
+    employee = get_employee(request)
+    try:
+        salary = SalaryStructure.objects.get(employee=employee)
+    except SalaryStructure.DoesNotExist:
+        return JsonResponse({'ok': False})
+    from payroll.payroll_calc import estimate_earned_salary_to_date
+    e = estimate_earned_salary_to_date(employee, salary)
+    return JsonResponse({
+        'ok': True,
+        'earned_net': float(e['earned_net']),
+        'earned_gross': float(e['earned_gross']),
+        'today_earned': float(e['today_earned']),
+        'today_hours': float(e['today_hours']),
+        'paid_days': float(e['paid_days']),
+        'overtime_amount': float(e['overtime_amount']),
+        'deductions_so_far': float(e['deductions_so_far']),
+    })
 # ── Portal Payslips ───────────────────────────────────────────────────────────
 @employee_required
 def portal_payslips(request):

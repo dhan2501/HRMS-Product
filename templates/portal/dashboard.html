@@ -876,8 +876,8 @@
   <a href="{% url 'portal_payslips' %}" class="text-xs bg-white/15 hover:bg-white/25 backdrop-blur px-3 py-1.5 rounded-full font-medium transition-colors flex-shrink-0">View Payslips</a>
 </div>
 
-{% if live_salary %}
-<!-- Live Estimated Salary — recomputed from real attendance every page load -->
+{% if earned_salary %}
+<!-- Salary Earned So Far: daily, hours-based, auto-refreshing -->
 <div class="dash-fade dash-fade-4 rounded-2xl p-4 mb-5 bg-white border border-slate-100 shadow-sm">
   <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
     <div class="flex items-center gap-2">
@@ -885,39 +885,58 @@
         <i class="fas fa-chart-line text-xs"></i>
       </div>
       <div>
-        <p class="text-slate-700 text-sm font-bold">Live Estimated Salary</p>
+        <p class="text-slate-700 text-sm font-bold">Salary Earned So Far</p>
         <p class="text-slate-400 text-[11px]">
-          Based on Day 1–{{ live_salary.days_elapsed }} of {{ live_salary.days_in_month }} this month · updates automatically
+          1 – {{ earned_salary.days_elapsed }} {{ month_name }} · updates daily with your working hours
         </p>
       </div>
     </div>
     <p class="text-xl font-extrabold text-emerald-600 font-display">
-      Rs.{{ live_salary.projected_net_salary|floatformat:0 }}
+      Rs.<span id="earnedNet">{{ earned_salary.earned_net|floatformat:0 }}</span>
     </p>
   </div>
 
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
     <div class="bg-slate-50 rounded-xl px-3 py-2 text-center">
-      <p class="text-slate-800 text-sm font-bold">{{ live_salary.present_days_so_far }}</p>
-      <p class="text-slate-400 text-[10px] mt-0.5">Present so far</p>
+      <p class="text-emerald-600 text-sm font-bold">Rs.<span id="earnedToday">{{ earned_salary.today_earned|floatformat:0 }}</span></p>
+      <p class="text-slate-400 text-[10px] mt-0.5">Today (<span id="earnedTodayHrs">{{ earned_salary.today_hours|floatformat:1 }}</span>h / {{ earned_salary.standard_hours|floatformat:0 }}h)</p>
     </div>
     <div class="bg-slate-50 rounded-xl px-3 py-2 text-center">
-      <p class="text-rose-600 text-sm font-bold">{{ live_salary.absent_days_so_far }}</p>
-      <p class="text-slate-400 text-[10px] mt-0.5">Absent so far</p>
+      <p class="text-slate-800 text-sm font-bold"><span id="earnedPaidDays">{{ earned_salary.paid_days|floatformat:1 }}</span></p>
+      <p class="text-slate-400 text-[10px] mt-0.5">Paid days</p>
     </div>
     <div class="bg-slate-50 rounded-xl px-3 py-2 text-center">
-      <p class="text-amber-600 text-sm font-bold">{{ live_salary.short_leaves_so_far }}</p>
-      <p class="text-slate-400 text-[10px] mt-0.5">Short Leaves</p>
+      <p class="text-indigo-600 text-sm font-bold">Rs.<span id="earnedOT">{{ earned_salary.overtime_amount|floatformat:0 }}</span></p>
+      <p class="text-slate-400 text-[10px] mt-0.5">Overtime</p>
     </div>
     <div class="bg-slate-50 rounded-xl px-3 py-2 text-center">
-      <p class="text-rose-500 text-sm font-bold">Rs.{{ live_salary.lop_amount_so_far|floatformat:0 }}</p>
-      <p class="text-slate-400 text-[10px] mt-0.5">Deducted so far</p>
+      <p class="text-rose-500 text-sm font-bold">Rs.<span id="earnedDed">{{ earned_salary.deductions_so_far|floatformat:0 }}</span></p>
+      <p class="text-slate-400 text-[10px] mt-0.5">Deductions (pro-rata)</p>
     </div>
   </div>
   <p class="text-slate-400 text-[10px] mt-2.5">
-    Estimate assumes remaining days this month go as fully-present — actual payslip may differ.
+    Take-home earned till now (after pro-rata deductions). Bonus/incentive are added in the final payslip. Full-month net: Rs.{{ earned_salary.full_month_net|floatformat:0 }}.
   </p>
 </div>
+<script>
+(function () {
+  var fmt = function (n) { return Math.round(n).toLocaleString('en-IN'); };
+  function refresh() {
+    fetch("{% url 'portal_live_salary' %}", {credentials: 'same-origin'})
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok) return;
+        document.getElementById('earnedNet').textContent = fmt(d.earned_net);
+        document.getElementById('earnedToday').textContent = fmt(d.today_earned);
+        document.getElementById('earnedTodayHrs').textContent = d.today_hours.toFixed(1);
+        document.getElementById('earnedPaidDays').textContent = d.paid_days.toFixed(1);
+        document.getElementById('earnedOT').textContent = fmt(d.overtime_amount);
+        document.getElementById('earnedDed').textContent = fmt(d.deductions_so_far);
+      }).catch(function () {});
+  }
+  setInterval(refresh, 60000);   // live update every minute
+})();
+</script>
 {% endif %}
 
 <!-- ── Main Grid ────────────────────────────────────────────────────────── -->
