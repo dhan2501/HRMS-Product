@@ -828,6 +828,7 @@ def portal_live_salary(request):
         'earned_gross': float(e['earned_gross']),
         'today_earned': float(e['today_earned']),
         'today_hours': float(e['today_hours']),
+        'today_hours_display': e['today_hours_display'],
         'paid_days': float(e['paid_days']),
         'overtime_amount': float(e['overtime_amount']),
         'deductions_so_far': float(e['deductions_so_far']),
