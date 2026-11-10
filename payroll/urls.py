@@ -7,6 +7,9 @@ urlpatterns = [
     path('add/', views.add_salary, name='add_salary'),
     path('<int:pk>/edit/', views.edit_salary, name='edit_salary'),
     path('<int:pk>/delete/', views.delete_salary, name='delete_salary'),
+    # Daily earnings (HR / Super Admin)
+    path('daily/', views.daily_earnings, name='daily_earnings'),
+    path('<int:pk>/pay-mode/', views.set_pay_mode, name='set_pay_mode'),
 
     # Payslips
     path('payslips/', views.payslips, name='payslips'),

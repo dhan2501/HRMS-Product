@@ -875,7 +875,7 @@
   </div>
   <a href="{% url 'portal_payslips' %}" class="text-xs bg-white/15 hover:bg-white/25 backdrop-blur px-3 py-1.5 rounded-full font-medium transition-colors flex-shrink-0">View Payslips</a>
 </div>
- 
+
 {% if earned_salary %}
 <!-- Salary Earned So Far: daily, hours-based, auto-refreshing -->
 <div class="dash-fade dash-fade-4 rounded-2xl p-4 mb-5 bg-white border border-slate-100 shadow-sm">
@@ -899,7 +899,7 @@
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
     <div class="bg-slate-50 rounded-xl px-3 py-2 text-center">
       <p class="text-emerald-600 text-sm font-bold">Rs.<span id="earnedToday">{{ earned_salary.today_earned|floatformat:0 }}</span></p>
-      <p class="text-slate-400 text-[10px] mt-0.5">Today (<span id="earnedTodayHrs">{{ earned_salary.today_hours|floatformat:1 }}</span>h / {{ earned_salary.standard_hours|floatformat:0 }}h)</p>
+      <p class="text-slate-400 text-[10px] mt-0.5">Today (<span id="earnedTodayHrs">{{ earned_salary.today_hours_display }}</span> / {{ earned_salary.standard_hours|floatformat:0 }}h)</p>
     </div>
     <div class="bg-slate-50 rounded-xl px-3 py-2 text-center">
       <p class="text-slate-800 text-sm font-bold"><span id="earnedPaidDays">{{ earned_salary.paid_days|floatformat:1 }}</span></p>
@@ -915,7 +915,7 @@
     </div>
   </div>
   <p class="text-slate-400 text-[10px] mt-2.5">
-    Take-home earned till now (after pro-rata deductions). Bonus/incentive are added in the final payslip. Full-month net: Rs.{{ earned_salary.full_month_net|floatformat:0 }}.
+    Take-home earned till now (after pro-rata deductions) · Pay mode: {{ earned_salary.pay_mode_label }}. Bonus/incentive are added in the final payslip. Full-month net: Rs.{{ earned_salary.full_month_net|floatformat:0 }}.
   </p>
 </div>
 <script>
@@ -928,7 +928,7 @@
         if (!d.ok) return;
         document.getElementById('earnedNet').textContent = fmt(d.earned_net);
         document.getElementById('earnedToday').textContent = fmt(d.today_earned);
-        document.getElementById('earnedTodayHrs').textContent = d.today_hours.toFixed(1);
+        document.getElementById('earnedTodayHrs').textContent = d.today_hours_display;
         document.getElementById('earnedPaidDays').textContent = d.paid_days.toFixed(1);
         document.getElementById('earnedOT').textContent = fmt(d.overtime_amount);
         document.getElementById('earnedDed').textContent = fmt(d.deductions_so_far);

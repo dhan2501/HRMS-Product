@@ -4,10 +4,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q, Sum
 import calendar
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 from employees.models import Employee
 from .models import SalaryStructure, Payslip
-from .payroll_calc import calculate_attendance_payroll
+from .payroll_calc import calculate_attendance_payroll, format_hours
 
 from functools import wraps
 from django.shortcuts import redirect
@@ -39,6 +40,24 @@ def dec(post, key, default=0):
     and missing keys all to `default`.
     """
     return post.get(key, default) or default
+
+
+VALID_PAY_MODES = {code for code, _ in SalaryStructure.PAY_MODE_CHOICES}
+
+
+def read_pay_mode(post):
+    """(pay_mode, half_day_min_hours) from a salary form POST, sanitised."""
+    mode = post.get('pay_mode', SalaryStructure.PAY_MODE_FIXED)
+    if mode not in VALID_PAY_MODES:
+        mode = SalaryStructure.PAY_MODE_FIXED
+    raw = (post.get('half_day_min_hours') or '').strip()
+    try:
+        half_min = Decimal(raw) if raw else None
+        if half_min is not None and half_min <= 0:
+            half_min = None
+    except InvalidOperation:
+        half_min = None
+    return mode, half_min
 
 
 # ── Salary Structure List ─────────────────────────────────────────────────────
@@ -100,6 +119,7 @@ def add_salary(request):
         ded_80c           = dec(request.POST, 'deduction_80c')
         ded_80d           = dec(request.POST, 'deduction_80d')
         eff_from          = request.POST.get('effective_from')
+        pay_mode, half_min = read_pay_mode(request.POST)
 
         if not emp_id or not basic or not eff_from:
             messages.error(request, 'Employee, Basic Salary, and Effective From are required.')
@@ -118,6 +138,8 @@ def add_salary(request):
                 tax_regime=tax_regime,
                 deduction_80c=ded_80c,
                 deduction_80d=ded_80d,
+                pay_mode=pay_mode,
+                half_day_min_hours=half_min,
                 effective_from=eff_from,
             )
             messages.success(request, f'Salary structure added for {employee.full_name}!')
@@ -126,6 +148,7 @@ def add_salary(request):
     return render(request, 'payroll/add_salary.html', {
         'employees': employees,
         'today':     date.today(),
+        'pay_modes': SalaryStructure.PAY_MODE_CHOICES,
     })
 
 
@@ -147,6 +170,7 @@ def edit_salary(request, pk):
         structure.deduction_80c          = dec(request.POST, 'deduction_80c')
         structure.deduction_80d          = dec(request.POST, 'deduction_80d')
         structure.effective_from         = request.POST.get('effective_from')
+        structure.pay_mode, structure.half_day_min_hours = read_pay_mode(request.POST)
         structure.save()
         messages.success(request, f'Salary updated for {structure.employee.full_name}!')
         return redirect('salary_structure')
@@ -155,6 +179,7 @@ def edit_salary(request, pk):
         'structure': structure,
         'is_edit':   True,
         'today':     date.today(),
+        'pay_modes': SalaryStructure.PAY_MODE_CHOICES,
     })
 
 
@@ -207,6 +232,81 @@ def payslips(request):
         'next_month':  next_month,
         'next_year':   next_year,
     })
+
+
+# ── Daily Earnings (HR / Super Admin) ─────────────────────────────────────────
+@admin_required
+def daily_earnings(request):
+    """
+    Day-wise earnings of every employee, computed automatically from punch
+    hours and each employee's pay mode — so HR / Super Admin can see what
+    every employee earned on a day (and month-to-date) before generating
+    payslips. Also lets HR switch an employee's pay mode in one click.
+    """
+    from .payroll_calc import estimate_earned_salary_to_date
+
+    today = timezone.localdate()
+    try:
+        day = datetime.strptime(request.GET.get('date', ''), '%Y-%m-%d').date()
+    except ValueError:
+        day = today
+    if day > today:
+        day = today
+
+    structures = SalaryStructure.objects.select_related(
+        'employee', 'employee__department', 'employee__shift'
+    ).filter(employee__status='active').order_by('employee__first_name', 'employee__last_name')
+
+    dept_id = request.GET.get('department', '')
+    if dept_id:
+        structures = structures.filter(employee__department_id=dept_id)
+
+    rows = []
+    tot_day = tot_mtd = Decimal('0')
+    for s in structures:
+        emp = s.employee
+        if emp.date_joined and day < emp.date_joined:
+            continue
+        e = estimate_earned_salary_to_date(emp, s, reference_date=day)
+        # For a past date, take that day's hours from the daily rows.
+        day_row = next((r for r in e['daily'] if r['date'] == day), None)
+        hrs = day_row['hours'] if day_row else Decimal('0')
+        credit = day_row['credit'] if day_row else Decimal('0')
+        day_amount = (e['per_day_salary'] * credit).quantize(Decimal('0.01'))
+        hours_display = format_hours(hrs)
+        tot_day += day_amount
+        tot_mtd += e['earned_net']
+        rows.append({
+            'structure': s, 'employee': emp, 'e': e,
+            'hours_display': hours_display, 'credit': credit,
+            'day_amount': day_amount, 'is_off': bool(day_row and day_row['is_off']),
+        })
+
+    from employees.models import Department
+    from datetime import timedelta
+    return render(request, 'payroll/daily_earnings.html', {
+        'rows': rows, 'day': day, 'today': today, 'is_today': day == today,
+        'prev_day': day - timedelta(days=1),
+        'next_day': day + timedelta(days=1) if day < today else None,
+        'total_day': tot_day, 'total_mtd': tot_mtd,
+        'departments': Department.objects.all(), 'selected_dept': dept_id,
+        'pay_modes': SalaryStructure.PAY_MODE_CHOICES,
+        'month_name': calendar.month_name[day.month],
+    })
+
+
+@admin_required
+def set_pay_mode(request, pk):
+    """Quick per-employee pay-mode switch from the Daily Earnings page."""
+    structure = get_object_or_404(SalaryStructure, pk=pk)
+    if request.method == 'POST':
+        structure.pay_mode, structure.half_day_min_hours = read_pay_mode(request.POST)
+        structure.save(update_fields=['pay_mode', 'half_day_min_hours'])
+        messages.success(
+            request,
+            f'{structure.employee.full_name}: pay mode set to "{structure.get_pay_mode_display()}".'
+        )
+    return redirect(request.META.get('HTTP_REFERER') or 'daily_earnings')
 
 
 # ── Generate Payslips (Attendance → Payroll automatic calculation) ────────────

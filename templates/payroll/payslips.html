@@ -20,6 +20,12 @@
   </div>
 
   <!-- Generate Button -->
+    <div class="flex items-center gap-2">
+  <a href="{% url 'daily_earnings' %}"
+    class="inline-flex items-center gap-2 border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-50">
+    <i class="fas fa-calendar-day text-xs"></i> Daily Earnings
+  </a>
+  <!-- Generate Button -->
   <form method="post" action="{% url 'generate_payslips' %}">
     {% csrf_token %}
     <input type="hidden" name="month" value="{{ month }}">
@@ -29,7 +35,8 @@
       onclick="return confirm('Generate payslips for {{ month_name }} {{ year }}?')">
       <i class="fas fa-bolt text-xs"></i> Generate Payslips
     </button>
-  </form>
+    </form>
+  </div>
 </div>
 
 <!-- Summary Cards -->

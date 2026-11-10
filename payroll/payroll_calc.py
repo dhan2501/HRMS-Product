@@ -40,6 +40,20 @@ SHORT_LEAVE_LOP_FRACTION = Decimal('0.25')  # quarter-day deduction per short le
 LOP_STATUSES = {'absent', 'PA'}
 
 
+# ── Pay modes (SalaryStructure.pay_mode) ───────────────────────────────
+PAY_MODE_FIXED = 'fixed'
+PAY_MODE_HOURLY = 'hourly'
+PAY_MODE_HALF_DAY = 'half_day'
+PAY_MODE_FULL_HOURS = 'full_hours'
+HOURS_MODES = {PAY_MODE_HOURLY, PAY_MODE_HALF_DAY, PAY_MODE_FULL_HOURS}
+PAY_MODE_LABELS = {
+    PAY_MODE_FIXED: 'Fixed monthly',
+    PAY_MODE_HOURLY: 'Hourly',
+    PAY_MODE_HALF_DAY: 'Half-day slab',
+    PAY_MODE_FULL_HOURS: 'Full hours only',
+}
+
+
 def _round(value):
     return Decimal(value).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
@@ -50,6 +64,11 @@ def calculate_attendance_payroll(employee, salary_structure, month, year):
     employee for the given month/year, ready to feed into a Payslip.
     """
     days_in_month = calendar.monthrange(year, month)[1]
+
+    # Hours-based pay modes (hourly / half-day slab / full-hours-only) are
+    # worked out day by day from real working hours.
+    if getattr(salary_structure, 'pay_mode', PAY_MODE_FIXED) in HOURS_MODES:
+        return _calculate_hours_based_payroll(employee, salary_structure, month, year)
 
     records = AttendanceRecord.objects.filter(
         employee=employee, date__year=year, date__month=month
@@ -207,81 +226,223 @@ def _approved_unpaid_leave_dates(employee, start, end):
     return dates
 
 
+def hours_to_credit(hours, standard_hours, mode, half_day_min_hours=None):
+    """
+    Fraction of a day's salary (0 .. 1) earned for `hours` worked, under an
+    hours-based pay mode.
+
+        hourly      -> hours / standard_hours, capped at 1 day
+        half_day    -> >= standard_hours: 1 day, >= half-day minimum: 0.5, else 0
+        full_hours  -> 1 day only when standard_hours are completed, else 0
+    """
+    hours = Decimal(hours or 0)
+    standard_hours = Decimal(standard_hours)
+    if hours <= 0 or standard_hours <= 0:
+        return Decimal('0')
+    if mode == PAY_MODE_FULL_HOURS:
+        return Decimal('1') if hours >= standard_hours else Decimal('0')
+    if mode == PAY_MODE_HALF_DAY:
+        if hours >= standard_hours:
+            return Decimal('1')
+        half_min = Decimal(half_day_min_hours) if half_day_min_hours else standard_hours / Decimal('2')
+        return Decimal('0.5') if hours >= half_min else Decimal('0')
+    # hourly (also the live fallback for fixed-mode "today")
+    return min(Decimal('1'), hours / standard_hours)
+
+
+def format_hours(hours):
+    """Decimal hours -> '2h 05m' (so a few minutes never shows up as '0.0h')."""
+    total_minutes = int(round(float(hours or 0) * 60))
+    return f"{total_minutes // 60}h {total_minutes % 60:02d}m"
+
+
+def _approved_paid_leave_dates(employee, start, end):
+    """Set of dates in [start, end] covered by an approved PAID leave."""
+    from leaves.models import LeaveRequest
+
+    dates = set()
+    qs = LeaveRequest.objects.filter(
+        employee=employee, status='approved',
+        start_date__lte=end, end_date__gte=start,
+        leave_type__is_paid=True,
+    )
+    for lr in qs:
+        d = max(lr.start_date, start)
+        while d <= min(lr.end_date, end):
+            dates.add(d)
+            d += timedelta(days=1)
+    return dates
+
+
+def _standard_hours(employee):
+    standard_hours = Decimal(str(employee.effective_working_hours or 8))
+    return standard_hours if standard_hours > 0 else Decimal('8')
+
+
+def _accrue_days(employee, salary_structure, start, end, today):
+    """
+    Day-by-day paid-day accrual for [start, end] (the single source of truth
+    used by the live dashboard card, the HR daily-earnings page and hours-based
+    payslips, so all three always agree).
+
+    Days after `today` are projected as fully paid (nothing to count yet).
+    Returns dict: paid_days, overtime_hours, today_hours, today_credit
+    (hours-earned part of today only), and `daily` (one row per day).
+    """
+    from attendance.models import Holiday
+
+    mode = getattr(salary_structure, 'pay_mode', PAY_MODE_FIXED) or PAY_MODE_FIXED
+    half_min = getattr(salary_structure, 'half_day_min_hours', None)
+    standard_hours = _standard_hours(employee)
+
+    records = {
+        r.date: r for r in AttendanceRecord.objects.filter(
+            employee=employee, date__gte=start, date__lte=min(end, today)
+        )
+    }
+    holidays = set(
+        Holiday.objects.filter(date__gte=start, date__lte=end).values_list('date', flat=True)
+    )
+    unpaid_leave = _approved_unpaid_leave_dates(employee, start, end)
+    paid_leave = _approved_paid_leave_dates(employee, start, end)
+
+    paid_days = Decimal('0')
+    overtime_hours = Decimal('0')
+    today_hours = Decimal('0')
+    today_credit = Decimal('0')
+    daily = []
+
+    d = start
+    while d <= end:
+        rec = records.get(d)
+        is_off = d.weekday() >= 5 or d in holidays
+        hours = Decimal('0')
+        credit = Decimal('0')
+        hours_credit = Decimal('0')
+
+        if d > today:
+            credit = Decimal('1')                      # projected, not counted yet
+        elif d == today:
+            hours = _live_hours_today(employee, today)
+            if mode in HOURS_MODES:
+                hours_credit = hours_to_credit(hours, standard_hours, mode, half_min)
+            else:
+                hours_credit = min(Decimal('1'), hours / standard_hours)
+            today_hours, today_credit = hours, hours_credit
+            credit = Decimal('1') if is_off else hours_credit
+            if hours > standard_hours:
+                overtime_hours += (hours - standard_hours)
+        elif rec is not None:
+            hours = Decimal(str(rec.working_hours)) if rec.working_hours else Decimal('0')
+            if rec.status in PAID_NON_WORKING_STATUSES or is_off:
+                credit = Decimal('1')
+                if hours > standard_hours:
+                    overtime_hours += (hours - standard_hours)
+            elif mode in HOURS_MODES:
+                hours_credit = hours_to_credit(hours, standard_hours, mode, half_min)
+                credit = hours_credit
+                # Approved-leave statuses still guarantee their own paid part.
+                if rec.status == HALF_DAY_STATUS:
+                    credit = max(credit, Decimal('0.5'))
+                elif rec.status == SHORT_LEAVE_STATUS:
+                    credit = max(credit, Decimal('1') - SHORT_LEAVE_LOP_FRACTION)
+                if hours > standard_hours:
+                    overtime_hours += (hours - standard_hours)
+            else:  # fixed monthly: attendance status decides
+                hours_credit = credit
+                if rec.status in FULL_PAID_STATUSES:
+                    credit = Decimal('1')
+                    if hours > standard_hours:
+                        overtime_hours += (hours - standard_hours)
+                elif rec.status == HALF_DAY_STATUS:
+                    credit = Decimal('0.5')
+                elif rec.status == SHORT_LEAVE_STATUS:
+                    credit = Decimal('1') - SHORT_LEAVE_LOP_FRACTION
+                # absent / PA -> 0
+        elif d in unpaid_leave:
+            pass
+        elif is_off or d in paid_leave:
+            credit = Decimal('1')                      # weekly off / holiday / paid leave
+
+        paid_days += credit
+        daily.append({
+            'date': d, 'hours': hours, 'credit': credit,
+            'is_off': is_off, 'is_projected': d > today,
+        })
+        d += timedelta(days=1)
+
+    return {
+        'paid_days': paid_days,
+        'overtime_hours': overtime_hours,
+        'today_hours': today_hours,
+        'today_credit': today_credit,
+        'daily': daily,
+    }
+
+
+def _calculate_hours_based_payroll(employee, salary_structure, month, year):
+    """Payslip figures for an hours-based pay mode (same shape as the fixed one)."""
+    today = timezone.localdate()
+    days_in_month = calendar.monthrange(year, month)[1]
+    month_start, month_end = date(year, month, 1), date(year, month, days_in_month)
+
+    start = month_start
+    if employee.date_joined and employee.date_joined > month_start:
+        start = employee.date_joined
+    if start > month_end:                               # joined after this month
+        return {
+            'payable_days': Decimal(days_in_month), 'present_days': Decimal('0'),
+            'lop_days': Decimal(days_in_month),
+            'lop_amount': _round(Decimal(salary_structure.gross_salary)),
+            'overtime_hours': Decimal('0'), 'overtime_amount': Decimal('0'),
+        }
+
+    acc = _accrue_days(employee, salary_structure, start, month_end, today)
+
+    payable_days = Decimal(days_in_month)
+    per_day = Decimal(salary_structure.gross_salary) / payable_days
+    paid_days = min(acc['paid_days'], payable_days)
+    lop_days = payable_days - paid_days                 # un-paid share of the month
+    ot_rate = getattr(salary_structure, 'overtime_rate_per_hour', Decimal('0')) or Decimal('0')
+
+    return {
+        'payable_days': payable_days,
+        'present_days': paid_days,
+        'lop_days': lop_days,
+        'lop_amount': _round(per_day * lop_days),
+        'overtime_hours': _round(acc['overtime_hours']),
+        'overtime_amount': _round(acc['overtime_hours'] * ot_rate),
+    }
+
+
 def estimate_earned_salary_to_date(employee, salary_structure, reference_date=None):
     """
-    Salary EARNED SO FAR this month (1st -> today). Starts near 0 on day 1
-    and increases every day; today's portion grows with the hours the
-    employee has actually worked today (live, including the running clock).
+    Salary EARNED SO FAR this month (1st -> reference day). Grows with the
+    hours worked, using the employee's pay mode (fixed / hourly / half-day
+    slab / full-hours-only). Today's portion uses the live punch clock.
     """
     today = reference_date or timezone.localdate()
     year, month = today.year, today.month
     days_in_month = calendar.monthrange(year, month)[1]
     month_start = date(year, month, 1)
 
-    # Don't count days before joining
     start = month_start
     if employee.date_joined and employee.date_joined > month_start:
         start = employee.date_joined
 
+    mode = getattr(salary_structure, 'pay_mode', PAY_MODE_FIXED) or PAY_MODE_FIXED
     gross = Decimal(salary_structure.gross_salary)
     per_day = gross / Decimal(days_in_month)
-    standard_hours = Decimal(str(employee.effective_working_hours or 8))
-    if standard_hours <= 0:
-        standard_hours = Decimal('8')
+    standard_hours = _standard_hours(employee)
 
-    from attendance.models import Holiday
-    records = {
-        r.date: r for r in AttendanceRecord.objects.filter(
-            employee=employee, date__gte=start, date__lte=today
-        )
-    }
-    holidays = set(
-        Holiday.objects.filter(date__gte=start, date__lte=today).values_list('date', flat=True)
-    )
-    unpaid_leave = _approved_unpaid_leave_dates(employee, start, today)
+    if start > today:                                   # not joined yet
+        acc = {'paid_days': Decimal('0'), 'overtime_hours': Decimal('0'),
+               'today_hours': Decimal('0'), 'today_credit': Decimal('0'), 'daily': []}
+    else:
+        acc = _accrue_days(employee, salary_structure, start, today, today)
 
-    paid_days = Decimal('0')
-    overtime_hours = Decimal('0')
-    d = start
-    while d <= today:
-        rec = records.get(d)
-        is_today = (d == today)
-        is_off = d.weekday() >= 5 or d in holidays
-
-        if is_today:
-            hours = _live_hours_today(employee, today)
-            if hours > 0:
-                paid_days += min(Decimal('1'), hours / standard_hours)
-                if hours > standard_hours:
-                    overtime_hours += (hours - standard_hours)
-            elif is_off:
-                paid_days += Decimal('1')
-            # weekday + no punch yet -> 0 so far today
-        elif rec is not None:
-            if rec.status in FULL_PAID_STATUSES or rec.status in PAID_NON_WORKING_STATUSES:
-                paid_days += Decimal('1')
-                if rec.status in FULL_PAID_STATUSES and rec.working_hours:
-                    w = Decimal(str(rec.working_hours))
-                    if w > standard_hours:
-                        overtime_hours += (w - standard_hours)
-            elif rec.status == HALF_DAY_STATUS:
-                paid_days += Decimal('0.5')
-            elif rec.status == SHORT_LEAVE_STATUS:
-                paid_days += Decimal('1') - SHORT_LEAVE_LOP_FRACTION
-            # absent / PA -> 0
-        elif d in unpaid_leave:
-            pass
-        elif is_off:
-            paid_days += Decimal('1')          # weekly off / holiday, no record
-        else:
-            # Weekday with no record: approved paid leave -> paid.
-            from leaves.models import LeaveRequest
-            if LeaveRequest.objects.filter(
-                employee=employee, status='approved', leave_type__is_paid=True,
-                start_date__lte=d, end_date__gte=d,
-            ).exists():
-                paid_days += Decimal('1')
-        d += timedelta(days=1)
+    paid_days = acc['paid_days']
+    overtime_hours = acc['overtime_hours']
 
     earned_gross = _round(per_day * paid_days)
     ot_rate = getattr(salary_structure, 'overtime_rate_per_hour', Decimal('0')) or Decimal('0')
@@ -295,15 +456,20 @@ def estimate_earned_salary_to_date(employee, salary_structure, reference_date=No
     deductions_so_far = _round(Decimal(deductions_full) * ratio)
     earned_net = _round(earned_gross + overtime_amount - deductions_so_far)
 
-    today_hours = _live_hours_today(employee, today)
-    today_earned = _round(per_day * min(Decimal('1'), today_hours / standard_hours))
+    today_hours = acc['today_hours']
+    today_credit = acc['today_credit']
+    today_earned = _round(per_day * today_credit)
 
     return {
         'days_elapsed': (today - month_start).days + 1,
         'days_in_month': days_in_month,
+        'pay_mode': mode,
+        'pay_mode_label': PAY_MODE_LABELS.get(mode, mode),
         'paid_days': _round(paid_days),
         'per_day_salary': _round(per_day),
         'today_hours': _round(today_hours),
+        'today_hours_display': format_hours(today_hours),
+        'today_credit': today_credit,
         'standard_hours': standard_hours,
         'today_earned': today_earned,
         'earned_gross': earned_gross,
@@ -312,4 +478,5 @@ def estimate_earned_salary_to_date(employee, salary_structure, reference_date=No
         'deductions_so_far': deductions_so_far,
         'earned_net': max(earned_net, Decimal('0')),
         'full_month_net': _round(salary_structure.net_salary),
+        'daily': acc['daily'],
     }

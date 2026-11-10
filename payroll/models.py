@@ -57,6 +57,27 @@ class SalaryStructure(models.Model):
         help_text='Section 80D health insurance premium — applicable under Old Regime only.'
     )
 
+        # ── Daily pay mode (Super Admin / HR configurable per employee) ───
+    PAY_MODE_FIXED = 'fixed'
+    PAY_MODE_HOURLY = 'hourly'
+    PAY_MODE_HALF_DAY = 'half_day'
+    PAY_MODE_FULL_HOURS = 'full_hours'
+    PAY_MODE_CHOICES = [
+        (PAY_MODE_FIXED, 'Fixed monthly - attendance status based (default)'),
+        (PAY_MODE_HOURLY, 'Hourly - pay for the actual hours worked'),
+        (PAY_MODE_HALF_DAY, 'Half-day slab - full day / half day by hours worked'),
+        (PAY_MODE_FULL_HOURS, 'Working hours complete - paid only when full hours are done'),
+    ]
+    pay_mode = models.CharField(
+        max_length=12, choices=PAY_MODE_CHOICES, default=PAY_MODE_FIXED,
+        help_text='How each working day is converted into paid salary for this employee.'
+    )
+    half_day_min_hours = models.DecimalField(
+        max_digits=4, decimal_places=2, null=True, blank=True,
+        help_text='Half-day slab only: minimum hours that earn a half day. '
+                  'Leave blank to use half of the standard working hours.'
+    )
+
     effective_from = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
 
